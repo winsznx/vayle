@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { getAddress } from "viem";
 import { diffFacts } from "../src/facts.ts";
-import { BEACON_SLOT, eip712DomainSeparator, IMPLEMENTATION_SLOT } from "../src/resolve.ts";
+import {
+  BEACON_SLOT,
+  eip712DomainSeparator,
+  IMPLEMENTATION_SLOT,
+  zeroRuntimeInitCode,
+} from "../src/resolve.ts";
 
 describe("diffFacts", () => {
   it("separates volatile changes from drift", () => {
@@ -54,5 +59,14 @@ describe("eip712DomainSeparator", () => {
     const separator = eip712DomainSeparator("Global Dollar", "1", 4663, usdg);
     // #then
     assert.equal(separator, "0x7a3d7400b27830f4f91c2c16a082486d67c1befecaec2f53b33f1f35d5b62036");
+  });
+});
+
+describe("zeroRuntimeInitCode", () => {
+  it("pushes the size, then offset zero, then returns", () => {
+    // #when
+    const code = zeroRuntimeInitCode(98_304);
+    // #then
+    assert.equal(code, "0x620180006000f3");
   });
 });

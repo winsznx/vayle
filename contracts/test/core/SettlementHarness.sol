@@ -39,4 +39,6 @@ contract SettlementHarness is SettlementEngine {
     }
 
     function _requireNotHalted() internal pure override {}
+
+    function _checkPlacement(address, address, OptionType, uint256) internal pure override {}
 }

@@ -28,4 +28,6 @@ contract EpochBookHarness is EpochBook {
     function mint(address to, uint256 id, uint256 amount) external {
         _mint(to, id, amount, "");
     }
+
+    function _requireNotHalted() internal pure override {}
 }

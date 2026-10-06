@@ -103,6 +103,7 @@ abstract contract EpochBook is OptionSeries, ReentrancyGuardTransient {
         returns (uint64 expiry)
     {
         liveness.checkpoint();
+        _requireNotHalted();
         StockTokenRegistry.Asset memory config = registry.asset(asset);
         SessionCalendar.Boundary memory boundary =
             calendar.latestBoundaryAtOrBefore(uint64(block.timestamp));
@@ -178,6 +179,9 @@ abstract contract EpochBook is OptionSeries, ReentrancyGuardTransient {
     {
         return _isListedStrike(_epoch(asset, expiry), optionType, strike);
     }
+
+    /// @dev Reverts while an emergency halt is active. MarketGuard implements it.
+    function _requireNotHalted() internal view virtual;
 
     /// @dev A pause seen at any point in the lookback refuses the week, as does no unpaused
     /// observation in the last CLOSE_OBSERVATION_RECENCY before the close.

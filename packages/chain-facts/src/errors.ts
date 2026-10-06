@@ -48,3 +48,6 @@ export class SpecMismatch extends FactError {
 export class Drift extends FactError {
   override readonly name = "Drift";
 }
+export class CodeSizeProbeFailed extends FactError {
+  override readonly name = "CodeSizeProbeFailed";
+}

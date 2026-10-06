@@ -55,6 +55,7 @@ abstract contract SettlementEngine is CollateralVault {
     /// @notice Closes the series once its window has ended. Anyone may call it.
     function finalize(uint256 series) external nonReentrant {
         liveness.checkpoint();
+        _requireNotHalted();
         SeriesKey storage key = _key(series);
         _observePauses(key.asset);
         uint64 end = _windowEnd(key);
@@ -84,9 +85,6 @@ abstract contract SettlementEngine is CollateralVault {
     /// MarketGuard implements these.
     function _haltCount() internal view virtual returns (uint256);
     function _haltAt(uint256 index) internal view virtual returns (uint64 start, uint64 end);
-
-    /// @dev Reverts while an emergency halt is active. MarketGuard implements it.
-    function _requireNotHalted() internal view virtual;
 
     /// @dev Cursor state for the window sweep, one cursor per source of dead time.
     struct Sweep {

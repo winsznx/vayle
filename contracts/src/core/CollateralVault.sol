@@ -63,6 +63,11 @@ abstract contract CollateralVault is EpochBook {
     mapping(uint256 id => Order) private _orders;
     mapping(uint256 series => Pool) private _pools;
     mapping(address owner => mapping(address token => uint256)) public claimable;
+    /// @notice The total size of active orders per asset and side, in raw units.
+    mapping(address asset => mapping(OptionType side => uint256)) public openSize;
+    /// @notice The same total per owner.
+    mapping(address owner => mapping(address asset => mapping(OptionType side => uint256))) public
+        walletSize;
 
     event OrderPlaced(
         uint256 indexed id,
@@ -111,6 +116,7 @@ abstract contract CollateralVault is EpochBook {
         _requireStrike(p.target, a.strikeTick);
         Units.requireOnTick(p.minPremium, a.priceTick);
         if (p.flip) _requireStrike(p.flipTarget, a.strikeTick);
+        _checkPlacement(msg.sender, p.asset, p.side, p.size);
 
         id = ++orderCount;
         _orders[id] = Order({
@@ -124,10 +130,11 @@ abstract contract CollateralVault is EpochBook {
             flipTarget: p.flip ? p.flipTarget : 0,
             rawUnit: a.rawUnit,
             lot: a.lot,
-            size: p.size,
+            size: 0,
             committed: 0,
             series: 0
         });
+        _grow(_orders[id], p.size);
         emit OrderPlaced(
             id, msg.sender, p.asset, p.side, p.target, p.minPremium, p.size, p.flip, p.flipTarget
         );
@@ -140,6 +147,7 @@ abstract contract CollateralVault is EpochBook {
         nonReentrant
     {
         liveness.checkpoint();
+        _requireNotHalted();
         Order storage order = _ownedActive(id);
         StockTokenRegistry.Asset memory a = registry.asset(order.asset);
         Units.requireOnTick(minPremium, a.priceTick);
@@ -154,10 +162,11 @@ abstract contract CollateralVault is EpochBook {
     /// this week's series stays there until the series settles.
     function cancelOrder(uint256 id) external nonReentrant {
         liveness.checkpoint();
+        _requireNotHalted();
         Order storage order = _ownedActive(id);
         uint256 uncommitted = order.size - order.committed;
         (address token, uint256 amount) = _collateralOf(order, uncommitted);
-        order.size = order.committed;
+        _shrink(order, uncommitted);
         order.status = order.size == 0 ? OrderStatus.Closed : OrderStatus.Cancelled;
         emit OrderCancelled(id, amount);
         if (order.status == OrderStatus.Closed) emit OrderClosed(id);
@@ -168,6 +177,7 @@ abstract contract CollateralVault is EpochBook {
     /// renew orders without the owner.
     function settleOrder(uint256 id) external nonReentrant {
         liveness.checkpoint();
+        _requireNotHalted();
         Order storage order = _orders[id];
         if (order.status == OrderStatus.None) revert UnknownOrder(id);
         uint256 series = order.series;
@@ -181,7 +191,7 @@ abstract contract CollateralVault is EpochBook {
         pool.collateral -= back;
         pool.proceeds -= proceeds;
         pool.remainingShares -= shares;
-        order.size -= shares;
+        _shrink(order, shares);
         order.committed = 0;
         order.series = 0;
 
@@ -198,7 +208,7 @@ abstract contract CollateralVault is EpochBook {
             uint256 lots = back / lotCollateral;
             renewed = lots * order.lot;
             released = back - lots * lotCollateral;
-            order.size += renewed;
+            _grow(order, renewed);
         }
         if (order.size == 0) {
             order.status = OrderStatus.Closed;
@@ -211,6 +221,7 @@ abstract contract CollateralVault is EpochBook {
 
     function withdraw(address token, uint256 amount) external nonReentrant {
         liveness.checkpoint();
+        _requireNotHalted();
         uint256 available = claimable[msg.sender][token];
         if (amount > available) {
             revert InsufficientClaimable(msg.sender, token, amount, available);
@@ -226,6 +237,31 @@ abstract contract CollateralVault is EpochBook {
 
     function poolOf(uint256 series) external view returns (Pool memory) {
         return _pools[series];
+    }
+
+    /// @dev Reverts when a new order would breach a pause or a launch cap. MarketGuard implements
+    /// it.
+    function _checkPlacement(address owner, address asset, OptionType side, uint256 size)
+        internal
+        view
+        virtual;
+
+    function _written(uint256 series) internal view returns (uint256) {
+        return _pools[series].written;
+    }
+
+    /// @dev Every change to an order's size goes through _grow and _shrink, which keep openSize and
+    /// walletSize equal to the sums over active orders.
+    function _grow(Order storage order, uint256 amount) private {
+        order.size += amount;
+        openSize[order.asset][order.side] += amount;
+        walletSize[order.owner][order.asset][order.side] += amount;
+    }
+
+    function _shrink(Order storage order, uint256 amount) private {
+        order.size -= amount;
+        openSize[order.asset][order.side] -= amount;
+        walletSize[order.owner][order.asset][order.side] -= amount;
     }
 
     /// @dev Writes `amount` of an order into `series`. Fill paths validate price and counterparty.

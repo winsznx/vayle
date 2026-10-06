@@ -39,4 +39,8 @@ contract VaultHarness is CollateralVault {
     function finalize(uint256 series) external {
         _finalize(series);
     }
+
+    function _requireNotHalted() internal pure override {}
+
+    function _checkPlacement(address, address, OptionType, uint256) internal pure override {}
 }

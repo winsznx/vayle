@@ -49,6 +49,8 @@ contract CoreHarness is QuoteSettlement {
 
     function _requireNotHalted() internal pure override {}
 
+    function _checkPlacement(address, address, OptionType, uint256) internal pure override {}
+
     function _requireFillsOpen(address) internal pure override {}
 
     function _checkFillCaps(address, uint256, uint256) internal override {}

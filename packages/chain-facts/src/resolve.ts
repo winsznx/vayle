@@ -1,4 +1,5 @@
 import {
+  BaseError,
   createPublicClient,
   encodeAbiParameters,
   getAddress,
@@ -17,6 +18,7 @@ import {
   AmbiguousAddress,
   AssetNotActive,
   ChainIdMismatch,
+  CodeSizeProbeFailed,
   DecimalsMismatch,
   DomainMismatch,
   FeedMismatch,
@@ -111,6 +113,48 @@ export function eip712DomainSeparator(
       ],
     ),
   );
+}
+
+// Bisection bounds and gas for the code size probe. Deploying a runtime costs 200 gas per byte, and
+// the public RPC's eth_call gas cap stopped a 262,144-byte probe with out of gas, so the ceiling
+// stays at half that.
+const CODE_SIZE_CEILING = 1 << 17;
+const CODE_SIZE_PROBE_GAS = 100_000_000n;
+
+// Init code that deploys `size` zero bytes: PUSH3 size, PUSH1 0, RETURN.
+export function zeroRuntimeInitCode(size: number): Hex {
+  return `0x62${size.toString(16).padStart(6, "0")}6000f3`;
+}
+
+// Whether a CREATE of a `size`-byte runtime succeeds. Only the node's "max code size exceeded"
+// error means no. Any other failure is thrown, so a flaky RPC can't shrink the result.
+async function deploys(client: PublicClient, block: bigint, size: number): Promise<boolean> {
+  try {
+    await client.call({
+      data: zeroRuntimeInitCode(size),
+      blockNumber: block,
+      gas: CODE_SIZE_PROBE_GAS,
+    });
+    return true;
+  } catch (error) {
+    if (error instanceof BaseError && /max code size exceeded/i.test(error.message)) return false;
+    throw error;
+  }
+}
+
+// The largest runtime the chain accepts, by bisecting eth_call creates.
+async function maxCodeSize(client: PublicClient, block: bigint): Promise<number> {
+  let fits = 0;
+  let tooBig = CODE_SIZE_CEILING;
+  if (await deploys(client, block, tooBig)) {
+    throw new CodeSizeProbeFailed(`a ${tooBig}-byte runtime deployed, so the limit is above it`);
+  }
+  while (tooBig - fits > 1) {
+    const mid = Math.floor((fits + tooBig) / 2);
+    if (await deploys(client, block, mid)) fits = mid;
+    else tooBig = mid;
+  }
+  return fits;
 }
 
 export function rpcClient(env: Readonly<Record<string, string | undefined>>): PublicClient {
@@ -245,6 +289,7 @@ export async function resolveFacts(client: PublicClient, now: Date): Promise<Cha
     chain: {
       chainId,
       arbOsVersion: Number(arbOsRaw - ARBOS_VERSION_OFFSET),
+      maxCodeSize: await maxCodeSize(client, block),
       sources: [SOURCES.chainConnecting, SOURCES.chainNode],
     },
     nvda: {
