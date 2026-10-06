@@ -189,4 +189,32 @@ contract SessionCalendarTest is Test {
         // #when
         calendar.nextCloseAfter(0);
     }
+
+    function testFuzz_latestCloseAtOrBeforeMatchesALinearScan(uint64 timestamp) public {
+        // #given
+        vm.prank(timelock);
+        calendar.append(_weeks());
+        uint64[] memory closes = _weeks();
+        timestamp = uint64(bound(timestamp, OCT_09, type(uint64).max));
+        uint64 expected;
+        for (uint256 i; i < closes.length; ++i) {
+            if (closes[i] <= timestamp) expected = closes[i];
+        }
+        // #when
+        uint64 found = calendar.latestCloseAtOrBefore(timestamp);
+        // #then
+        assertEq(found, expected);
+    }
+
+    function test_latestCloseAtOrBeforeRevertsBeforeTheFirstClose() public {
+        // #given
+        vm.prank(timelock);
+        calendar.append(_weeks());
+        // #then
+        vm.expectRevert(
+            abi.encodeWithSelector(SessionCalendar.NoCloseAtOrBefore.selector, OCT_09 - 1)
+        );
+        // #when
+        calendar.latestCloseAtOrBefore(OCT_09 - 1);
+    }
 }

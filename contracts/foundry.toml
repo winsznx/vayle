@@ -33,3 +33,5 @@ line_length = 100
 
 [lint]
 ignore = ["test/**/*.sol"]
+# Timestamps are the protocol clock: calendar closes, exercise windows and liveness gaps.
+exclude_lints = ["block-timestamp"]

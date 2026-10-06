@@ -22,6 +22,7 @@ contract SessionCalendar is Ownable2Step {
     error TooSoon(uint64 close, uint256 earliest);
     error NothingToTruncate(uint256 keep, uint256 length);
     error NoCloseAfter(uint64 timestamp);
+    error NoCloseAtOrBefore(uint64 timestamp);
 
     constructor(address initialOwner) Ownable(initialOwner) {}
 
@@ -61,8 +62,22 @@ contract SessionCalendar is Ownable2Step {
         return _closes[index];
     }
 
+    /// @notice The last scheduled close at or before `timestamp`.
+    function latestCloseAtOrBefore(uint64 timestamp) external view returns (uint64) {
+        uint256 index = _firstAfter(timestamp);
+        if (index == 0) revert NoCloseAtOrBefore(timestamp);
+        return _closes[index - 1];
+    }
+
     /// @notice The first scheduled close strictly after `timestamp`.
     function nextCloseAfter(uint64 timestamp) external view returns (uint64) {
+        uint256 index = _firstAfter(timestamp);
+        if (index == _closes.length) revert NoCloseAfter(timestamp);
+        return _closes[index];
+    }
+
+    /// @dev Index of the first close strictly after `timestamp`, or the length if there's none.
+    function _firstAfter(uint64 timestamp) private view returns (uint256) {
         uint256 lo = 0;
         uint256 hi = _closes.length;
         while (lo < hi) {
@@ -70,7 +85,6 @@ contract SessionCalendar is Ownable2Step {
             if (_closes[mid] <= timestamp) lo = mid + 1;
             else hi = mid;
         }
-        if (lo == _closes.length) revert NoCloseAfter(timestamp);
-        return _closes[lo];
+        return lo;
     }
 }
