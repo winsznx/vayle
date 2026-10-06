@@ -30,3 +30,6 @@ robinhood = "${ROBINHOOD_RPC_URL}"
 
 [fmt]
 line_length = 100
+
+[lint]
+ignore = ["test/**/*.sol"]
