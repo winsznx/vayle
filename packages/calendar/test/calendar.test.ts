@@ -6,6 +6,7 @@ import {
   CalendarYearNotCovered,
   coveredYears,
   creationDeadline,
+  easternWallClock,
   isPlausibleClose,
   isPlausibleCreationDeadline,
   sessionClose,
@@ -232,6 +233,21 @@ describe("isPlausibleCreationDeadline", () => {
     const results = cases.map(isPlausibleCreationDeadline);
     // #then
     assert.deepEqual(results, [true, true, false, false, false]);
+  });
+});
+
+describe("easternWallClock", () => {
+  it("reads Eastern time on both sides of a DST change", () => {
+    // #given: Fri 20:00 EDT, Fri 20:00 EST, Sun 21:00 EST
+    const times = [1_791_590_400, 1_794_013_200, 1_794_189_600];
+    // #when
+    const clocks = times.map(easternWallClock);
+    // #then
+    assert.deepEqual(clocks, [
+      { weekday: 5, minuteOfDay: 20 * 60 },
+      { weekday: 5, minuteOfDay: 20 * 60 },
+      { weekday: 0, minuteOfDay: 21 * 60 },
+    ]);
   });
 });
 

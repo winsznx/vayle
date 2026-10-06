@@ -143,6 +143,14 @@ abstract contract MarketGuard is QuoteSettlement, Ownable2Step {
         return _caps[asset][side];
     }
 
+    /// @notice When the active emergency halt ends, or 0 when none is active.
+    function haltedUntil() external view returns (uint64) {
+        uint256 count = _halts.length;
+        if (count == 0) return 0;
+        uint64 end = _halts[count - 1].end;
+        return block.timestamp < end ? end : 0;
+    }
+
     function haltCount() external view returns (uint256) {
         return _haltCount();
     }

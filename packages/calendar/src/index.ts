@@ -12,6 +12,12 @@ import { NYSE_EARLY_CLOSES, NYSE_HOLIDAYS } from "./nyse.ts";
 
 export type { CivilDate } from "./civil.ts";
 export { DST_SOURCE } from "./dst.ts";
+
+// A US Eastern wall-clock reading: 0 is Sunday through 6, Saturday.
+export interface EasternWallClock {
+  readonly weekday: number;
+  readonly minuteOfDay: number;
+}
 export { NYSE_SOURCE } from "./nyse.ts";
 
 export class CalendarYearNotCovered extends Error {
@@ -116,4 +122,17 @@ export function isPlausibleCreationDeadline(seconds: number): boolean {
     (secondOfDay === 13 * SECONDS_PER_HOUR + 30 * SECONDS_PER_MINUTE ||
       secondOfDay === 14 * SECONDS_PER_HOUR + 30 * SECONDS_PER_MINUTE)
   );
+}
+
+// The US Eastern weekday and minute of day at a UTC time. The offset is looked up by the Eastern
+// date, which is exact except from midnight to 02:00 on a DST-change Sunday.
+export function easternWallClock(seconds: number): EasternWallClock {
+  const utcDate = fromDays(Math.floor(seconds / SECONDS_PER_DAY));
+  const guess = seconds + easternOffsetHours(utcDate) * SECONDS_PER_HOUR;
+  const easternDate = fromDays(Math.floor(guess / SECONDS_PER_DAY));
+  const local = seconds + easternOffsetHours(easternDate) * SECONDS_PER_HOUR;
+  return {
+    weekday: weekday(fromDays(Math.floor(local / SECONDS_PER_DAY))),
+    minuteOfDay: Math.floor((local % SECONDS_PER_DAY) / SECONDS_PER_MINUTE),
+  };
 }

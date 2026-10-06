@@ -1,0 +1,9 @@
+# Deployed by the owner's Cloudflare account. Secrets are set with wrangler secret put:
+# ROBINHOOD_RPC_URL, WATCHER_WEBHOOK_URL, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
+# The market addresses and start block go in [vars] once the contracts are deployed.
+name = "vayle-watcher"
+main = "src/worker.ts"
+compatibility_date = "2026-10-01"
+
+[triggers]
+crons = ["* * * * *"]

@@ -27,6 +27,8 @@ importers:
         specifier: 8.71.1
         version: 8.71.1(eslint@10.12.0)(typescript@6.0.3)
 
+  packages/abi: {}
+
   packages/calendar:
     devDependencies:
       fast-check:
@@ -46,6 +48,18 @@ importers:
       fast-check:
         specifier: 4.10.2
         version: 4.10.2
+
+  services/watcher:
+    dependencies:
+      '@vayle/abi':
+        specifier: workspace:*
+        version: link:../../packages/abi
+      '@vayle/calendar':
+        specifier: workspace:*
+        version: link:../../packages/calendar
+      viem:
+        specifier: 2.57.3
+        version: 2.57.3(typescript@6.0.3)
 
 packages:
 

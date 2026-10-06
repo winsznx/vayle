@@ -1,0 +1,16 @@
+{
+  "name": "@vayle/abi",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node --test \"test/**/*.test.ts\"",
+    "generate": "node src/generate.ts",
+    "check": "node src/generate.ts --check"
+  }
+}

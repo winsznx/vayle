@@ -3,3 +3,4 @@ contracts/lib/
 contracts/out/
 contracts/cache/
 deployments/
+packages/abi/src/generated/

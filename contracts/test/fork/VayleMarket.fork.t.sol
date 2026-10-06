@@ -288,6 +288,28 @@ contract VayleMarketForkTest is CoreFork {
         market.createEpoch(nvda, 1);
     }
 
+    function test_haltedUntilReportsTheActiveHaltsEnd() public {
+        // #given
+        vm.prank(guardian);
+        market.halt();
+        uint64 end = uint64(block.timestamp + 72 hours);
+        // #when
+        uint64 reported = market.haltedUntil();
+        // #then
+        assertEq(reported, end);
+    }
+
+    function test_haltedUntilIsZeroOnceTheHaltEnds() public {
+        // #given
+        vm.prank(guardian);
+        market.halt();
+        vm.warp(block.timestamp + 72 hours);
+        // #when
+        uint64 reported = market.haltedUntil();
+        // #then
+        assertEq(reported, 0);
+    }
+
     function test_aHaltExpiresAfterSeventyTwoHours() public {
         // #given
         _writeCall(alice, ONE);
