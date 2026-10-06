@@ -1,0 +1,28 @@
+{
+  "name": "vayle",
+  "private": true,
+  "license": "MIT",
+  "author": "winsznx",
+  "type": "module",
+  "packageManager": "pnpm@11.23.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "build": "pnpm -r --if-present build",
+    "test": "pnpm -r --if-present test",
+    "guard": "node packages/repo-guard/src/cli.ts tree"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.19.1",
+    "eslint": "10.12.0",
+    "prettier": "3.9.9",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.1"
+  }
+}

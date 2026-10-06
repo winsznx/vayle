@@ -1,0 +1,32 @@
+# Private working docs and local agent instructions
+/internal
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+
+# Secrets and keys
+.env*
+!.env.example
+.dev.vars*
+*.pem
+*.key
+*.p12
+*.keystore
+keystore/
+keystores/
+
+# Dependencies and build output
+node_modules/
+dist/
+coverage/
+.turbo/
+.next/
+.open-next/
+.wrangler/
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+
+# OS and editor files
+.DS_Store
+*.log
