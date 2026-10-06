@@ -9,8 +9,9 @@ export interface ChainFacts {
   readonly chain: {
     readonly chainId: number;
     readonly arbOsVersion: number;
-    // The largest contract runtime a CREATE accepts, in bytes.
+    // The largest contract runtime and init code a CREATE accepts, in bytes.
     readonly maxCodeSize: number;
+    readonly maxInitCodeSize: number;
     readonly sources: readonly string[];
   };
   readonly nvda: {

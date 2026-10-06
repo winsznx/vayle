@@ -1,13 +1,14 @@
 {
   "block": {
-    "hash": "0x2efbd771ae7fdb7ac442fab4f6d2f1f5bfa8f01d74b4a873c5a8e0826d7e0d7f",
-    "number": "82012560",
-    "timestamp": 1791328751
+    "hash": "0x3a79251fff0d39c5b13d50deccff6f43035962e5dd1ac40bed7b1497e57ae78f",
+    "number": "82018194",
+    "timestamp": 1791329330
   },
   "chain": {
     "arbOsVersion": 61,
     "chainId": 4663,
     "maxCodeSize": 98304,
+    "maxInitCodeSize": 196608,
     "sources": [
       "https://docs.robinhood.com/chain/connecting",
       "https://docs.robinhood.com/chain/run-a-full-node"
@@ -24,7 +25,7 @@
       "https://eips.ethereum.org/EIPS/eip-8056"
     ]
   },
-  "generatedAt": "2026-10-06T23:19:11.144Z",
+  "generatedAt": "2026-10-06T23:28:51.053Z",
   "network": "robinhood-mainnet",
   "nvda": {
     "accessRegistry": "0xe10b6f6B275de231345c20D14Ab812db62151b00",

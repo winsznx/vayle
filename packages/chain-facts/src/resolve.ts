@@ -115,10 +115,11 @@ export function eip712DomainSeparator(
   );
 }
 
-// Bisection bounds and gas for the code size probe. Deploying a runtime costs 200 gas per byte, and
-// the public RPC's eth_call gas cap stopped a 262,144-byte probe with out of gas, so the ceiling
-// stays at half that.
-const CODE_SIZE_CEILING = 1 << 17;
+// Bisection ceilings and gas for the code size probes. Deploying a runtime costs 200 gas per byte,
+// and the public RPC's eth_call gas cap stopped a 262,144-byte runtime probe with out of gas, so
+// that ceiling stays at half. Init code costs about 4 gas per byte, so its ceiling can be higher.
+const RUNTIME_CEILING = 1 << 17;
+const INIT_CODE_CEILING = 1 << 18;
 const CODE_SIZE_PROBE_GAS = 100_000_000n;
 
 // Init code that deploys `size` zero bytes: PUSH3 size, PUSH1 0, RETURN.
@@ -126,35 +127,58 @@ export function zeroRuntimeInitCode(size: number): Hex {
   return `0x62${size.toString(16).padStart(6, "0")}6000f3`;
 }
 
-// Whether a CREATE of a `size`-byte runtime succeeds. Only the node's "max code size exceeded"
-// error means no. Any other failure is thrown, so a flaky RPC can't shrink the result.
-async function deploys(client: PublicClient, block: bigint, size: number): Promise<boolean> {
+// Init code `size` bytes long that deploys nothing: STOP, then zero padding.
+export function emptyInitCodeOfSize(size: number): Hex {
+  return `0x${"00".repeat(size)}`;
+}
+
+// Whether a CREATE with this init code succeeds. Only the node's error for the limit being probed
+// means no. Any other failure is thrown, so a flaky RPC can't shrink the result.
+async function creates(
+  client: PublicClient,
+  block: bigint,
+  initCode: Hex,
+  limitError: RegExp,
+): Promise<boolean> {
   try {
-    await client.call({
-      data: zeroRuntimeInitCode(size),
-      blockNumber: block,
-      gas: CODE_SIZE_PROBE_GAS,
-    });
+    await client.call({ data: initCode, blockNumber: block, gas: CODE_SIZE_PROBE_GAS });
     return true;
   } catch (error) {
-    if (error instanceof BaseError && /max code size exceeded/i.test(error.message)) return false;
+    if (error instanceof BaseError && limitError.test(error.message)) return false;
     throw error;
   }
 }
 
-// The largest runtime the chain accepts, by bisecting eth_call creates.
-async function maxCodeSize(client: PublicClient, block: bigint): Promise<number> {
-  let fits = 0;
-  let tooBig = CODE_SIZE_CEILING;
-  if (await deploys(client, block, tooBig)) {
-    throw new CodeSizeProbeFailed(`a ${tooBig}-byte runtime deployed, so the limit is above it`);
+// The largest size `fits` accepts, by bisection below `ceiling`.
+async function largestFitting(
+  ceiling: number,
+  fits: (size: number) => Promise<boolean>,
+): Promise<number> {
+  let fitting = 0;
+  let tooBig = ceiling;
+  if (await fits(tooBig)) {
+    throw new CodeSizeProbeFailed(`${tooBig} bytes fit, so the limit is above the probe ceiling`);
   }
-  while (tooBig - fits > 1) {
-    const mid = Math.floor((fits + tooBig) / 2);
-    if (await deploys(client, block, mid)) fits = mid;
+  while (tooBig - fitting > 1) {
+    const mid = Math.floor((fitting + tooBig) / 2);
+    if (await fits(mid)) fitting = mid;
     else tooBig = mid;
   }
-  return fits;
+  return fitting;
+}
+
+// The largest contract runtime and the largest init code the chain accepts.
+async function codeSizeLimits(
+  client: PublicClient,
+  block: bigint,
+): Promise<{ maxCodeSize: number; maxInitCodeSize: number }> {
+  const maxCodeSize = await largestFitting(RUNTIME_CEILING, (size) =>
+    creates(client, block, zeroRuntimeInitCode(size), /max code size exceeded/i),
+  );
+  const maxInitCodeSize = await largestFitting(INIT_CODE_CEILING, (size) =>
+    creates(client, block, emptyInitCodeOfSize(size), /max initcode size exceeded/i),
+  );
+  return { maxCodeSize, maxInitCodeSize };
 }
 
 export function rpcClient(env: Readonly<Record<string, string | undefined>>): PublicClient {
@@ -289,7 +313,7 @@ export async function resolveFacts(client: PublicClient, now: Date): Promise<Cha
     chain: {
       chainId,
       arbOsVersion: Number(arbOsRaw - ARBOS_VERSION_OFFSET),
-      maxCodeSize: await maxCodeSize(client, block),
+      ...(await codeSizeLimits(client, block)),
       sources: [SOURCES.chainConnecting, SOURCES.chainNode],
     },
     nvda: {

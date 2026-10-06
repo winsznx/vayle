@@ -5,6 +5,7 @@ import { diffFacts } from "../src/facts.ts";
 import {
   BEACON_SLOT,
   eip712DomainSeparator,
+  emptyInitCodeOfSize,
   IMPLEMENTATION_SLOT,
   zeroRuntimeInitCode,
 } from "../src/resolve.ts";
@@ -68,5 +69,14 @@ describe("zeroRuntimeInitCode", () => {
     const code = zeroRuntimeInitCode(98_304);
     // #then
     assert.equal(code, "0x620180006000f3");
+  });
+});
+
+describe("emptyInitCodeOfSize", () => {
+  it("is a STOP padded to the size", () => {
+    // #when
+    const code = emptyInitCodeOfSize(3);
+    // #then
+    assert.equal(code, "0x000000");
   });
 });

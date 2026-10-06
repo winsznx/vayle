@@ -1,3 +1,3 @@
 # Services
 
-Offchain services: the watcher (step 8), the keeper (step 10), and the maker and indexer (step 11). Settlement never depends on them.
+Offchain services: the watcher, the keeper, the maker and the indexer. Settlement never depends on them.

@@ -68,9 +68,11 @@ jobs:
       - name: Lint
         working-directory: contracts
         run: forge lint
+      # Sizes are checked against the chain's own limits by test/Deployables.t.sol, since
+      # forge build --sizes only knows the 24,576-byte mainnet Ethereum limit.
       - name: Build
         working-directory: contracts
-        run: forge build --sizes
+        run: forge build
       - name: Test
         working-directory: contracts
         env:

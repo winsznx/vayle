@@ -1,3 +1,3 @@
 # Web app
 
-The holder-facing app. It lands in build step 11.
+The holder-facing app. It isn't built yet.
