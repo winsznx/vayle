@@ -2,6 +2,7 @@
 pragma solidity 0.8.37;
 
 import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {StockTokenRegistry} from "../assets/StockTokenRegistry.sol";
 import {ExternalReads} from "../libraries/ExternalReads.sol";
 import {OptionType} from "../libraries/SeriesId.sol";
 import {QuoteSettlement} from "./QuoteSettlement.sol";
@@ -177,8 +178,10 @@ abstract contract MarketGuard is QuoteSettlement, Ownable2Step {
         if (block.timestamp < end) revert MarketHalted(end);
     }
 
+    /// @dev A delisted asset is settlement-only: its live series settle, but nothing new is written.
     function _requireFillsOpen(address asset) internal view override {
         _requireNotHalted();
+        if (!registry.isListed(asset)) revert StockTokenRegistry.NotListed(asset);
         if (paused || assetPaused[asset]) revert MarketPaused(asset);
         if (ExternalReads.oraclePaused(asset)) revert OraclePaused(asset);
     }
