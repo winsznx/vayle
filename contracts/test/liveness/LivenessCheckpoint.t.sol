@@ -21,12 +21,26 @@ contract LivenessCheckpointTest is Test {
         liveness.checkpoint();
     }
 
-    function test_theFirstCheckpointRecordsNoGap() public {
+    function test_deploymentCountsAsTheFirstCheckpoint() public view {
+        // #then
+        assertEq(liveness.lastSeen(), START);
+    }
+
+    function test_silenceBetweenDeploymentAndTheFirstPingIsAGap() public {
+        // #given
+        uint64 firstPing = START + 20 minutes;
+        // #then
+        vm.expectEmit(address(liveness));
+        emit GapRecorded(0, START, firstPing);
         // #when
-        liveness.checkpoint();
+        _checkpointAt(firstPing);
+    }
+
+    function test_aFirstPingSoonAfterDeploymentRecordsNoGap() public {
+        // #when
+        _checkpointAt(START + liveness.GAP_THRESHOLD());
         // #then
         assertEq(liveness.gapCount(), 0);
-        assertEq(liveness.lastSeen(), START);
     }
 
     function test_recordsAQuietStretchLongerThanTheThreshold() public {

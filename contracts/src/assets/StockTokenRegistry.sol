@@ -5,13 +5,15 @@ import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IPriceFeed} from "../interfaces/IPriceFeed.sol";
 import {IScaledUIAmount, IScaledUIAmountPending, IStockToken} from "../interfaces/IStockToken.sol";
+import {ExternalReads} from "../libraries/ExternalReads.sol";
 import {Units} from "../libraries/Units.sol";
 
 /// @title StockTokenRegistry
 /// @notice The Stock Tokens Vayle lists, each with its price feed and its order and strike grid.
 /// @dev Owned by the timelocked admin. A token's identity is its issuer uid, checked on chain when
 /// it's listed. Live series copy what they need when they're created and never read this registry
-/// again, so delisting only stops new epochs.
+/// again, so delisting only stops new epochs. Reads that fail revert ExternalReads.NotAStockToken
+/// or ExternalReads.FeedUnusable.
 contract StockTokenRegistry is Ownable2Step {
     uint256 internal constant MAX_STRIKE_RANGE_BPS = 10_000;
 
@@ -45,10 +47,8 @@ contract StockTokenRegistry is Ownable2Step {
     event AssetDelisted(address indexed token);
 
     error NotAContract(address account);
-    error NotAStockToken(address token);
     error UidMismatch(address token, bytes32 expected, bytes32 actual);
     error InterfaceNotSupported(address token, bytes4 interfaceId);
-    error FeedUnusable(address feed);
     error InexactGrid(uint256 lot, uint256 priceTick, uint256 rawUnit);
     error BadStrikeGrid(uint256 strikeTick, uint256 priceTick, uint16 strikeRangeBps);
     error AlreadyListed(address token);
@@ -71,7 +71,7 @@ contract StockTokenRegistry is Ownable2Step {
         if (_assets[token].listed) revert AlreadyListed(token);
         if (token.code.length == 0) revert NotAContract(token);
         _checkIdentity(IStockToken(token), uid);
-        uint8 tokenDecimals = IStockToken(token).decimals();
+        uint8 tokenDecimals = ExternalReads.tokenDecimals(token);
         uint256 rawUnit = 10 ** tokenDecimals;
         uint8 feedDecimals = _checkFeed(feed);
         if (!Units.gridIsExact(lot, priceTick, rawUnit)) {
@@ -117,11 +117,13 @@ contract StockTokenRegistry is Ownable2Step {
     function _checkIdentity(IStockToken token, bytes32 uid) private view {
         (bool ok, bytes memory data) =
             address(token).staticcall(abi.encodeCall(IStockToken.uid, ()));
-        if (!ok || data.length != 32) revert NotAStockToken(address(token));
+        if (!ok || data.length != 32) revert ExternalReads.NotAStockToken(address(token));
         bytes32 actual = abi.decode(data, (bytes32));
         if (actual != uid) revert UidMismatch(address(token), uid, actual);
         _requireInterface(token, type(IScaledUIAmount).interfaceId);
         _requireInterface(token, type(IScaledUIAmountPending).interfaceId);
+        // The price adapter and the close observations act on the flag. Listing only needs it.
+        ExternalReads.requireOracleFlag(address(token));
     }
 
     function _requireInterface(IStockToken token, bytes4 interfaceId) private view {
@@ -140,12 +142,12 @@ contract StockTokenRegistry is Ownable2Step {
 
     /// @dev Listing only checks that the feed answers. Staleness is enforced at each close by the
     /// price adapter.
-    // slither-disable-next-line oracle-no-staleness
     function _checkFeed(IPriceFeed feed) private view returns (uint8 feedDecimals) {
         if (address(feed).code.length == 0) revert NotAContract(address(feed));
-        feedDecimals = feed.decimals();
-        // slither-disable-next-line unused-return
-        (, int256 answer,,,) = feed.latestRoundData();
-        if (feedDecimals < usdgDecimals || answer <= 0) revert FeedUnusable(address(feed));
+        feedDecimals = ExternalReads.feedDecimals(address(feed));
+        int256 answer = ExternalReads.latestAnswer(address(feed));
+        if (feedDecimals < usdgDecimals || answer <= 0) {
+            revert ExternalReads.FeedUnusable(address(feed));
+        }
     }
 }

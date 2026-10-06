@@ -5,6 +5,7 @@ import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/Reentrancy
 import {PriceAdapter} from "../assets/PriceAdapter.sol";
 import {StockTokenRegistry} from "../assets/StockTokenRegistry.sol";
 import {SessionCalendar} from "../calendar/SessionCalendar.sol";
+import {ExternalReads} from "../libraries/ExternalReads.sol";
 import {
     CollateralMode,
     ExerciseStyle,
@@ -20,11 +21,13 @@ import {OptionSeries} from "./OptionSeries.sol";
 /// @notice Weekly epochs per asset and their strike grids.
 /// @dev An epoch is created at the latest scheduled close (its opening) with the reference price
 /// at that close, and expires at the next scheduled close. It copies the asset's grid and the
-/// window length, so later changes to the registry or calendar can't touch a live epoch.
+/// window length, so later changes to the registry or calendar can't touch a live epoch. Creation
+/// needs evidence from the half hour before the opening: no liveness gap, and keeper observations
+/// of the asset's oracle that never saw a pause, the last one within five minutes of the close.
 abstract contract EpochBook is OptionSeries, ReentrancyGuardTransient {
     uint256 internal constant BPS = 10_000;
-    uint256 public constant CREATION_WINDOW = 65 hours + 30 minutes;
     uint64 public constant LIVENESS_LOOKBACK = 30 minutes;
+    uint64 public constant CLOSE_OBSERVATION_RECENCY = 5 minutes;
     uint256 public constant REFERENCE_RECENCY = 8 days;
     uint32 public constant WINDOW_LENGTH = 2 hours;
 
@@ -42,6 +45,13 @@ abstract contract EpochBook is OptionSeries, ReentrancyGuardTransient {
         uint16 strikeRangeBps;
     }
 
+    /// @param lastClear The latest observation that saw the oracle unpaused.
+    /// @param pausedSeen Whether any observation saw it paused.
+    struct CloseObservation {
+        uint64 lastClear;
+        bool pausedSeen;
+    }
+
     SessionCalendar public immutable calendar;
     StockTokenRegistry public immutable registry;
     PriceAdapter public immutable priceAdapter;
@@ -50,6 +60,7 @@ abstract contract EpochBook is OptionSeries, ReentrancyGuardTransient {
 
     mapping(address asset => mapping(uint64 expiry => Epoch)) private _epochs;
     mapping(address asset => uint64) public latestExpiry;
+    mapping(address asset => mapping(uint64 close => CloseObservation)) private _observations;
 
     event EpochCreated(
         address indexed asset,
@@ -60,10 +71,14 @@ abstract contract EpochBook is OptionSeries, ReentrancyGuardTransient {
         uint64 referenceUpdatedAt,
         uint32 windowLength
     );
+    event OraclePauseObserved(address indexed asset, uint64 indexed close, uint64 observedAt);
 
-    error CreationWindowClosed(uint64 opening, uint256 deadline);
+    error CreationWindowClosed(uint64 opening, uint64 deadline);
     error EpochExists(address asset, uint64 expiry);
     error LivenessGapAtClose(uint64 opening, uint64 gapSeconds);
+    error NotNearAClose(uint64 close);
+    error OraclePausedAtClose(address asset, uint64 close);
+    error CloseNotObserved(address asset, uint64 close);
     error UnknownEpoch(address asset, uint64 expiry);
     error StrikeNotListed(address asset, uint64 expiry, OptionType optionType, uint256 strike);
 
@@ -89,13 +104,17 @@ abstract contract EpochBook is OptionSeries, ReentrancyGuardTransient {
     {
         liveness.checkpoint();
         StockTokenRegistry.Asset memory config = registry.asset(asset);
-        uint64 opening = calendar.latestCloseAtOrBefore(uint64(block.timestamp));
-        uint256 deadline = opening + CREATION_WINDOW;
-        if (block.timestamp >= deadline) revert CreationWindowClosed(opening, deadline);
+        SessionCalendar.Boundary memory boundary =
+            calendar.latestBoundaryAtOrBefore(uint64(block.timestamp));
+        uint64 opening = boundary.close;
+        if (block.timestamp >= boundary.creationDeadline) {
+            revert CreationWindowClosed(opening, boundary.creationDeadline);
+        }
         expiry = calendar.nextCloseAfter(opening);
         if (_epochs[asset][expiry].expiry != 0) revert EpochExists(asset, expiry);
         uint64 gap = liveness.gapOverlap(opening - LIVENESS_LOOKBACK, opening);
         if (gap != 0) revert LivenessGapAtClose(opening, gap);
+        _requireClearAtClose(asset, opening);
 
         Epoch storage previous = _epochs[asset][latestExpiry[asset]];
         uint256 previousReference = previous.expiry != 0
@@ -122,6 +141,32 @@ abstract contract EpochBook is OptionSeries, ReentrancyGuardTransient {
         emit EpochCreated(asset, expiry, opening, price, round, updatedAt, WINDOW_LENGTH);
     }
 
+    /// @notice Records whether the asset's oracle is paused, for the close coming up within
+    /// LIVENESS_LOOKBACK. The keeper calls it every minute in that stretch for each listed asset,
+    /// and anyone may call it.
+    function observeClose(address asset) external nonReentrant {
+        liveness.checkpoint();
+        if (!registry.isListed(asset)) revert StockTokenRegistry.NotListed(asset);
+        uint64 now_ = uint64(block.timestamp);
+        uint64 close = calendar.nextCloseAfter(now_ - 1);
+        if (close - now_ > LIVENESS_LOOKBACK) revert NotNearAClose(close);
+        CloseObservation storage seen = _observations[asset][close];
+        if (ExternalReads.oraclePaused(asset)) {
+            seen.pausedSeen = true;
+            emit OraclePauseObserved(asset, close, now_);
+        } else {
+            seen.lastClear = now_;
+        }
+    }
+
+    function closeObservation(address asset, uint64 close)
+        external
+        view
+        returns (CloseObservation memory)
+    {
+        return _observations[asset][close];
+    }
+
     function epoch(address asset, uint64 expiry) external view returns (Epoch memory) {
         return _epoch(asset, expiry);
     }
@@ -132,6 +177,16 @@ abstract contract EpochBook is OptionSeries, ReentrancyGuardTransient {
         returns (bool)
     {
         return _isListedStrike(_epoch(asset, expiry), optionType, strike);
+    }
+
+    /// @dev A pause seen at any point in the lookback refuses the week, as does no unpaused
+    /// observation in the last CLOSE_OBSERVATION_RECENCY before the close.
+    function _requireClearAtClose(address asset, uint64 close) private view {
+        CloseObservation memory seen = _observations[asset][close];
+        if (seen.pausedSeen) revert OraclePausedAtClose(asset, close);
+        if (seen.lastClear + CLOSE_OBSERVATION_RECENCY < close) {
+            revert CloseNotObserved(asset, close);
+        }
     }
 
     function _epoch(address asset, uint64 expiry) internal view returns (Epoch storage e) {

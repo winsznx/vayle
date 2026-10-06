@@ -4,6 +4,7 @@ pragma solidity 0.8.37;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import {CollateralVault} from "../../src/core/CollateralVault.sol";
+import {EpochBook} from "../../src/core/EpochBook.sol";
 import {QuoteSettlement} from "../../src/core/QuoteSettlement.sol";
 import {OptionType} from "../../src/libraries/SeriesId.sol";
 import {Units} from "../../src/libraries/Units.sol";
@@ -19,13 +20,21 @@ contract QuoteSettlementForkTest is CoreFork {
     uint256 internal constant PREMIUM = 2_500_000;
 
     CoreHarness internal market;
+    // A second deployment sharing the calendar, registry and liveness, to check domain separation.
+    CoreHarness internal other;
     address internal quoter;
     uint256 internal quoterKey;
     address internal treasury = makeAddr("treasury");
 
     function _deployCore() internal override returns (CollateralVault) {
         market = new CoreHarness(calendar, registry, adapter, liveness);
+        other = new CoreHarness(calendar, registry, adapter, liveness);
         return market;
+    }
+
+    function _keeperBooks() internal view override returns (EpochBook[] memory books) {
+        books = new EpochBook[](2);
+        (books[0], books[1]) = (market, other);
     }
 
     function setUp() public override {
@@ -169,8 +178,7 @@ contract QuoteSettlementForkTest is CoreFork {
     }
 
     function test_aQuoteSignedForAnotherDeploymentDoesntVerify() public {
-        // #given: a second deployment with its own epoch and an order in the same series
-        CoreHarness other = new CoreHarness(calendar, registry, adapter, liveness);
+        // #given: the second deployment's own epoch and an order in the same series
         (uint80 round,,) = _lastRoundAtOrBefore(OCT_02);
         other.createEpoch(nvda, round);
         other.seriesFor(nvda, OCT_09, OptionType.Call, callStrike);

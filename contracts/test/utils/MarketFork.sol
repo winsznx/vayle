@@ -5,6 +5,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {PriceAdapter} from "../../src/assets/PriceAdapter.sol";
 import {StockTokenRegistry} from "../../src/assets/StockTokenRegistry.sol";
 import {SessionCalendar} from "../../src/calendar/SessionCalendar.sol";
+import {EpochBook} from "../../src/core/EpochBook.sol";
 import {IPriceFeed} from "../../src/interfaces/IPriceFeed.sol";
 import {LivenessCheckpoint} from "../../src/liveness/LivenessCheckpoint.sol";
 import {ForkTest} from "./ForkTest.sol";
@@ -12,12 +13,21 @@ import {ForkTest} from "./ForkTest.sol";
 /// @notice Fork fixture that replays real history: it warps back before recent Friday closes so
 /// the calendar can hold them, then uses the feed's real rounds at those closes.
 abstract contract MarketFork is ForkTest {
-    // Friday 16:00 ET closes in UTC, regular sessions on the exchange's published calendar.
+    // Friday 16:00 ET closes in UTC, regular sessions on the exchange's published calendar, each
+    // with the Monday 09:30 ET after it. All fall in daylight time.
     uint64 internal constant SEP_18 = 1_789_761_600;
+    uint64 internal constant SEP_21_OPEN = 1_789_997_400;
     uint64 internal constant SEP_25 = 1_790_366_400;
+    uint64 internal constant SEP_28_OPEN = 1_790_602_200;
     uint64 internal constant OCT_02 = 1_790_971_200;
+    uint64 internal constant OCT_05_OPEN = 1_791_207_000;
     uint64 internal constant OCT_09 = 1_791_576_000;
+    uint64 internal constant OCT_12_OPEN = 1_791_811_800;
     uint64 internal constant OCT_16 = 1_792_180_800;
+    uint64 internal constant OCT_19_OPEN = 1_792_416_600;
+
+    // The keeper starts pinging this long before each close.
+    uint64 internal constant KEEPER_LEAD = 45 minutes;
 
     uint256 internal constant LOT = 1e16;
     uint256 internal constant PRICE_TICK = 100;
@@ -34,11 +44,14 @@ abstract contract MarketFork is ForkTest {
         super.setUp();
         vm.warp(SEP_18 - 2 days);
         calendar = new SessionCalendar(admin);
-        uint64[] memory closes = new uint64[](5);
-        (closes[0], closes[1], closes[2], closes[3], closes[4]) =
-        (SEP_18, SEP_25, OCT_02, OCT_09, OCT_16);
+        SessionCalendar.Boundary[] memory boundaries = new SessionCalendar.Boundary[](5);
+        boundaries[0] = SessionCalendar.Boundary(SEP_18, SEP_21_OPEN);
+        boundaries[1] = SessionCalendar.Boundary(SEP_25, SEP_28_OPEN);
+        boundaries[2] = SessionCalendar.Boundary(OCT_02, OCT_05_OPEN);
+        boundaries[3] = SessionCalendar.Boundary(OCT_09, OCT_12_OPEN);
+        boundaries[4] = SessionCalendar.Boundary(OCT_16, OCT_19_OPEN);
         vm.prank(admin);
-        calendar.append(closes);
+        calendar.append(boundaries);
         registry = new StockTokenRegistry(admin, IERC20Metadata(usdg));
         vm.prank(admin);
         registry.list(
@@ -71,6 +84,31 @@ abstract contract MarketFork is ForkTest {
         for (uint256 t = from; t <= to; t += 1 minutes) {
             vm.warp(t);
             liveness.checkpoint();
+        }
+    }
+
+    /// @dev The keeper's schedule around a close, starting at `from` (KEEPER_LEAD before it when
+    /// on time): liveness pings every minute, NVDA oracle observations instead of pings in the
+    /// lookback through the close, and pings after it until `until`.
+    function _runKeeper(EpochBook book, uint64 close, uint256 from, uint256 until) internal {
+        EpochBook[] memory books = new EpochBook[](1);
+        books[0] = book;
+        _runKeeper(books, close, from, until);
+    }
+
+    function _runKeeper(EpochBook[] memory books, uint64 close, uint256 from, uint256 until)
+        internal
+    {
+        uint64 lookback = books[0].LIVENESS_LOOKBACK();
+        for (uint256 t = from; t <= until; t += 1 minutes) {
+            vm.warp(t);
+            if (t + lookback >= close && t <= close) {
+                for (uint256 i; i < books.length; ++i) {
+                    books[i].observeClose(nvda);
+                }
+            } else {
+                liveness.checkpoint();
+            }
         }
     }
 }

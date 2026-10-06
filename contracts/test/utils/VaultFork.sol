@@ -3,6 +3,7 @@ pragma solidity 0.8.37;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {CollateralVault} from "../../src/core/CollateralVault.sol";
+import {EpochBook} from "../../src/core/EpochBook.sol";
 import {OptionType} from "../../src/libraries/SeriesId.sol";
 import {Units} from "../../src/libraries/Units.sol";
 import {VaultHarness} from "../core/VaultHarness.sol";
@@ -35,11 +36,17 @@ abstract contract CoreFork is MarketFork {
 
     function _deployCore() internal virtual returns (CollateralVault);
 
+    /// @dev Every core the keeper serves. A suite with a second deployment adds it here.
+    function _keeperBooks() internal view virtual returns (EpochBook[] memory books) {
+        books = new EpochBook[](1);
+        books[0] = core;
+    }
+
     function setUp() public virtual override {
         super.setUp();
         core = _deployCore();
         (uint80 round, int256 answer,) = _lastRoundAtOrBefore(OCT_02);
-        _keepAlive(OCT_02 - 40 minutes, OCT_02 + 10 minutes);
+        _runKeeper(_keeperBooks(), OCT_02, OCT_02 - KEEPER_LEAD, OCT_02 + 10 minutes);
         core.createEpoch(nvda, round);
         referencePrice = _referencePriceFrom(answer);
         callStrike = (referencePrice / STRIKE_TICK + 1) * STRIKE_TICK;

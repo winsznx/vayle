@@ -5,9 +5,11 @@ pragma solidity 0.8.37;
 /// @notice Records when the chain went quiet, so settlement windows can be extended by time
 /// nobody could transact.
 /// @dev This chain has no sequencer uptime feed. Every Vayle state change calls checkpoint(), and
-/// a keeper calls it every minute around each close and exercise window. Any stretch longer than
-/// GAP_THRESHOLD with no checkpoint is recorded as a gap. A missing keeper also opens a gap, which
-/// only ever lengthens a window. Anyone can call checkpoint() to close a gap that isn't an outage.
+/// a keeper calls it every minute from 45 minutes before each close and through each exercise
+/// window. Any stretch longer than GAP_THRESHOLD with no checkpoint is recorded as a gap, from the
+/// last checkpoint to the call that ends it, and a recorded gap is permanent. Deployment counts as
+/// the first checkpoint, so silence before the first ping is a gap too. A missing keeper only ever
+/// refuses an epoch or lengthens a window. Anyone can call checkpoint().
 contract LivenessCheckpoint {
     uint64 public constant GAP_THRESHOLD = 5 minutes;
 
@@ -21,10 +23,14 @@ contract LivenessCheckpoint {
 
     event GapRecorded(uint256 indexed index, uint64 start, uint64 end);
 
+    constructor() {
+        lastSeen = uint64(block.timestamp);
+    }
+
     function checkpoint() external {
         uint64 now_ = uint64(block.timestamp);
         uint64 previous = lastSeen;
-        if (previous != 0 && now_ - previous > GAP_THRESHOLD) {
+        if (now_ - previous > GAP_THRESHOLD) {
             _gaps.push(Gap({start: previous, end: now_}));
             emit GapRecorded(_gaps.length - 1, previous, now_);
         }

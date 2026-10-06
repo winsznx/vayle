@@ -13,6 +13,7 @@ import {
     SettlementType
 } from "../../src/libraries/SeriesId.sol";
 import {EpochBookHarness} from "../core/EpochBookHarness.sol";
+import {ChainActors, IOracleAdmin} from "../utils/ChainActors.sol";
 import {MarketFork} from "../utils/MarketFork.sol";
 
 contract EpochBookForkTest is MarketFork {
@@ -40,13 +41,13 @@ contract EpochBookForkTest is MarketFork {
     }
 
     function _createOct02() internal returns (uint64) {
-        _keepAlive(OCT_02 - 40 minutes, OCT_02 + 10 minutes);
+        _runKeeper(book, OCT_02, OCT_02 - KEEPER_LEAD, OCT_02 + 10 minutes);
         return book.createEpoch(nvda, oct02Round);
     }
 
     function test_createsTheEpochFromTheLatestCloseToTheNext() public {
         // #given
-        _keepAlive(OCT_02 - 40 minutes, OCT_02 + 10 minutes);
+        _runKeeper(book, OCT_02, OCT_02 - KEEPER_LEAD, OCT_02 + 10 minutes);
         (,, uint256 updatedAt) = _lastRoundAtOrBefore(OCT_02);
         // #then
         vm.expectEmit(address(book));
@@ -66,16 +67,122 @@ contract EpochBookForkTest is MarketFork {
         assertEq(book.latestExpiry(nvda), OCT_09);
     }
 
-    function test_refusesOnceTheCreationWindowHasClosed() public {
+    function test_refusesOnceTheBoundarysCreationDeadlineHasPassed() public {
         // #given
-        uint256 deadline = OCT_02 + book.CREATION_WINDOW();
-        vm.warp(deadline);
+        _runKeeper(book, OCT_02, OCT_02 - KEEPER_LEAD, OCT_02 + 10 minutes);
+        vm.warp(OCT_05_OPEN);
         // #then
         vm.expectRevert(
-            abi.encodeWithSelector(EpochBook.CreationWindowClosed.selector, OCT_02, deadline)
+            abi.encodeWithSelector(EpochBook.CreationWindowClosed.selector, OCT_02, OCT_05_OPEN)
         );
         // #when
         book.createEpoch(nvda, oct02Round);
+    }
+
+    function test_createsUntilTheSecondBeforeTheDeadline() public {
+        // #given
+        _runKeeper(book, OCT_02, OCT_02 - KEEPER_LEAD, OCT_02 + 10 minutes);
+        vm.warp(OCT_05_OPEN - 1);
+        // #when
+        uint64 expiry = book.createEpoch(nvda, oct02Round);
+        // #then
+        assertEq(expiry, OCT_09);
+    }
+
+    function test_aFirstPingInsideTheLookbackRefusesTheWeek() public {
+        // #given: nothing pinged since deployment, and the keeper's first ping lands one second
+        // into the lookback, so the quiet stretch it ends overlaps the lookback by one second
+        _runKeeper(book, OCT_02, OCT_02 - 30 minutes + 1, OCT_02 + 10 minutes);
+        // #then
+        vm.expectRevert(
+            abi.encodeWithSelector(EpochBook.LivenessGapAtClose.selector, OCT_02, uint64(1))
+        );
+        // #when
+        book.createEpoch(nvda, oct02Round);
+    }
+
+    function test_theKeeperLeadAbsorbsAFirstPingFourteenMinutesLate() public {
+        // #given
+        _runKeeper(book, OCT_02, OCT_02 - KEEPER_LEAD + 14 minutes, OCT_02 + 10 minutes);
+        // #when
+        uint64 expiry = book.createEpoch(nvda, oct02Round);
+        // #then
+        assertEq(expiry, OCT_09);
+    }
+
+    function test_refusesWhenTheOracleWasPausedInTheLookbackEvenAfterItResumed() public {
+        // #given: the real pauser pauses NVDA's oracle ten minutes before the close and
+        // unpauses it five minutes after
+        _runKeeper(book, OCT_02, OCT_02 - KEEPER_LEAD, OCT_02 - 11 minutes);
+        vm.prank(ChainActors.ORACLE_PAUSER);
+        IOracleAdmin(nvda).pauseOracle();
+        _runKeeper(book, OCT_02, OCT_02 - 10 minutes, OCT_02 + 5 minutes);
+        vm.prank(ChainActors.ORACLE_PAUSER);
+        IOracleAdmin(nvda).unpauseOracle();
+        vm.warp(OCT_02 + 10 minutes);
+        // #then
+        vm.expectRevert(
+            abi.encodeWithSelector(EpochBook.OraclePausedAtClose.selector, nvda, OCT_02)
+        );
+        // #when
+        book.createEpoch(nvda, oct02Round);
+    }
+
+    function test_refusesWithoutAnyOracleObservation() public {
+        // #given: liveness pings only
+        _keepAlive(OCT_02 - KEEPER_LEAD, OCT_02 + 10 minutes);
+        // #then
+        vm.expectRevert(abi.encodeWithSelector(EpochBook.CloseNotObserved.selector, nvda, OCT_02));
+        // #when
+        book.createEpoch(nvda, oct02Round);
+    }
+
+    function test_refusesWhenTheLastObservationIsOlderThanFiveMinutesAtTheClose() public {
+        // #given: observations stop six minutes before the close, pings continue
+        _runKeeper(book, OCT_02, OCT_02 - KEEPER_LEAD, OCT_02 - 6 minutes);
+        _keepAlive(OCT_02 - 5 minutes, OCT_02 + 10 minutes);
+        // #then
+        vm.expectRevert(abi.encodeWithSelector(EpochBook.CloseNotObserved.selector, nvda, OCT_02));
+        // #when
+        book.createEpoch(nvda, oct02Round);
+    }
+
+    function test_anObservationRecordsAnUnpausedOracleForTheComingClose() public {
+        // #given
+        vm.warp(OCT_02 - 1 minutes);
+        // #when
+        book.observeClose(nvda);
+        // #then
+        EpochBook.CloseObservation memory seen = book.closeObservation(nvda, OCT_02);
+        assertEq(seen.lastClear, OCT_02 - 1 minutes);
+        assertFalse(seen.pausedSeen);
+    }
+
+    function test_anObservationAtTheCloseCountsForThatClose() public {
+        // #given
+        vm.warp(OCT_02);
+        // #when
+        book.observeClose(nvda);
+        // #then
+        assertEq(book.closeObservation(nvda, OCT_02).lastClear, OCT_02);
+    }
+
+    function test_refusesAnObservationOutsideTheLookback() public {
+        // #given
+        vm.warp(OCT_02 - 30 minutes - 1);
+        // #then
+        vm.expectRevert(abi.encodeWithSelector(EpochBook.NotNearAClose.selector, OCT_02));
+        // #when
+        book.observeClose(nvda);
+    }
+
+    function test_refusesAnObservationOfAnUnlistedAsset() public {
+        // #given
+        vm.warp(OCT_02 - 1 minutes);
+        // #then
+        vm.expectRevert(abi.encodeWithSelector(StockTokenRegistry.NotListed.selector, usdg));
+        // #when
+        book.observeClose(usdg);
     }
 
     function test_refusesASecondEpochForTheSameExpiry() public {
@@ -105,7 +212,7 @@ contract EpochBookForkTest is MarketFork {
     function test_checksTheJumpAgainstARecentPreviousEpoch() public {
         // #given: an epoch created at the Sep 25 close
         (uint80 sep25Round,,) = _lastRoundAtOrBefore(SEP_25);
-        _keepAlive(SEP_25 - 40 minutes, SEP_25 + 10 minutes);
+        _runKeeper(book, SEP_25, SEP_25 - KEEPER_LEAD, SEP_25 + 10 minutes);
         book.createEpoch(nvda, sep25Round);
         // #when: the next week's epoch, with real prices that moved less than half
         uint64 expiry = _createOct02();

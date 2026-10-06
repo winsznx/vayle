@@ -5,6 +5,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {StockTokenRegistry} from "../../src/assets/StockTokenRegistry.sol";
 import {IPriceFeed} from "../../src/interfaces/IPriceFeed.sol";
+import {ExternalReads} from "../../src/libraries/ExternalReads.sol";
 import {ForkTest} from "../utils/ForkTest.sol";
 
 contract StockTokenRegistryForkTest is ForkTest {
@@ -52,8 +53,8 @@ contract StockTokenRegistryForkTest is ForkTest {
         // #then
         StockTokenRegistry.Asset memory listed = registry.asset(nvda);
         assertEq(listed.uid, nvdaUid);
-        assertEq(listed.decimals, 18);
-        assertEq(listed.rawUnit, 1e18);
+        assertEq(listed.decimals, nvdaDecimals);
+        assertEq(listed.rawUnit, 10 ** nvdaDecimals);
         assertEq(listed.feedDecimals, IPriceFeed(nvdaFeed).decimals());
         assertTrue(listed.listed);
     }
@@ -71,9 +72,19 @@ contract StockTokenRegistryForkTest is ForkTest {
 
     function test_refusesAContractThatIsntAStockToken() public {
         // #then
-        vm.expectRevert(abi.encodeWithSelector(StockTokenRegistry.NotAStockToken.selector, usdg));
+        vm.expectRevert(abi.encodeWithSelector(ExternalReads.NotAStockToken.selector, usdg));
         // #when
         _list(usdg, nvdaUid, PRICE_TICK, STRIKE_TICK, STRIKE_RANGE_BPS);
+    }
+
+    function test_refusesAFeedThatIsntAPriceFeed() public {
+        // #then
+        vm.expectRevert(abi.encodeWithSelector(ExternalReads.FeedUnusable.selector, usdg));
+        // #when
+        vm.prank(admin);
+        registry.list(
+            nvda, nvdaUid, IPriceFeed(usdg), LOT, PRICE_TICK, STRIKE_TICK, STRIKE_RANGE_BPS
+        );
     }
 
     function test_refusesAnAddressWithoutCode() public {
@@ -88,7 +99,9 @@ contract StockTokenRegistryForkTest is ForkTest {
     function test_refusesAGridThatCantDivideExactly() public {
         // #then
         vm.expectRevert(
-            abi.encodeWithSelector(StockTokenRegistry.InexactGrid.selector, LOT, 1, 1e18)
+            abi.encodeWithSelector(
+                StockTokenRegistry.InexactGrid.selector, LOT, 1, 10 ** nvdaDecimals
+            )
         );
         // #when
         _list(nvda, nvdaUid, 1, STRIKE_TICK, STRIKE_RANGE_BPS);

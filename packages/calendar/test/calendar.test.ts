@@ -2,9 +2,12 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import fc from "fast-check";
 import {
+  boundariesAfter,
   CalendarYearNotCovered,
   coveredYears,
+  creationDeadline,
   isPlausibleClose,
+  isPlausibleCreationDeadline,
   sessionClose,
   weeklyBoundariesAfter,
   weeklyBoundary,
@@ -178,6 +181,57 @@ describe("weeklyBoundariesAfter", () => {
     const gaps = boundaries.slice(1).map((b, i) => b - (boundaries[i] ?? 0));
     assert.ok(boundaries.every(isPlausibleClose));
     assert.ok(gaps.every((gap) => gap >= 6 * DAY - 4 * HOUR && gap <= 8 * DAY + 4 * HOUR));
+  });
+});
+
+describe("creationDeadline", () => {
+  it("is the Monday 09:30 ET after the close across DST changes, holidays and early closes", () => {
+    // #given: close, then the expected deadline
+    const cases: [number, number][] = [
+      [1_789_761_600, 1_789_997_400], // Fri 2026-09-18 16:00 EDT -> Mon 09-21 09:30 EDT
+      [1_793_390_400, 1_793_629_800], // Fri 2026-10-30 16:00 EDT -> Mon 11-02 09:30 EST
+      [1_795_802_400, 1_796_049_000], // Fri 2026-11-27 13:00 EST -> Mon 11-30 09:30 EST
+      [1_798_135_200, 1_798_468_200], // Thu 2026-12-24 13:00 EST -> Mon 12-28 09:30 EST
+      [1_804_885_200, 1_805_117_400], // Fri 2027-03-12 16:00 EST -> Mon 03-15 09:30 EDT
+      [1_806_004_800, 1_806_327_000], // Thu 2027-03-25 16:00 EDT -> Mon 03-29 09:30 EDT
+    ];
+    // #when
+    const deadlines = cases.map(([close]) => creationDeadline(close));
+    // #then
+    assert.deepEqual(
+      deadlines,
+      cases.map(([, expected]) => expected),
+    );
+  });
+
+  it("passes the contract's rule for every boundary in the published years", () => {
+    // #given
+    const boundaries = boundariesAfter(1_767_225_600, 150);
+    // #when
+    const failures = boundaries.filter(
+      ({ close, creationDeadline: deadline }) =>
+        !isPlausibleCreationDeadline(deadline) || deadline <= close || deadline - close >= 7 * DAY,
+    );
+    // #then
+    assert.deepEqual(failures, []);
+  });
+});
+
+describe("isPlausibleCreationDeadline", () => {
+  it("accepts only Mondays at 13:30 or 14:30 UTC", () => {
+    // #given
+    const mondayOpenEdt = 1_791_811_800;
+    const cases = [
+      mondayOpenEdt,
+      mondayOpenEdt + HOUR,
+      mondayOpenEdt - 4 * HOUR,
+      mondayOpenEdt + 1,
+      mondayOpenEdt + DAY,
+    ];
+    // #when
+    const results = cases.map(isPlausibleCreationDeadline);
+    // #then
+    assert.deepEqual(results, [true, true, false, false, false]);
   });
 });
 
