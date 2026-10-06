@@ -14,6 +14,7 @@ abstract contract ForkTest is Test {
     bytes32 internal nvdaUid;
     address internal usdg;
     address internal nvdaFeed;
+    address internal nvdaAccessRegistry;
     uint256 internal usdgDecimals;
 
     function setUp() public virtual {
@@ -29,6 +30,7 @@ abstract contract ForkTest is Test {
         nvdaUid = vm.parseJsonBytes32(facts, ".nvda.uid");
         usdg = vm.parseJsonAddress(facts, ".usdg.address");
         nvdaFeed = vm.parseJsonAddress(facts, ".nvdaUsdFeed.proxy");
+        nvdaAccessRegistry = vm.parseJsonAddress(facts, ".nvda.accessRegistry");
         usdgDecimals = vm.parseJsonUint(facts, ".usdg.decimals");
     }
 }

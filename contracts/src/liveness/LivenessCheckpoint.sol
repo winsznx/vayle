@@ -39,18 +39,21 @@ contract LivenessCheckpoint {
         return _gaps[index];
     }
 
+    /// @notice Index of the first recorded gap that ends after `timestamp`, or gapCount() if none.
+    function firstGapEndingAfter(uint64 timestamp) public view returns (uint256 index) {
+        uint256 hi = _gaps.length;
+        while (index < hi) {
+            uint256 mid = (index + hi) / 2;
+            if (_gaps[mid].end <= timestamp) index = mid + 1;
+            else hi = mid;
+        }
+    }
+
     /// @notice Total seconds of recorded gaps that fall inside [from, to].
     function gapOverlap(uint64 from, uint64 to) external view returns (uint64 total) {
         if (to <= from) return 0;
         uint256 length = _gaps.length;
-        uint256 lo = 0;
-        uint256 hi = length;
-        while (lo < hi) {
-            uint256 mid = (lo + hi) / 2;
-            if (_gaps[mid].end <= from) lo = mid + 1;
-            else hi = mid;
-        }
-        for (uint256 i = lo; i < length; ++i) {
+        for (uint256 i = firstGapEndingAfter(from); i < length; ++i) {
             Gap memory gap = _gaps[i];
             if (gap.start >= to) break;
             uint64 start = gap.start > from ? gap.start : from;

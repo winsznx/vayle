@@ -15,4 +15,9 @@ library ChainActors {
     /// @dev Called updateMultiplier(uint256,uint256) on NVDA in tx
     /// 0x4ac23f2e58e2c4962dcd701c2beff581e87f3995152a29d527c07a3afd67d956, block 58952659.
     address internal constant MULTIPLIER_UPDATER = 0x92905e8d0e2301BA143215B8D86D63fFD4188143;
+
+    /// @dev Called pause() and unpause() on the Stock Tokens' shared access registry in txs
+    /// 0x04b200d0fc66e443d7f6765267a9c271cffc9f8d3fc7a2d48cbe9587123d6bd5 (block 611101) and
+    /// at block 611243.
+    address internal constant REGISTRY_PAUSER = 0xe7BCB188254Bc6eBBfF63014DfED4cD4A024F22A;
 }
