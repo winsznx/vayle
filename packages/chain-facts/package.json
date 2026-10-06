@@ -1,0 +1,16 @@
+{
+  "name": "@vayle/chain-facts",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node --test \"test/**/*.test.ts\"",
+    "resolve": "node src/cli.ts resolve",
+    "verify": "node src/cli.ts verify"
+  },
+  "dependencies": {
+    "viem": "2.57.3"
+  }
+}

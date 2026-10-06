@@ -1,0 +1,99 @@
+{
+  "block": {
+    "hash": "0x8ad8e893f7796602c6b7819d72d82facf880d66c2e47bd688613ede4d5c93612",
+    "number": "81944099",
+    "timestamp": 1791321731
+  },
+  "chain": {
+    "arbOsVersion": 61,
+    "chainId": 4663,
+    "sources": [
+      "https://docs.robinhood.com/chain/connecting",
+      "https://docs.robinhood.com/chain/run-a-full-node"
+    ]
+  },
+  "erc8056": {
+    "interfaceIds": {
+      "balances": "0xd890fd71",
+      "conversion": "0x57854fc3",
+      "core": "0xa60bf13d",
+      "pending": "0x4bd27648"
+    },
+    "sources": [
+      "https://eips.ethereum.org/EIPS/eip-8056"
+    ]
+  },
+  "generatedAt": "2026-10-06T21:22:11.924Z",
+  "network": "robinhood-mainnet",
+  "nvda": {
+    "accessRegistry": "0xe10b6f6B275de231345c20D14Ab812db62151b00",
+    "accessRegistryPaused": false,
+    "address": "0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC",
+    "beacon": "0xe10b6f6B275de231345c20D14Ab812db62151b00",
+    "decimals": 18,
+    "effectiveAt": 1788998430,
+    "implementation": "0xb35490d6f9163DE4F80d88dc75c3516eb64C5aE2",
+    "interfaces": {
+      "balances": true,
+      "conversion": false,
+      "core": true,
+      "pending": true
+    },
+    "name": "NVIDIA • Robinhood Token",
+    "newUIMultiplier": "1000775159164630595",
+    "oraclePaused": false,
+    "paused": false,
+    "registryStatus": "ASSET_STATUS_ACTIVE",
+    "sources": [
+      "https://api.robinhood.com/rhj/assets"
+    ],
+    "symbol": "NVDA",
+    "uiMultiplier": "1000775159164630595",
+    "uid": "0x00000000000000000000000000000000915f477416294f5099a5e0e09f327ce5"
+  },
+  "nvdaUsdFeed": {
+    "aggregator": "0xC9d16E4f2569b9E3ea0468fD85844953713DC2a2",
+    "aggregatorTypeAndVersion": "DualAggregator 1.0.0",
+    "decimals": 8,
+    "description": "RHNVDA / USD",
+    "deviationThresholdPercent": 0.5,
+    "heartbeatSeconds": 86400,
+    "latestRound": {
+      "answer": "23943045295",
+      "roundId": "18446744073709552798",
+      "startedAt": 1791315544,
+      "updatedAt": 1791315556
+    },
+    "marketHours": "us_equities_24/5",
+    "name": "Robinhood NVDA / USD",
+    "proxy": "0x379EC4f7C378F34a1B47E4F3cbeBCbAC3E8E9F15",
+    "sources": [
+      "https://reference-data-directory.vercel.app/feeds-robinhood-mainnet.json",
+      "https://docs.chain.link/data-feeds/price-feeds/addresses?network=robinhood"
+    ],
+    "svrProxy": "0xCF169363636D73dbBf77733629CB38919d14232d"
+  },
+  "schemaVersion": 1,
+  "sequencerUptimeFeed": {
+    "available": false,
+    "sources": [
+      "https://reference-data-directory.vercel.app/feeds-robinhood-mainnet.json",
+      "https://docs.chain.link/data-feeds/l2-sequencer-feeds"
+    ]
+  },
+  "usdg": {
+    "address": "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+    "decimals": 6,
+    "domainSeparator": "0x7a3d7400b27830f4f91c2c16a082486d67c1befecaec2f53b33f1f35d5b62036",
+    "domainVersion": "1",
+    "implementation": "0x68184C449E1a8f34fA18d289737129FD27B66f8F",
+    "name": "Global Dollar",
+    "paused": false,
+    "rewardsFacet": true,
+    "sources": [
+      "https://docs.robinhood.com/chain/contracts",
+      "https://docs.paxos.com/guides/stablecoin/usdg/mainnet"
+    ],
+    "symbol": "USDG"
+  }
+}
