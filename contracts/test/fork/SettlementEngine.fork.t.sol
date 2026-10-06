@@ -201,21 +201,21 @@ contract SettlementEngineForkTest is CoreFork {
         // #when
         uint64 end = engine.windowEnd(callSeries);
         // #then: walk the window a minute at a time, spending gap minutes from the budget
-        uint256 at = OCT_09;
+        uint256 minute = OCT_09;
         uint256 remaining = 2 hours;
         uint256 budget = 24 hours;
         while (remaining > 0) {
-            if (budget > 0 && _insideGap(at)) budget -= 1 minutes;
+            if (budget > 0 && _insideGap(minute)) budget -= 1 minutes;
             else remaining -= 1 minutes;
-            at += 1 minutes;
+            minute += 1 minutes;
         }
-        assertEq(end, at);
+        assertEq(end, minute);
     }
 
-    function _insideGap(uint256 at) internal view returns (bool) {
+    function _insideGap(uint256 instant) internal view returns (bool) {
         for (uint256 i; i < liveness.gapCount(); ++i) {
             LivenessCheckpoint.Gap memory gap = liveness.gapAt(i);
-            if (at >= gap.start && at < gap.end) return true;
+            if (instant >= gap.start && instant < gap.end) return true;
         }
         return false;
     }

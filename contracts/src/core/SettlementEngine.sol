@@ -214,6 +214,7 @@ abstract contract SettlementEngine is CollateralVault {
         if (ok && data.length == 32) {
             uint256 word = abi.decode(data, (uint256));
             if (word <= type(uint160).max) {
+                // forge-lint: disable-next-line(unsafe-typecast) the range check above makes it exact
                 address accessRegistry = address(uint160(word));
                 if (accessRegistry.code.length != 0 && _flag(accessRegistry, "paused()")) {
                     return true;

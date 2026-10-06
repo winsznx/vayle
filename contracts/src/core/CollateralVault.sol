@@ -299,9 +299,16 @@ abstract contract CollateralVault is EpochBook {
 
     function _pull(address token, address from, uint256 amount) internal {
         uint256 before = IERC20(token).balanceOf(address(this));
+        // `from` is the caller, or a maker whose signed quote covers this amount.
+        // slither-disable-next-line arbitrary-send-erc20
         IERC20(token).safeTransferFrom(from, address(this), amount);
         uint256 received = IERC20(token).balanceOf(address(this)) - before;
         if (received != amount) revert UnexpectedTransferAmount(token, amount, received);
+    }
+
+    function _orderStorage(uint256 id) internal view returns (Order storage o) {
+        o = _orders[id];
+        if (o.status == OrderStatus.None) revert UnknownOrder(id);
     }
 
     function _collateralOf(Order storage o, uint256 size)
