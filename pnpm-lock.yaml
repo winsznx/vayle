@@ -200,6 +200,9 @@ importers:
       '@vayle/abi':
         specifier: workspace:*
         version: link:../../packages/abi
+      '@vayle/calendar':
+        specifier: workspace:*
+        version: link:../../packages/calendar
       '@vayle/chain-facts':
         specifier: workspace:*
         version: link:../../packages/chain-facts

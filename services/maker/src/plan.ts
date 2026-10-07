@@ -1,5 +1,6 @@
 import type { Address } from "viem";
 import type { PricingConfig } from "./config.ts";
+import { latestAnswer, type PriceReading, type PriceVerdict, type UsablePrice } from "./guard.ts";
 import {
   SECONDS_PER_YEAR,
   bidPremium,
@@ -83,8 +84,8 @@ export interface MakerSnapshot {
   readonly usdgDecimals: number;
   readonly feeBps: number;
   readonly bidWindow: number;
-  // The feed's latest answer, in USDG per whole token.
-  readonly spot: number | null;
+  // The feed and oracle-flag reads every price comes from, before the guard judges them.
+  readonly price: PriceReading;
   readonly epoch: EpochTerms | null;
   readonly buckets: readonly Bucket[];
   readonly idle: readonly IdleOrder[];
@@ -121,15 +122,16 @@ function min(...values: bigint[]): bigint {
 export function premiumFor(
   s: MakerSnapshot,
   pricing: PricingConfig,
+  price: UsablePrice,
   side: number,
   strike: bigint,
 ): bigint | null {
-  if (s.spot === null || s.epoch === null) return null;
+  if (s.epoch === null) return null;
   const years = (s.epoch.expiry - s.now) / SECONDS_PER_YEAR;
   if (years <= 0) return null;
   const fair = blackScholes({
     side: (side === CALL ? "call" : "put") satisfies Side,
-    spot: s.spot,
+    spot: price.spot,
     strike: Number(strike) / 10 ** s.usdgDecimals,
     years,
     vol: pricing.vol,
@@ -222,9 +224,11 @@ function housekeeping(s: MakerSnapshot): MakerAction[] {
   return actions;
 }
 
-// Every in-the-money long in an open window, as far as the maker's balances pay for it.
+// Every in-the-money long in an open window, as far as the maker's balances pay for it, judged on
+// the latest positive answer whether or not the guard passed it.
 function exercises(s: MakerSnapshot): MakerAction[] {
-  if (s.spot === null || s.epoch === null) return [];
+  const spot = latestAnswer(s.price);
+  if (spot === null || s.epoch === null) return [];
   const actions: MakerAction[] = [];
   let usdg = s.usdgBalance;
   let asset = s.assetBalance;
@@ -232,7 +236,7 @@ function exercises(s: MakerSnapshot): MakerAction[] {
   for (const h of s.holdings) {
     if (s.now < h.expiry || s.now >= h.windowEnd) continue;
     const strike = Number(h.strike) / 10 ** s.usdgDecimals;
-    const inTheMoney = h.side === CALL ? s.spot > strike : s.spot < strike;
+    const inTheMoney = h.side === CALL ? spot > strike : spot < strike;
     if (!inTheMoney) continue;
     const payable =
       h.side === CALL ? floorTo((usdg * rawUnit) / h.strike, lot) : floorTo(asset, lot);
@@ -247,7 +251,7 @@ function exercises(s: MakerSnapshot): MakerAction[] {
 
 // Bids into each bucket's batch while the bid window is open, then registration for series that
 // need it first.
-function bids(s: MakerSnapshot, pricing: PricingConfig): MakerAction[] {
+function bids(s: MakerSnapshot, pricing: PricingConfig, price: UsablePrice): MakerAction[] {
   const e = s.epoch;
   if (e === null) return [];
   const opens = e.opening + e.windowLength;
@@ -260,7 +264,7 @@ function bids(s: MakerSnapshot, pricing: PricingConfig): MakerAction[] {
       actions.push({ kind: "register", side: b.side, strike: b.strike, expiry: e.expiry });
       continue;
     }
-    const premium = premiumFor(s, pricing, b.side, b.strike);
+    const premium = premiumFor(s, pricing, price, b.side, b.strike);
     if (premium === null) continue;
     const amount = min(
       pricing.maxPerSeries,
@@ -285,7 +289,7 @@ function bids(s: MakerSnapshot, pricing: PricingConfig): MakerAction[] {
 }
 
 // Mid-week quotes for orders that came in after the batch, at the same price the maker would bid.
-function quotes(s: MakerSnapshot, pricing: PricingConfig): MakerAction[] {
+function quotes(s: MakerSnapshot, pricing: PricingConfig, price: UsablePrice): MakerAction[] {
   const e = s.epoch;
   if (!pricing.rfq || e === null) return [];
   if (s.now < e.batchDeadline || s.now >= e.expiry - RFQ_CUTOFF) return [];
@@ -296,7 +300,7 @@ function quotes(s: MakerSnapshot, pricing: PricingConfig): MakerAction[] {
     if (o.frozen) continue;
     const bucket = s.buckets.find((b) => b.side === o.side && b.strike === o.target);
     if (bucket === undefined || !bucket.registered) continue;
-    const premium = premiumFor(s, pricing, o.side, o.target);
+    const premium = premiumFor(s, pricing, price, o.side, o.target);
     if (premium === null || premium < o.minPremium) continue;
     const left = room.get(bucket.series) ?? 0n;
     const amount = floorTo(
@@ -328,6 +332,10 @@ function quotes(s: MakerSnapshot, pricing: PricingConfig): MakerAction[] {
   return actions;
 }
 
-export function plan(s: MakerSnapshot, pricing: PricingConfig): MakerAction[] {
-  return [...housekeeping(s), ...exercises(s), ...bids(s, pricing), ...quotes(s, pricing)];
+// Registering, bidding and quoting take on risk at a price, so they wait for a price the guard
+// passed. Approving, exercising and withdrawing don't: an exercise fills a holder's order at exactly
+// its price, so a wrong one only costs the maker.
+export function plan(s: MakerSnapshot, pricing: PricingConfig, price: PriceVerdict): MakerAction[] {
+  const priced = price.usable ? [...bids(s, pricing, price), ...quotes(s, pricing, price)] : [];
+  return [...housekeeping(s), ...exercises(s), ...priced];
 }

@@ -22,6 +22,9 @@ export interface MakerConfig {
   readonly market: Address;
   readonly asset: Address;
   readonly feed: Address;
+  // The feed's decimals and heartbeat in seconds, as the chain facts record them.
+  readonly feedDecimals: number;
+  readonly feedHeartbeat: number;
   readonly usdg: Address;
   readonly usdgDecimals: number;
   readonly pricing: PricingConfig;
@@ -58,6 +61,8 @@ export function loadConfig(env: Env): MakerConfig {
     market: getAddress(required(env, "VAYLE_MARKET")),
     asset: getAddress(facts.nvda.address),
     feed: getAddress(facts.nvdaUsdFeed.proxy),
+    feedDecimals: facts.nvdaUsdFeed.decimals,
+    feedHeartbeat: facts.nvdaUsdFeed.heartbeatSeconds,
     usdg: getAddress(facts.usdg.address),
     usdgDecimals: facts.usdg.decimals,
     pricing: {

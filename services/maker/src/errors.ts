@@ -11,3 +11,6 @@ export class BadSetting extends MakerError {
 export class DigestMismatch extends MakerError {
   override readonly name = "DigestMismatch";
 }
+export class CalendarNotCovered extends MakerError {
+  override readonly name = "CalendarNotCovered";
+}

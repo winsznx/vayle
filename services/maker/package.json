@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@vayle/abi": "workspace:*",
+    "@vayle/calendar": "workspace:*",
     "@vayle/chain-facts": "workspace:*",
     "@vayle/market": "workspace:*",
     "viem": "2.57.3"

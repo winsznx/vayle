@@ -8,14 +8,36 @@ import {
   type PublicClient,
 } from "viem";
 import type { MakerConfig } from "./config.ts";
+import type { FeedRound, Reading } from "./guard.ts";
 import type { Bucket, EpochTerms, Holding, IdleOrder, MakerSnapshot } from "./plan.ts";
 
 const feedAbi = parseAbi([
   "function decimals() view returns (uint8)",
   "function latestRoundData() view returns (uint80, int256, uint256, uint256, uint80)",
 ]);
+const stockTokenAbi = parseAbi(["function oraclePaused() view returns (bool)"]);
 const ACTIVE = 1;
 const READ_BATCH = 20;
+
+function oneLine(error: unknown): string {
+  const text =
+    error instanceof BaseError
+      ? `${error.name}: ${error.shortMessage}`
+      : error instanceof Error
+        ? `${error.name}: ${error.message}`
+        : String(error);
+  return text.replace(/\s+/g, " ");
+}
+
+// Any failure of a price read is kept rather than thrown: the guard stands the maker down by name,
+// and approving, exercising and withdrawing still go ahead.
+async function reading<T>(read: () => Promise<T>): Promise<Reading<T>> {
+  try {
+    return { ok: true, value: await read() };
+  } catch (error) {
+    return { ok: false, error: oneLine(error) };
+  }
+}
 
 async function inBatches<T, R>(items: readonly T[], read: (item: T) => Promise<R>): Promise<R[]> {
   const results: R[] = [];
@@ -43,22 +65,27 @@ export async function readSnapshot(
   const market = { address: config.market, abi: vayleMarketAbi, blockNumber } as const;
   const usdg = { address: config.usdg, abi: erc20Abi, blockNumber } as const;
   const asset = { address: config.asset, abi: erc20Abi, blockNumber } as const;
-  const [bidWindow, feeBps, latestExpiry, round, feedDecimals] = await Promise.all([
+  const feed = { address: config.feed, abi: feedAbi, blockNumber } as const;
+  const [bidWindow, feeBps, latestExpiry, round, feedDecimals, oraclePaused] = await Promise.all([
     client.readContract({ ...market, functionName: "BID_WINDOW" }),
     client.readContract({ ...market, functionName: "feeBps" }),
     client.readContract({ ...market, functionName: "latestExpiry", args: [config.asset] }),
-    client.readContract({
-      address: config.feed,
-      abi: feedAbi,
-      functionName: "latestRoundData",
-      blockNumber,
+    reading(async (): Promise<FeedRound> => {
+      const [roundId, answer, , updatedAt] = await client.readContract({
+        ...feed,
+        functionName: "latestRoundData",
+      });
+      return { roundId, answer, updatedAt: Number(updatedAt) };
     }),
-    client.readContract({
-      address: config.feed,
-      abi: feedAbi,
-      functionName: "decimals",
-      blockNumber,
-    }),
+    reading(() => client.readContract({ ...feed, functionName: "decimals" })),
+    reading(() =>
+      client.readContract({
+        address: config.asset,
+        abi: stockTokenAbi,
+        functionName: "oraclePaused",
+        blockNumber,
+      }),
+    ),
   ]);
   const [usdgBalance, assetBalance, usdgAllowance, assetAllowance, claimableUsdg, claimableAsset] =
     await Promise.all([
@@ -71,6 +98,7 @@ export async function readSnapshot(
     ]);
 
   let epoch: EpochTerms | null = null;
+  let reference: bigint | null = null;
   if (latestExpiry !== 0n) {
     const e = await client.readContract({
       ...market,
@@ -86,9 +114,8 @@ export async function readSnapshot(
       priceTick: e.priceTick,
       rawUnit: e.rawUnit,
     };
+    reference = e.referencePrice;
   }
-  const answer = round[1];
-  const spot = answer > 0n ? Number(answer) / 10 ** feedDecimals : null;
 
   const count = await client.readContract({ ...market, functionName: "orderCount" });
   const ids = Array.from({ length: Number(count) }, (_, i) => BigInt(i + 1));
@@ -145,7 +172,7 @@ export async function readSnapshot(
     usdgDecimals: config.usdgDecimals,
     feeBps,
     bidWindow: Number(bidWindow),
-    spot,
+    price: { round, feedDecimals, oraclePaused, reference },
     epoch,
     buckets,
     idle,

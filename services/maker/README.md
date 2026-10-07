@@ -19,6 +19,10 @@ Black-Scholes on the raw token: spot is the NVDA feed's latest answer, and the s
 
 The maker signs the digest the market computes for each quote, so what it signs is exactly what the contract verifies.
 
+## When it stands down
+
+It prices only on a round it trusts. When the token's oracle is paused, the feed or the flag can't be read, the feed's decimals differ from the chain facts, the exchange calendar doesn't cover the date, or the feed's latest round is stamped after the block it was read at, older than the feed's session allows, not positive, or under half or over one and a half times this week's reference price, the maker skips registering, bidding and quoting for that run and logs one line saying why. The feed publishes from 20:00 ET the evening before each trading day until 20:00 ET on it, so weekends and exchange holidays don't age a round: while the session is open a round can be at most a day old, and once it has been open for a quarter hour the round has to come from it. Exercising and withdrawing carry on either way.
+
 ## Configuration
 
 Secrets: `ROBINHOOD_RPC_URL`, `MAKER_KEY`. Vars: `VAYLE_MARKET` and the `MAKER_*` inputs described in `.env.example`. A missing or malformed input stops the maker instead of falling back to a default.
