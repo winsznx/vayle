@@ -8,6 +8,7 @@ export default defineConfig(
     "**/node_modules/",
     "**/dist/",
     "**/coverage/",
+    "**/.wrangler/",
     "contracts/lib/",
     "contracts/out/",
     "contracts/cache/",
