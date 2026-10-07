@@ -1,4 +1,5 @@
 import { vayleMarketAbi } from "@vayle/abi";
+import { withGasMargin } from "@vayle/market";
 import {
   erc20Abi,
   maxUint256,
@@ -36,6 +37,24 @@ async function confirmed(clients: Clients, hash: Hash): Promise<Hash> {
   return hash;
 }
 
+type Request = Parameters<Clients["wallet"]["writeContract"]>[0];
+
+// Sends with a gas limit over the estimate, since what a call costs depends on the second it
+// lands in (withGasMargin).
+async function sent(clients: Clients, request: Request): Promise<Hash> {
+  const { address, abi, functionName, args } = request;
+  const gas = withGasMargin(
+    await clients.public.estimateContractGas({
+      address,
+      abi,
+      functionName,
+      account: clients.wallet.account,
+      ...(args === undefined ? {} : { args }),
+    }),
+  );
+  return confirmed(clients, await clients.wallet.writeContract({ ...request, gas }));
+}
+
 // The maker signs the digest the market itself computes, so the signed bytes can't drift from what
 // the contract verifies.
 async function signedQuote(clients: Clients, config: MakerConfig, terms: QuoteTerms) {
@@ -69,7 +88,6 @@ export async function execute(
   const { account } = clients.wallet;
   const market = { address: config.market, abi: vayleMarketAbi, account } as const;
   const sim = clients.public;
-  const write = clients.wallet;
   switch (action.kind) {
     case "approve": {
       const { request } = await sim.simulateContract({
@@ -79,7 +97,7 @@ export async function execute(
         args: [config.market, maxUint256],
         account,
       });
-      return confirmed(clients, await write.writeContract(request));
+      return sent(clients, request);
     }
     case "withdraw": {
       const { request } = await sim.simulateContract({
@@ -87,7 +105,7 @@ export async function execute(
         functionName: "withdraw",
         args: [action.token, action.amount],
       });
-      return confirmed(clients, await write.writeContract(request));
+      return sent(clients, request);
     }
     case "exercise": {
       const { request } = await sim.simulateContract({
@@ -95,7 +113,7 @@ export async function execute(
         functionName: "exercise",
         args: [action.series, action.amount],
       });
-      return confirmed(clients, await write.writeContract(request));
+      return sent(clients, request);
     }
     case "register": {
       const { request } = await sim.simulateContract({
@@ -103,7 +121,7 @@ export async function execute(
         functionName: "seriesFor",
         args: [config.asset, BigInt(action.expiry), action.side, action.strike],
       });
-      return confirmed(clients, await write.writeContract(request));
+      return sent(clients, request);
     }
     case "bid": {
       const { quote, signature } = await signedQuote(clients, config, action.quote);
@@ -112,7 +130,7 @@ export async function execute(
         functionName: "submitBid",
         args: [quote, signature],
       });
-      return confirmed(clients, await write.writeContract(request));
+      return sent(clients, request);
     }
     case "fill": {
       const { quote, signature } = await signedQuote(clients, config, action.quote);
@@ -121,7 +139,7 @@ export async function execute(
         functionName: "fillQuote",
         args: [quote, signature, action.orderId, action.quote.maxAmount],
       });
-      return confirmed(clients, await write.writeContract(request));
+      return sent(clients, request);
     }
   }
 }

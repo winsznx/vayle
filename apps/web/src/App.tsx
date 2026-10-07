@@ -1,4 +1,4 @@
-import type { Call } from "@vayle/market";
+import { withGasMargin, type Call } from "@vayle/market";
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { chainOf, publicClientOf } from "./chain.ts";
 import { Header } from "./components/Header.tsx";
@@ -46,7 +46,12 @@ export function App({ config }: { readonly config: AppConfig }) {
     setTx({ status: "pending", label });
     try {
       for (const call of calls) {
-        const hash = await send(connection, chain, call);
+        const estimate = await client.estimateGas({
+          account: connection.address,
+          to: call.to,
+          data: call.data,
+        });
+        const hash = await send(connection, chain, call, withGasMargin(estimate));
         await client.waitForTransactionReceipt({ hash });
       }
       setTx({ status: "done", label });

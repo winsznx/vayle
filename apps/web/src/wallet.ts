@@ -123,12 +123,24 @@ export async function switchTo(wallet: WalletProvider, chain: Chain): Promise<vo
   });
 }
 
-// Sends one call from the connected account and returns its hash. The wallet shows it first.
-export async function send(current: Connection, chain: Chain, call: Call): Promise<Hash> {
+// Sends one call from the connected account with the given gas limit and returns its hash. The
+// wallet shows it first.
+export async function send(
+  current: Connection,
+  chain: Chain,
+  call: Call,
+  gas: bigint,
+): Promise<Hash> {
   const client = createWalletClient({
     account: current.address,
     chain,
     transport: custom(current.wallet.provider),
   });
-  return client.sendTransaction({ to: call.to, data: call.data, account: current.address, chain });
+  return client.sendTransaction({
+    to: call.to,
+    data: call.data,
+    gas,
+    account: current.address,
+    chain,
+  });
 }

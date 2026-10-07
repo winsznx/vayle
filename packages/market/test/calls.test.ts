@@ -7,6 +7,7 @@ import {
   nextStep,
   placeOrder,
   withdraw,
+  withGasMargin,
   type OrderState,
   type SeriesState,
 } from "../src/index.ts";
@@ -93,5 +94,16 @@ describe("nextStep", () => {
   it("can cancel an idle active order", () => {
     // #then
     assert.equal(nextStep(order(), null, 0n), "cancel");
+  });
+});
+
+describe("withGasMargin", () => {
+  it("leaves room for a gap record and a quarter more over the estimate", () => {
+    // #given
+    const estimate = 142_786n;
+    // #when
+    const limit = withGasMargin(estimate);
+    // #then
+    assert.equal(limit, 142_786n + 35_696n + 100_000n);
   });
 });
