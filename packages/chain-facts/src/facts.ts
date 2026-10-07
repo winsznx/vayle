@@ -54,6 +54,8 @@ export interface ChainFacts {
     readonly proxy: Address;
     readonly svrProxy: Address | null;
     readonly aggregator: Address;
+    // Who may read the feed. Zero, for anyone, is what batched reads through Multicall3 rely on.
+    readonly accessController: Address;
     readonly aggregatorTypeAndVersion: string;
     readonly description: string;
     readonly decimals: number;

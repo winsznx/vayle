@@ -82,6 +82,7 @@ const feedProxyAbi = parseAbi([
   "function decimals() view returns (uint8)",
   "function description() view returns (string)",
   "function aggregator() view returns (address)",
+  "function accessController() view returns (address)",
   "function latestRoundData() view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)",
 ]);
 const typeAndVersionAbi = parseAbi(["function typeAndVersion() view returns (string)"]);
@@ -414,6 +415,11 @@ export async function resolveFacts(client: PublicClient, now: Date): Promise<Cha
       proxy: listed.proxy,
       svrProxy: listed.svrProxy,
       aggregator: listed.aggregator,
+      // Zero means anyone may read the feed, Multicall3 included, which is how every Vayle client
+      // batches its reads. A change here is drift, since batched feed reads would start failing.
+      accessController: getAddress(
+        await client.readContract({ ...feed, functionName: "accessController" }),
+      ),
       aggregatorTypeAndVersion: await client.readContract({
         address: listed.aggregator,
         abi: typeAndVersionAbi,

@@ -56,6 +56,7 @@
     "uid": "0x00000000000000000000000000000000915f477416294f5099a5e0e09f327ce5"
   },
   "nvdaUsdFeed": {
+    "accessController": "0x0000000000000000000000000000000000000000",
     "aggregator": "0xC9d16E4f2569b9E3ea0468fD85844953713DC2a2",
     "aggregatorTypeAndVersion": "DualAggregator 1.0.0",
     "decimals": 8,
