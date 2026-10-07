@@ -338,6 +338,9 @@ function orderAction(
   if (step === "cancel") {
     return { label: `Cancel order ${order.id}`, calls: [cancelOrder(market, order.id)] };
   }
+  if (step === "stop-renewing") {
+    return { label: `Stop renewing order ${order.id}`, calls: [cancelOrder(market, order.id)] };
+  }
   return null;
 }
 

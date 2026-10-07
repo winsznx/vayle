@@ -95,6 +95,16 @@ describe("nextStep", () => {
     // #then
     assert.equal(nextStep(order(), null, 0n), "cancel");
   });
+
+  it("can stop an attached order renewing while its week runs", () => {
+    // #then
+    assert.equal(nextStep(order({ series: 9n }), series, 0n), "stop-renewing");
+  });
+
+  it("waits on an attached order that has already stopped renewing", () => {
+    // #then
+    assert.equal(nextStep(order({ series: 9n, status: "cancelled" }), series, 0n), "wait");
+  });
 });
 
 describe("withGasMargin", () => {

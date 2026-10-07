@@ -60,6 +60,9 @@ function actionFor(config: AppConfig, order: OrderState, line: OrderLine): Actio
   if (line.action === "cancel") {
     return { label: "Cancel order", calls: [cancelOrder(config.market, order.id)], quiet: true };
   }
+  if (line.action === "stop-renewing") {
+    return { label: "Stop renewing", calls: [cancelOrder(config.market, order.id)], quiet: true };
+  }
   return null;
 }
 

@@ -83,9 +83,11 @@ function writtenStatus(
     const whole = order.committed === order.size;
     const amount = tokens(order.committed, symbol);
     const ends = easternTime(Number(series.expiry));
-    return order.side === 0
-      ? `If ${symbol} closes above ${dollars(order.target)} on ${ends}, the maker can buy ${whole ? `your ${symbol}` : amount} at that price.`
-      : `If ${symbol} closes below ${dollars(order.target)} on ${ends}, the maker can sell you ${whole ? symbol : amount} at that price.`;
+    const outcome =
+      order.side === 0
+        ? `If ${symbol} closes above ${dollars(order.target)} on ${ends}, the maker can buy ${whole ? `your ${symbol}` : amount} at that price.`
+        : `If ${symbol} closes below ${dollars(order.target)} on ${ends}, the maker can sell you ${whole ? symbol : amount} at that price.`;
+    return order.status === "active" ? outcome : `${outcome} It won't renew after this week.`;
   }
   if (BigInt(now) < series.windowEnd) {
     return `The week ended. The result is final at ${easternTime(Number(series.windowEnd))}.`;

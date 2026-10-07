@@ -51,7 +51,11 @@ function attachedState(order: OrderState, series: SeriesState, now: bigint, unit
       ? `Its exercise window ends ${moment(series.windowEnd)}.`
       : `Its exercise window ended ${moment(series.windowEnd)}.`;
   const finalized = series.settled ? "The series is finalized." : "The series isn't finalized yet.";
-  return `${part} is in series ${series.id}, which expires ${moment(series.expiry)}. ${window} ${finalized}`;
+  const renewal =
+    order.status === "active"
+      ? "It renews after it settles unless you stop it."
+      : "It won't renew after it settles.";
+  return `${part} is in series ${series.id}, which expires ${moment(series.expiry)}. ${window} ${finalized} ${renewal}`;
 }
 
 // A window the market's view says is over, but that finalize would still find open: the

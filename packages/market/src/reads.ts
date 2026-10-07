@@ -165,14 +165,17 @@ export async function balanceOf(
   });
 }
 
-export type NextStep = "settle" | "finalize-then-settle" | "cancel" | "wait" | "none";
+export type NextStep =
+  "settle" | "finalize-then-settle" | "cancel" | "stop-renewing" | "wait" | "none";
 
 // What a holder can do next with an order, from its state and its series'. `now` is the chain's time.
+// While a week runs, cancelling an attached order is how it stops renewing: settling would renew it,
+// and the next batch freezes it until it's written again.
 export function nextStep(order: OrderState, series: SeriesState | null, now: bigint): NextStep {
   if (order.series !== 0n && series !== null) {
     if (series.settled) return "settle";
     if (now >= series.windowEnd) return "finalize-then-settle";
-    return "wait";
+    return order.status === "active" && !order.frozen ? "stop-renewing" : "wait";
   }
   if (order.status === "active") return order.frozen ? "wait" : "cancel";
   return "none";

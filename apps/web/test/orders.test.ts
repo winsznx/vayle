@@ -118,6 +118,53 @@ describe("describeOrder", () => {
     );
   });
 
+  it("offers to stop an order renewing while its week runs", () => {
+    // #given
+    const series: SeriesState = {
+      id: 9n,
+      side: 0,
+      strike: 245_000_000n,
+      expiry: BigInt(epoch.expiry),
+      windowEnd: BigInt(epoch.expiry + 7200),
+      settled: false,
+    };
+    // #when
+    const line = describeOrder(
+      order({ series: 9n, committed: ONE }),
+      series,
+      epoch,
+      OCT_02 + 5 * 3600,
+      "NVDA",
+    );
+    // #then
+    assert.equal(line.action, "stop-renewing");
+  });
+
+  it("says an order that was stopped won't renew after this week", () => {
+    // #given
+    const series: SeriesState = {
+      id: 9n,
+      side: 0,
+      strike: 245_000_000n,
+      expiry: BigInt(epoch.expiry),
+      windowEnd: BigInt(epoch.expiry + 7200),
+      settled: false,
+    };
+    // #when
+    const line = describeOrder(
+      order({ series: 9n, committed: ONE, status: "cancelled" }),
+      series,
+      epoch,
+      OCT_02 + 5 * 3600,
+      "NVDA",
+    );
+    // #then
+    assert.deepEqual(
+      [line.action, line.status.endsWith("It won't renew after this week.")],
+      ["wait", true],
+    );
+  });
+
   it("names the part of a buy order that's in this week's trade when only part of it filled", () => {
     // #given
     const series: SeriesState = {

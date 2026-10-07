@@ -94,7 +94,29 @@ describe("orderLine", () => {
     // #then
     assert.equal(
       line.state,
-      "1 NVDA is in series 9, which expires Fri, Oct 9, 2026, 16:00 EDT (2026-10-09 20:00 UTC). Its exercise window ends Fri, Oct 9, 2026, 18:00 EDT (2026-10-09 22:00 UTC). The series isn't finalized yet.",
+      "1 NVDA is in series 9, which expires Fri, Oct 9, 2026, 16:00 EDT (2026-10-09 20:00 UTC). Its exercise window ends Fri, Oct 9, 2026, 18:00 EDT (2026-10-09 22:00 UTC). The series isn't finalized yet. It renews after it settles unless you stop it.",
+    );
+  });
+
+  it("offers to stop an attached order renewing while its week runs", () => {
+    // #when
+    const line = orderLine(order({ series: 9n, committed: ONE }), series(), EXPIRY - 3600n, units);
+    // #then
+    assert.equal(line.step, "stop-renewing");
+  });
+
+  it("says an attached order that was stopped won't renew", () => {
+    // #when
+    const line = orderLine(
+      order({ series: 9n, committed: ONE, status: "cancelled" }),
+      series(),
+      EXPIRY - 3600n,
+      units,
+    );
+    // #then
+    assert.deepEqual(
+      [line.step, line.state.endsWith("It won't renew after it settles.")],
+      ["wait", true],
     );
   });
 });
