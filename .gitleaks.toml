@@ -1,0 +1,14 @@
+# Secret scanning with gitleaks: `gitleaks git --redact --log-opts="--all" .` scans every commit.
+# The default rules stay on. Two kinds of public value they flag are allowed here: contract
+# addresses, which are 20 bytes where a private key is 32, and the fake key a test uses to check
+# that error messages drop URL paths.
+title = "Vayle"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Contract addresses and the test fixture key"
+regexTarget = "secret"
+regexes = ['''^0x[0-9a-fA-F]{40}$''']
+stopwords = ["0123456789abcdef0123456789abcdef"]
