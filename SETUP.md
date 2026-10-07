@@ -6,6 +6,9 @@
 - pnpm 11 through Corepack
 - Foundry 1.7.1
 - git
+- A Robinhood Chain mainnet RPC with archive state, for fork tests, the local fork and the chain facts check
+
+If you install Foundry with foundryup, pin the version with `foundryup --install v1.7.1`.
 
 ## Bootstrap from a clean clone
 
@@ -19,23 +22,24 @@ cp .env.example .env
 
 `pnpm install` also points git at the repo's hooks. Fill in `.env`, which is gitignored. `.env.example` lists every variable with a one-line description and no values, and the hooks block any commit that adds a value to it.
 
-If you install Foundry with foundryup, pin the version with `foundryup --install v1.7.1`.
+`ROBINHOOD_RPC_URL` is the one value you need to work on Vayle. The RPC behind it has to keep archive state, because fork tests and the local fork read mainnet state at blocks that are minutes or weeks old, and the public RPC keeps only recent state. It has to answer `eth_getLogs` over 10,000 blocks, which is how far the indexer and the app read at a time. The rest of `.env` is for deploying and running the services, which [DEPLOY.md](DEPLOY.md) covers.
 
 ## Checks
 
 ```sh
-pnpm lint
+pnpm lint        # ESLint and Prettier
 pnpm typecheck
 pnpm build
-pnpm test
+pnpm test        # every package's unit tests, without a network
+pnpm guard       # the tree scan the commit hooks run
 cd contracts
 forge fmt --check
 forge build
-forge test
+forge test       # unit, fork and campaign tests; fork tests need ROBINHOOD_RPC_URL
 slither . --config-file slither.config.json
 ```
 
-CI runs all of these on every push and pull request. Slither is optional locally.
+`pnpm -r --if-present test:chain` runs the few TypeScript tests that read the live chain, like the keeper's search for a feed round. CI runs all of these on every push and pull request. Slither is optional locally.
 
 ## Commit hooks
 
@@ -51,4 +55,4 @@ Don't bypass the hooks with `--no-verify`. The repository is public, so CI can o
 
 ## Fork tests
 
-Fork tests run against Robinhood Chain mainnet state. They need `ROBINHOOD_RPC_URL` set to an RPC with archive access. Without it they fail with a named error, and nothing falls back to another endpoint.
+Fork tests run against Robinhood Chain mainnet state through `ROBINHOOD_RPC_URL`. Without it they fail with a named error, and nothing falls back to another endpoint.
