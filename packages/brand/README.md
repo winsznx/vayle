@@ -23,7 +23,7 @@ import nvda from "@vayle/brand/assets/tokens/nvda.png";
 | `css/tokens.css` | Design tokens                                                                                            |
 | `source/`        | Symbol, wordmark, horizontal and stacked lockups in colour, black, white and reversed, plus the app icon |
 | `favicon/`       | Favicon SVG and ICO, PNG renders, and the iOS and web app icons                                          |
-| `social/`        | The 1200 by 630 social card and the page it's rendered from                                              |
+| `social/`        | The link preview cards in code, and the landing card rendered at 1200 by 630                             |
 | `assets/tokens/` | NVDA and USDG logos, with where each came from and its checksum in `manifest.json`                       |
 
 ## Rebuilding
@@ -35,7 +35,13 @@ pip install fonttools brotli uharfbuzz cairosvg
 python scripts/build_masters.py
 ```
 
-It writes `source/` and `favicon/`, and copies the served icons into `apps/web/public/`. On macOS with Homebrew's cairo, run it with `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib`. Then re-render the social card by opening `social/og.html` at 1200 by 630 and saving a screenshot over `social/vayle-og-1200x630.png` and `apps/web/public/og.png`.
+It writes `source/` and `favicon/`, and copies the served icons into `apps/web/public/`. On macOS with Homebrew's cairo, run it with `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib`.
+
+Link previews are drawn in code in `social/cards.ts`, one card per page, and rendered with Satori and resvg. The web build renders every card into `og/` on its own. To refresh the brand's copy of the landing card after a change:
+
+```sh
+pnpm --filter @vayle/brand social
+```
 
 The token logos are pinned by checksum in `assets/tokens/manifest.json`. Where each one comes from is kept in a sources file outside the repo, mapping each symbol to its `sourceUrl`. To re-download them and check nothing changed:
 

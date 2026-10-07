@@ -260,19 +260,19 @@ None. The system uses no outside reference imagery.
 
 ## Required deliverables
 
-| Deliverable                                                          | Path                                                 |
-| -------------------------------------------------------------------- | ---------------------------------------------------- |
-| Symbol geometry                                                      | `src/mark.ts`                                        |
-| Tokens                                                               | `css/tokens.css`                                     |
-| Symbol, wordmark and both lockups: colour, black, white and reversed | `source/`                                            |
-| App icon master                                                      | `source/vayle-app-icon.svg`                          |
-| Favicons and app icons                                               | `favicon/`, copied into `apps/web/public/`           |
-| Social card, 1200 by 630                                             | `social/vayle-og-1200x630.png` from `social/og.html` |
-| Token logos with provenance                                          | `assets/tokens/`                                     |
-| Machine-readable spec                                                | `brand.json`                                         |
+| Deliverable                                                          | Path                                                  |
+| -------------------------------------------------------------------- | ----------------------------------------------------- |
+| Symbol geometry                                                      | `src/mark.ts`                                         |
+| Tokens                                                               | `css/tokens.css`                                      |
+| Symbol, wordmark and both lockups: colour, black, white and reversed | `source/`                                             |
+| App icon master                                                      | `source/vayle-app-icon.svg`                           |
+| Favicons and app icons                                               | `favicon/`, copied into `apps/web/public/`            |
+| Social card, 1200 by 630                                             | `social/cards.ts`, rendered per page by the web build |
+| Token logos with provenance                                          | `assets/tokens/`                                      |
+| Machine-readable spec                                                | `brand.json`                                          |
 
 ## Validation
 
 - `pnpm --filter @vayle/brand test` checks that the token logos match their manifest, that every master and icon was generated from the current `src/mark.ts`, that no SVG carries text, scripts or outside references, and that the web app serves the same icons as this package.
-- After changing `src/mark.ts` or the wordmark settings, rerun `scripts/build_masters.py`, then re-render the social card from `social/og.html`.
+- After changing `src/mark.ts` or the wordmark settings, rerun `scripts/build_masters.py`, then `pnpm --filter @vayle/brand social`.
 - By eye before release: the favicon at 16 and 32 px on light and dark browser tabs, and both lockups in both themes.

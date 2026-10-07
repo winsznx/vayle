@@ -7,15 +7,21 @@
   "exports": {
     "./tokens.css": "./css/tokens.css",
     "./mark": "./src/mark.ts",
+    "./cards": "./social/cards.ts",
     "./brand.json": "./brand.json",
     "./assets/*": "./assets/*"
   },
   "scripts": {
     "test": "node --test \"test/*.test.ts\"",
     "sync-tokens": "node scripts/sync-tokens.ts",
+    "social": "node scripts/render-social.ts",
     "typecheck": "tsc -p tsconfig.json"
   },
   "devDependencies": {
-    "@fontsource-variable/plus-jakarta-sans": "5.3.0"
+    "@fontsource-variable/plus-jakarta-sans": "5.3.0",
+    "@fontsource/plus-jakarta-sans": "5.3.0",
+    "@resvg/resvg-js": "2.6.2",
+    "@types/react": "19.3.0",
+    "satori": "0.33.5"
   }
 }
