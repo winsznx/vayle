@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import { vayleMarketAbi } from "@vayle/abi";
 import type { OrderState } from "@vayle/market";
 import { decodeFunctionData, erc20Abi, getAddress, type Hex } from "viem";
-import { planEdit, type Holdings } from "../src/app/edit.ts";
+import { planEdit, type Holdings, type Limits } from "../src/app/edit.ts";
 import type { Epoch } from "../src/app/week.ts";
 
 const ONE = 10n ** 18n;
@@ -12,7 +12,14 @@ const addresses = {
   asset: getAddress("0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC"),
   usdg: getAddress("0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168"),
 };
-const decimals = { usdg: 6, asset: 18 };
+const units = { usdg: 6, asset: 18, symbol: "NVDA" };
+const caps = {
+  openSize: 100n * ONE,
+  walletSize: 10n * ONE,
+  seriesOpenInterest: 0n,
+  fillSize: 0n,
+};
+const limits: Limits = { caps: { sell: caps, buy: caps }, open: { sell: 0n, buy: 0n } };
 const epoch: Epoch = {
   opening: 0,
   expiry: 1,
@@ -30,6 +37,7 @@ const holdings: Holdings = {
   balanceUsdg: 500_000_000n,
   allowanceAsset: 0n,
   allowanceUsdg: 0n,
+  walletOpen: { sell: ONE / 2n, buy: 0n },
 };
 
 function order(overrides: Partial<OrderState> = {}): OrderState {
@@ -70,7 +78,8 @@ describe("planEdit", () => {
       epoch,
       holdings,
       addresses,
-      decimals,
+      limits,
+      units,
     );
     // #then
     assert.deepEqual(plan.kind === "ready" ? [functionNames(plan.calls), plan.move] : plan, [
@@ -87,7 +96,8 @@ describe("planEdit", () => {
       epoch,
       { ...holdings, allowanceAsset: ONE },
       addresses,
-      decimals,
+      limits,
+      units,
     );
     // #then
     assert.deepEqual(plan.kind === "ready" ? functionNames(plan.calls) : plan, ["amendOrder"]);
@@ -103,7 +113,8 @@ describe("planEdit", () => {
       epoch,
       holdings,
       addresses,
-      decimals,
+      limits,
+      units,
     );
     // #then
     assert.deepEqual(plan.kind === "ready" ? [functionNames(plan.calls), plan.move] : plan, [
@@ -116,7 +127,7 @@ describe("planEdit", () => {
     // #given the wallet holds 1 NVDA and the order 0.5 more
     const input = { target: 250_000_000n, amount: "1.50", minimum: "0.10" };
     // #when
-    const plan = planEdit(order(), input, epoch, holdings, addresses, decimals);
+    const plan = planEdit(order(), input, epoch, holdings, addresses, limits, units);
     // #then
     assert.equal(plan.kind, "ready");
   });
@@ -129,7 +140,8 @@ describe("planEdit", () => {
       epoch,
       holdings,
       addresses,
-      decimals,
+      limits,
+      units,
     );
     // #then
     assert.deepEqual(plan, {
@@ -146,7 +158,8 @@ describe("planEdit", () => {
       epoch,
       holdings,
       addresses,
-      decimals,
+      limits,
+      units,
     );
     // #then
     assert.deepEqual(plan, { kind: "unchanged" });
@@ -162,13 +175,59 @@ describe("planEdit", () => {
       epoch,
       holdings,
       addresses,
-      decimals,
+      limits,
+      units,
     );
     // #then
     assert.deepEqual(plan.kind === "ready" ? [functionNames(plan.calls), plan.move] : plan, [
       ["updateOrder"],
       null,
     ]);
+  });
+
+  it("counts the order's own size as released when it checks the wallet's cap", () => {
+    // #given a wallet cap of 1 NVDA, all of it this order's 0.5 and another order's 0.5
+    const tight: Limits = {
+      caps: { sell: { ...caps, walletSize: ONE }, buy: caps },
+      open: { sell: ONE, buy: 0n },
+    };
+    const full = { ...holdings, walletOpen: { sell: ONE, buy: 0n } };
+    // #when
+    const plan = planEdit(
+      order(),
+      { target: 255_000_000n, amount: "0.50", minimum: "0.10" },
+      epoch,
+      full,
+      addresses,
+      tight,
+      units,
+    );
+    // #then
+    assert.equal(plan.kind, "ready");
+  });
+
+  it("refuses to grow an order past the wallet's cap", () => {
+    // #given the same full cap
+    const tight: Limits = {
+      caps: { sell: { ...caps, walletSize: ONE }, buy: caps },
+      open: { sell: ONE, buy: 0n },
+    };
+    const full = { ...holdings, walletOpen: { sell: ONE, buy: 0n } };
+    // #when
+    const plan = planEdit(
+      order(),
+      { target: 250_000_000n, amount: "0.75", minimum: "0.10" },
+      epoch,
+      full,
+      addresses,
+      tight,
+      units,
+    );
+    // #then
+    assert.deepEqual(plan, {
+      kind: "problem",
+      problem: "That's over the market's limit for now. Up to 0.50 NVDA fits.",
+    });
   });
 
   it("refuses a least premium off the market's price steps", () => {
@@ -181,7 +240,8 @@ describe("planEdit", () => {
       epoch,
       holdings,
       addresses,
-      decimals,
+      limits,
+      units,
     );
     // #then
     assert.equal(plan.kind, "problem");

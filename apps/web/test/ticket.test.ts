@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { checkTicket } from "../src/app/ticket.ts";
+import { capProblem, checkTicket, roomUnderCaps } from "../src/app/ticket.ts";
 import type { Epoch } from "../src/app/week.ts";
 
 const epoch: Epoch = {
@@ -76,5 +76,55 @@ describe("checkTicket", () => {
     );
     // #then
     assert.equal(result.ok, false);
+  });
+});
+
+describe("roomUnderCaps", () => {
+  const caps = { openSize: 10n * ONE, walletSize: 3n * ONE, seriesOpenInterest: 0n, fillSize: 0n };
+
+  it("is what's left of the wallet's share when that's tighter than the market's", () => {
+    // #when
+    const room = roomUnderCaps(caps, 4n * ONE, ONE);
+    // #then
+    assert.equal(room, 2n * ONE);
+  });
+
+  it("is what's left of the market's total when that's tighter", () => {
+    // #when
+    const room = roomUnderCaps(caps, 9n * ONE, 0n);
+    // #then
+    assert.equal(room, ONE);
+  });
+
+  it("is never below zero after a cap is lowered under what's open", () => {
+    // #when
+    const room = roomUnderCaps(caps, 12n * ONE, 0n);
+    // #then
+    assert.equal(room, 0n);
+  });
+});
+
+describe("capProblem", () => {
+  const caps = { openSize: 10n * ONE, walletSize: 3n * ONE, seriesOpenInterest: 0n, fillSize: 0n };
+
+  it("says buy orders aren't open while their cap is zero", () => {
+    // #when
+    const problem = capProblem(ONE, 0n, { ...caps, openSize: 0n }, "buy", "NVDA", 18);
+    // #then
+    assert.equal(problem, "Buy orders aren't open yet.");
+  });
+
+  it("says how much fits when an order is over the room left", () => {
+    // #when
+    const problem = capProblem(2n * ONE, ONE / 2n, caps, "sell", "NVDA", 18);
+    // #then
+    assert.equal(problem, "That's over the market's limit for now. Up to 0.50 NVDA fits.");
+  });
+
+  it("finds nothing wrong with an order that fits", () => {
+    // #when
+    const problem = capProblem(ONE, ONE, caps, "sell", "NVDA", 18);
+    // #then
+    assert.equal(problem, null);
   });
 });

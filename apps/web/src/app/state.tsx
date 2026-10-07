@@ -4,6 +4,8 @@ import { createContext, use, useMemo, useState, type ReactNode } from "react";
 import type { Chain, PublicClient } from "viem";
 import { publicClientOf } from "./chain.ts";
 import { describeFailure, reverted } from "./failures.ts";
+import { easternTime } from "./format.ts";
+import { placementRestricted } from "./region.ts";
 import type { AppConfig } from "./config.ts";
 import { useDisclosures, type DisclosuresState } from "./useDisclosures.ts";
 import { useMarket, type MarketView } from "./useMarket.ts";
@@ -75,6 +77,8 @@ function placementOf(
   disclosures: DisclosuresState,
   wallet: Wallet,
   onChain: boolean,
+  view: MarketView | null,
+  restricted: boolean,
 ): Placement {
   if (!config.placement) {
     return {
@@ -85,6 +89,25 @@ function placementOf(
   }
   if (disclosures.status !== "approved") {
     return { open: false, reason: "Trading opens once the disclosures are final." };
+  }
+  if (restricted) {
+    return {
+      open: false,
+      reason:
+        "New orders aren't available where you are. Your existing orders can still be settled, stopped and withdrawn.",
+    };
+  }
+  if (view !== null && view.now < view.guard.haltedUntil) {
+    return {
+      open: false,
+      reason: `The market is halted until ${easternTime(view.guard.haltedUntil)}, so nothing can change until then.`,
+    };
+  }
+  if (view?.guard.paused === true) {
+    return {
+      open: false,
+      reason: "New orders are paused right now. Settling, stopping and withdrawing still work.",
+    };
   }
   if (wallet.address === null)
     return { open: false, reason: "Connect a wallet to place an order." };
@@ -108,6 +131,8 @@ export function AppProvider({
   const { view, error } = useMarket(client, config, wallet.address, version);
   const history = useMarketHistory(client, config, wallet.address, version);
   const disclosures = useDisclosures();
+  // Where the visitor is doesn't change while the page is open, so it's read once.
+  const [restricted] = useState(placementRestricted);
   const onChain = wallet.address !== null && wallet.chainId === config.chainId;
 
   // Sends the calls one after another, each after the last confirms, then refreshes what's shown.
@@ -149,7 +174,7 @@ export function AppProvider({
     tx,
     busy: tx.status === "signing" || tx.status === "confirming",
     run,
-    placement: placementOf(config, disclosures, wallet, onChain),
+    placement: placementOf(config, disclosures, wallet, onChain, view, restricted),
   };
   return <AppContext value={state}>{children}</AppContext>;
 }

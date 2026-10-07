@@ -19,6 +19,12 @@
     // The market and the NVDA/USD feed, the only addresses /rpc answers eth_getLogs for. Set the
     // market here after the deploy.
     "RPC_LOG_ADDRESSES": "",
+    // Where the app doesn't offer new orders. Settling, stopping and withdrawing stay open
+    // everywhere, and so does the fallback page. The United States, the countries under
+    // comprehensive sanctions, and Tor exits (T1), whose location can't be known.
+    "RESTRICTED_COUNTRIES": "US,CU,IR,KP,SY,T1",
+    // Regions of a country otherwise open: Crimea, Donetsk and Luhansk.
+    "RESTRICTED_REGIONS": "UA-43,UA-14,UA-09",
   },
   // Each visitor's /rpc requests, keyed by address. A poll is a few requests every 15 seconds, and
   // waiting on a transaction adds two or three a second.

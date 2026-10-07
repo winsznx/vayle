@@ -3,7 +3,9 @@ import { Link, Outlet, useMatches, useRouteError } from "react-router";
 import { Sidebar } from "../components/Sidebar.tsx";
 import { TopBar } from "../components/TopBar.tsx";
 import { txUrl } from "../events.ts";
+import { easternTime } from "../format.ts";
 import { useApp, type TxState } from "../state.tsx";
+import type { MarketView } from "../useMarket.ts";
 import { PhoneTabs } from "./PhoneTabs.tsx";
 
 // Each route names itself in its handle; the shell shows it in the top bar and the tab title.
@@ -80,6 +82,26 @@ function Frame({ title, children }: { readonly title: string; readonly children:
   );
 }
 
+// A halt or a pause changes what every page can do, so it's said above every page while it lasts.
+function MarketNotice({ view }: { readonly view: MarketView }) {
+  if (view.now < view.guard.haltedUntil) {
+    return (
+      <p className="market-notice market-notice-halted" role="status">
+        The market is halted until {easternTime(view.guard.haltedUntil)}. Nothing can be placed,
+        changed, settled or withdrawn until then.
+      </p>
+    );
+  }
+  if (view.guard.paused) {
+    return (
+      <p className="market-notice" role="status">
+        New orders are paused. Settling, stopping and withdrawing still work.
+      </p>
+    );
+  }
+  return null;
+}
+
 export function AppShell() {
   const { view, readError } = useApp();
   const title = usePageTitle();
@@ -93,6 +115,7 @@ export function AppShell() {
         </p>
       ) : (
         <main className="board">
+          <MarketNotice view={view} />
           <Outlet />
         </main>
       )}

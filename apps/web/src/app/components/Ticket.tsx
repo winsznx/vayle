@@ -6,7 +6,7 @@ import { TokenIcon } from "../../ui/TokenIcon.tsx";
 import type { Run } from "../state.tsx";
 import type { AppConfig } from "../config.ts";
 import { dollars, easternTime, tokens, usdgAmount } from "../format.ts";
-import { checkTicket } from "../ticket.ts";
+import { capProblem, checkTicket, roomUnderCaps, type TicketResult } from "../ticket.ts";
 import type { MarketView } from "../useMarket.ts";
 import { BID_WINDOW, type Epoch, type Rung } from "../week.ts";
 
@@ -52,7 +52,16 @@ export function Ticket(props: {
 
   const selling = rung.side === "sell";
   const account = view.account;
-  const result =
+  const caps = selling ? view.guard.caps.sell : view.guard.caps.buy;
+  const room =
+    account === null
+      ? 0n
+      : roomUnderCaps(
+          caps,
+          selling ? view.guard.open.sell : view.guard.open.buy,
+          selling ? account.walletOpen.sell : account.walletOpen.buy,
+        );
+  const checked =
     account === null || amount === ""
       ? null
       : checkTicket(
@@ -62,19 +71,35 @@ export function Ticket(props: {
           config.usdgDecimals,
           config.assetDecimals,
         );
+  // The caps bind the same way the market will check them when the order is sent.
+  const overCap =
+    checked?.ok === true
+      ? capProblem(
+          checked.ticket.size,
+          room,
+          caps,
+          rung.side,
+          config.assetSymbol,
+          config.assetDecimals,
+        )
+      : null;
+  const result =
+    overCap === null ? checked : ({ ok: false, problem: overCap } satisfies TicketResult);
   const batchOpens = epoch.opening + epoch.windowLength + BID_WINDOW;
   const timing =
     view.now < batchOpens
       ? `Joins this week's batch, which starts ${easternTime(batchOpens)}.`
       : "Can fill this week if the maker quotes it, or joins next week's batch.";
 
-  // The most whole lots the wallet can cover: its NVDA for a sell, its USDG at this price for a buy.
-  const maxSize =
+  // The most whole lots the wallet can cover, its NVDA for a sell and its USDG at this price for a
+  // buy, that also fit under the caps.
+  const covered =
     account === null
       ? 0n
       : selling
-        ? (account.balanceAsset / epoch.lot) * epoch.lot
-        : ((account.balanceUsdg * epoch.rawUnit) / rung.strike / epoch.lot) * epoch.lot;
+        ? account.balanceAsset
+        : (account.balanceUsdg * epoch.rawUnit) / rung.strike;
+  const maxSize = ((covered < room ? covered : room) / epoch.lot) * epoch.lot;
 
   const place = (): void => {
     if (result === null || !result.ok || account === null) return;

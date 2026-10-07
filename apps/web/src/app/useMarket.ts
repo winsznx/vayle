@@ -15,8 +15,35 @@ import type { AppConfig } from "./config.ts";
 import { shortError } from "./failures.ts";
 import { ladder, type Epoch } from "./week.ts";
 
+// What one side of the market may take, in raw token units. A buy order counts the NVDA it would
+// buy.
+export interface Caps {
+  readonly openSize: bigint;
+  readonly walletSize: bigint;
+  readonly seriesOpenInterest: bigint;
+  readonly fillSize: bigint;
+}
+
+export interface BySide<T> {
+  readonly sell: T;
+  readonly buy: T;
+}
+
+// What can stop the market and how full it is.
+export interface GuardView {
+  // New orders are paused for every asset or for NVDA.
+  readonly paused: boolean;
+  // When the latest emergency halt ends, in seconds, or 0 when there's never been one.
+  readonly haltedUntil: number;
+  readonly caps: BySide<Caps>;
+  // The size of every active order, per side.
+  readonly open: BySide<bigint>;
+}
+
 export interface AccountView {
   readonly orders: readonly OrderState[];
+  // The size of this wallet's active orders, per side, which the per-wallet cap counts.
+  readonly walletOpen: BySide<bigint>;
   readonly series: ReadonlyMap<bigint, SeriesState>;
   // Series whose window the view says is over but that finalize would still find open, with the
   // end it reports. The chain has been quiet, and quiet time extends windows.
@@ -37,6 +64,7 @@ export interface MarketView {
   readonly feedDecimals: number;
   // This week's best bid per listed strike, in USDG base units per raw token.
   readonly bids: ReadonlyMap<bigint, bigint>;
+  readonly guard: GuardView;
   readonly account: AccountView | null;
 }
 
@@ -46,6 +74,8 @@ const feedAbi = parseAbi([
 ]);
 const POLL_MS = 15_000;
 const NO_MAKER = "0x0000000000000000000000000000000000000000";
+const CALL = 0;
+const PUT = 1;
 
 // Every read in a poll is pinned to the block the poll starts from, so the page never shows one
 // block's orders beside another block's series. Reads that don't wait on each other start together,
@@ -119,6 +149,30 @@ async function readBids(
   return bids;
 }
 
+async function readGuard(
+  client: PublicClient,
+  config: AppConfig,
+  blockNumber: bigint,
+): Promise<GuardView> {
+  const market = { address: config.market, abi: vayleMarketAbi, blockNumber } as const;
+  const [paused, assetPaused, haltedUntil, sellCaps, buyCaps, openSell, openBuy] =
+    await Promise.all([
+      client.readContract({ ...market, functionName: "paused" }),
+      client.readContract({ ...market, functionName: "assetPaused", args: [config.asset] }),
+      client.readContract({ ...market, functionName: "haltedUntil" }),
+      client.readContract({ ...market, functionName: "capsOf", args: [config.asset, CALL] }),
+      client.readContract({ ...market, functionName: "capsOf", args: [config.asset, PUT] }),
+      client.readContract({ ...market, functionName: "openSize", args: [config.asset, CALL] }),
+      client.readContract({ ...market, functionName: "openSize", args: [config.asset, PUT] }),
+    ]);
+  return {
+    paused: paused || assetPaused,
+    haltedUntil: Number(haltedUntil),
+    caps: { sell: sellCaps, buy: buyCaps },
+    open: { sell: openSell, buy: openBuy },
+  };
+}
+
 async function readAccount(
   client: PublicClient,
   config: AppConfig,
@@ -133,6 +187,14 @@ async function readAccount(
       args: [owner, config.market],
       blockNumber: head.number,
     });
+  const wallet = (side: number): Promise<bigint> =>
+    client.readContract({
+      address: config.market,
+      abi: vayleMarketAbi,
+      functionName: "walletSize",
+      args: [owner, config.asset, side],
+      blockNumber: head.number,
+    });
   const [
     orders,
     claimableAsset,
@@ -141,6 +203,8 @@ async function readAccount(
     balanceUsdg,
     allowanceAsset,
     allowanceUsdg,
+    walletSell,
+    walletBuy,
   ] = await Promise.all([
     ordersOf(client, config.market, owner, head.number),
     claimable(client, config.market, owner, config.asset, head.number),
@@ -149,6 +213,8 @@ async function readAccount(
     balanceOf(client, config.usdg, owner, head.number),
     allowance(config.asset),
     allowance(config.usdg),
+    wallet(CALL),
+    wallet(PUT),
   ]);
   const ids = [...new Set(orders.filter((o) => o.series !== 0n).map((o) => o.series))];
   const series = new Map(
@@ -170,6 +236,7 @@ async function readAccount(
   for (const [id, until] of blocked) if (until !== null) heldOpen.set(id, until);
   return {
     orders,
+    walletOpen: { sell: walletSell, buy: walletBuy },
     series,
     heldOpen,
     claimableAsset,
@@ -188,7 +255,7 @@ async function readMarket(
 ): Promise<MarketView> {
   const head = await client.getBlock({ blockTag: "latest" });
   const at = { blockNumber: head.number } as const;
-  const [week, round, feedDecimals, account] = await Promise.all([
+  const [week, round, feedDecimals, guard, account] = await Promise.all([
     readEpoch(client, config, head.number).then(async (epoch) => ({
       epoch,
       bids:
@@ -203,6 +270,7 @@ async function readMarket(
       ...at,
     }),
     client.readContract({ address: config.feed, abi: feedAbi, functionName: "decimals", ...at }),
+    readGuard(client, config, head.number),
     owner === null ? Promise.resolve(null) : readAccount(client, config, owner, head),
   ]);
   return {
@@ -212,6 +280,7 @@ async function readMarket(
     feedAnswer: round[1],
     feedDecimals,
     bids: week.bids,
+    guard,
     account,
   };
 }

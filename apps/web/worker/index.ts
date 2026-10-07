@@ -1,12 +1,14 @@
 import { appPage, LANDING, tabTitle, type PageMeta } from "../src/meta.ts";
+import { restrictedHere, type RegionEnv } from "./region.ts";
 import { proxyRpc, type RpcEnv } from "./rpc.ts";
 
 // Serves the built site from static assets. The landing and every app route get their HTML from
 // here, with that page's title, description and link preview written in, because a crawler that
-// asks for /app/orders reads the HTML and never runs the app. /rpc is the site's own RPC (rpc.ts).
-// Everything else is a static file.
+// asks for /app/orders reads the HTML and never runs the app. App pages also say whether new orders
+// are offered where the visitor is (region.ts). /rpc is the site's own RPC (rpc.ts). Everything
+// else is a static file.
 
-interface Env extends RpcEnv {
+interface Env extends RpcEnv, RegionEnv {
   readonly ASSETS: Fetcher;
 }
 
@@ -25,9 +27,22 @@ function setContent(value: string): HTMLRewriterElementContentHandlers {
   };
 }
 
-function withMeta(html: Response, meta: PageMeta, title: string, url: URL): Response {
+function withMeta(
+  html: Response,
+  meta: PageMeta,
+  title: string,
+  url: URL,
+  restricted: boolean,
+): Response {
   const image = `${url.origin}/og/${meta.card}.png`;
   return new HTMLRewriter()
+    .on("head", {
+      element(element) {
+        if (restricted) {
+          element.append('<meta name="vayle-region" content="restricted" />', { html: true });
+        }
+      },
+    })
     .on("title", {
       element(element) {
         element.setInnerContent(title);
@@ -44,8 +59,11 @@ function withMeta(html: Response, meta: PageMeta, title: string, url: URL): Resp
     .transform(html);
 }
 
+// A visitor's request, with what Cloudflare knows about where it came from.
+type Visit = Request<unknown, IncomingRequestCfProperties>;
+
 async function page(
-  request: Request,
+  request: Visit,
   env: Env,
   shell: string,
   meta: PageMeta,
@@ -57,7 +75,8 @@ async function page(
     new Request(new URL(shell, url), { headers: request.headers }),
   );
   if (!html.ok) return html;
-  const body = withMeta(html, meta, title, url);
+  const restricted = restrictedHere(request.cf?.country, request.cf?.regionCode, env);
+  const body = withMeta(html, meta, title, url, restricted);
   const headers = new Headers(body.headers);
   headers.set("content-type", "text/html; charset=utf-8");
   headers.set("cache-control", "no-cache");
@@ -66,7 +85,7 @@ async function page(
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Visit, env: Env): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname;
     if (path === "/rpc") return proxyRpc(request, env);

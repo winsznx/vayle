@@ -16,8 +16,8 @@ export function EditOrder({ order }: { readonly order: OrderState }) {
   const [target, setTarget] = useState(order.target);
   const [amount, setAmount] = useState(formatFixed(order.size, config.assetDecimals));
   const [minimum, setMinimum] = useState(formatFixed(order.minPremium, config.usdgDecimals));
-  const epoch = view?.epoch ?? null;
-  const account = view?.account ?? null;
+  if (view === null) return null;
+  const { epoch, account } = view;
   if (order.status !== "active" || order.frozen || epoch === null || account === null) return null;
 
   const selling = order.side === 0;
@@ -30,9 +30,10 @@ export function EditOrder({ order }: { readonly order: OrderState }) {
       order.target,
     ]),
   ].sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
-  const plan = planEdit(order, { target, amount, minimum }, epoch, account, config, {
+  const plan = planEdit(order, { target, amount, minimum }, epoch, account, config, view.guard, {
     usdg: config.usdgDecimals,
     asset: config.assetDecimals,
+    symbol: config.assetSymbol,
   });
   const moveText = (move: Move): string => {
     const what = selling
