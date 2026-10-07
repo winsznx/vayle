@@ -1127,3 +1127,34 @@
     padding: 0 12px;
   }
 }
+
+/* /app before the market exists, or in a build missing its settings. */
+.standby {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background: var(--page);
+}
+
+.standby-card {
+  width: min(100%, 480px);
+  display: grid;
+  gap: 16px;
+  padding: clamp(28px, 5vw, 44px);
+  border-radius: var(--radius-card);
+  background: var(--sheet);
+  box-shadow: var(--shadow-float);
+}
+
+.standby-brand {
+  justify-self: start;
+  margin-bottom: 12px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.standby-home {
+  justify-self: start;
+  margin-top: 8px;
+}

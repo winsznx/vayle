@@ -6,6 +6,7 @@ import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router/dom";
 import { loadConfig } from "./config.ts";
 import { router } from "./router.tsx";
+import { Standby } from "./Standby.tsx";
 import { WalletProviders } from "./shell/WalletProviders.tsx";
 import { AppProvider } from "./state.tsx";
 import { walletConfigOf } from "./walletConfig.ts";
@@ -24,12 +25,7 @@ createRoot(root).render(
         </AppProvider>
       </WalletProviders>
     ) : (
-      <main className="setup">
-        <h1>Vayle isn&apos;t set up</h1>
-        <p>
-          This build is missing settings it needs to reach the market: {result.missing.join(", ")}.
-        </p>
-      </main>
+      <Standby missing={result.missing} />
     )}
   </StrictMode>,
 );
