@@ -11,6 +11,7 @@ export const SOURCES = {
   feedDocs: "https://docs.chain.link/data-feeds/price-feeds/addresses?network=robinhood",
   sequencerFeeds: "https://docs.chain.link/data-feeds/l2-sequencer-feeds",
   erc8056: "https://eips.ethereum.org/EIPS/eip-8056",
+  multicall3: "https://github.com/mds1/multicall3",
 } as const;
 
 const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);

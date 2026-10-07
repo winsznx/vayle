@@ -51,3 +51,6 @@ export class Drift extends FactError {
 export class CodeSizeProbeFailed extends FactError {
   override readonly name = "CodeSizeProbeFailed";
 }
+export class DocsMismatch extends FactError {
+  override readonly name = "DocsMismatch";
+}

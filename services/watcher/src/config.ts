@@ -2,8 +2,8 @@ import { getAddress, type Address } from "viem";
 import facts from "../../../deployments/robinhood-mainnet.json" with { type: "json" };
 import { MarketConfigIncomplete, MissingSetting } from "./errors.ts";
 
-// The chain's block explorer, as listed at https://docs.robinhood.com/chain/connecting.
-export const EXPLORER = "https://robinhoodchain.blockscout.com";
+// The chain's block explorer, from the chain facts.
+export const EXPLORER = facts.chain.explorerUrl;
 
 export interface MarketAddresses {
   readonly market: Address;

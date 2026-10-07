@@ -20,6 +20,7 @@ import {
   ChainIdMismatch,
   CodeSizeProbeFailed,
   DecimalsMismatch,
+  DocsMismatch,
   DomainMismatch,
   FeedMismatch,
   InterfaceNotSupported,
@@ -41,6 +42,14 @@ import {
 } from "./sources.ts";
 
 export const EXPECTED_CHAIN_ID = 4663;
+// Multicall3's address is the same on every chain it's deployed to, and so is its runtime code.
+// Both are checked on chain on every run.
+export const MULTICALL3 = getAddress("0xcA11bde05977b3631167028862bE2a173976CA11");
+export const MULTICALL3_RUNTIME_KECCAK =
+  "0xd5c15df687b16f2ff992fc8d767b4216323184a2bbc6ee2f9c398c318e770891";
+// As listed at docs.robinhood.com/chain/connecting, and checked against that page on every run.
+export const PUBLIC_RPC_URL = "https://rpc.mainnet.chain.robinhood.com";
+export const EXPLORER_URL = "https://robinhoodchain.blockscout.com";
 const ACTIVE = "ASSET_STATUS_ACTIVE";
 const ARBSYS: Address = "0x0000000000000000000000000000000000000064";
 // ArbSys reports 55 plus the ArbOS version.
@@ -199,6 +208,36 @@ async function addressInSlot(
   return getAddress(sliceHex(word ?? "0x", 12, 32));
 }
 
+// Where Multicall3 is and when it appeared: its code must match the canonical runtime, and the
+// earliest block with code is found by bisection over archive state.
+async function multicall3(client: PublicClient, block: bigint): Promise<ChainFacts["multicall3"]> {
+  const code = (await client.getCode({ address: MULTICALL3, blockNumber: block })) ?? "0x";
+  if (code === "0x" || keccak256(code) !== MULTICALL3_RUNTIME_KECCAK) {
+    throw new SpecMismatch(
+      `${MULTICALL3} doesn't hold Multicall3's runtime code at block ${block}`,
+    );
+  }
+  const hasCode = async (at: bigint): Promise<boolean> =>
+    ((await client.getCode({ address: MULTICALL3, blockNumber: at })) ?? "0x") !== "0x";
+  let created = 0n;
+  if (!(await hasCode(0n))) {
+    let low = 0n;
+    let high = block;
+    while (low + 1n < high) {
+      const mid = (low + high) / 2n;
+      if (await hasCode(mid)) high = mid;
+      else low = mid;
+    }
+    created = high;
+  }
+  return {
+    address: MULTICALL3,
+    blockCreated: Number(created),
+    runtimeKeccak: MULTICALL3_RUNTIME_KECCAK,
+    sources: [SOURCES.multicall3],
+  };
+}
+
 export async function resolveFacts(client: PublicClient, now: Date): Promise<ChainFacts> {
   const latest = await client.getBlock({ blockTag: "latest" });
   const block = latest.number;
@@ -206,6 +245,11 @@ export async function resolveFacts(client: PublicClient, now: Date): Promise<Cha
   const connecting = await fetchText(SOURCES.chainConnecting);
   if (chainId !== EXPECTED_CHAIN_ID || !pageStates(connecting, String(EXPECTED_CHAIN_ID))) {
     throw new ChainIdMismatch(`RPC reports ${chainId}, docs state ${EXPECTED_CHAIN_ID}`);
+  }
+  for (const url of [PUBLIC_RPC_URL, EXPLORER_URL]) {
+    if (!pageStates(connecting, url)) {
+      throw new DocsMismatch(`${SOURCES.chainConnecting} no longer lists ${url}`);
+    }
   }
   const arbOsRaw = await client.readContract({
     address: ARBSYS,
@@ -314,6 +358,8 @@ export async function resolveFacts(client: PublicClient, now: Date): Promise<Cha
       chainId,
       arbOsVersion: Number(arbOsRaw - ARBOS_VERSION_OFFSET),
       ...(await codeSizeLimits(client, block)),
+      publicRpcUrl: PUBLIC_RPC_URL,
+      explorerUrl: EXPLORER_URL,
       sources: [SOURCES.chainConnecting, SOURCES.chainNode],
     },
     nvda: {
@@ -391,6 +437,7 @@ export async function resolveFacts(client: PublicClient, now: Date): Promise<Cha
       available: hasUptimeFeed(directory),
       sources: [SOURCES.feedDirectory, SOURCES.sequencerFeeds],
     },
+    multicall3: await multicall3(client, block),
     erc8056: { interfaceIds: ids, sources: [SOURCES.erc8056] },
   };
 }

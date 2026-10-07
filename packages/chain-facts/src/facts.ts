@@ -12,6 +12,10 @@ export interface ChainFacts {
     // The largest contract runtime and init code a CREATE accepts, in bytes.
     readonly maxCodeSize: number;
     readonly maxInitCodeSize: number;
+    // The public RPC and the block explorer the chain's docs list. Wallets get these when they add
+    // the chain, never a private RPC.
+    readonly publicRpcUrl: string;
+    readonly explorerUrl: string;
     readonly sources: readonly string[];
   };
   readonly nvda: {
@@ -66,6 +70,14 @@ export interface ChainFacts {
   };
   readonly sequencerUptimeFeed: {
     readonly available: boolean;
+    readonly sources: readonly string[];
+  };
+  // The batching contract every client reads through. Its runtime code must hash to the canonical
+  // Multicall3 deployment's, and it must have code from blockCreated on.
+  readonly multicall3: {
+    readonly address: Address;
+    readonly blockCreated: number;
+    readonly runtimeKeccak: Hex;
     readonly sources: readonly string[];
   };
   readonly erc8056: {
