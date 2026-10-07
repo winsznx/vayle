@@ -50,6 +50,8 @@ export interface Bucket {
   readonly series: bigint;
   readonly registered: boolean;
   readonly bestBidder: Address | null;
+  // The maker's own best bid here, which the batch may still write.
+  readonly ownBid: { readonly premium: bigint; readonly amount: bigint } | null;
   readonly fillSize: bigint;
   readonly seriesRoom: bigint;
 }
@@ -108,6 +110,10 @@ function floorTo(value: bigint, unit: bigint): bigint {
   return value - (value % unit);
 }
 
+function ceilDiv(a: bigint, b: bigint): bigint {
+  return (a + b - 1n) / b;
+}
+
 function min(...values: bigint[]): bigint {
   return values.reduce((a, b) => (b < a ? b : a), MAX_UINT);
 }
@@ -133,11 +139,75 @@ export function premiumFor(
   return bidPremium(fair, pricing.edgeBps, s.usdgDecimals, s.epoch.priceTick);
 }
 
-// The most a premium can buy from `budget` USDG, fee on top, in whole lots.
-function affordable(budget: bigint, premium: bigint, feeBps: number, e: EpochTerms): bigint {
-  if (premium === 0n) return MAX_UINT;
-  const perRaw = premium * (BPS + BigInt(feeBps));
-  return floorTo((budget * e.rawUnit * BPS) / perRaw, e.lot);
+// What's left to spend once the maker has kept back what exercising takes: the strike in USDG for
+// every call and the asset for every put it's long in a window still to come, plus, until the
+// batches are done, its own bids that a batch may still write. A long it can't exercise is a holder's
+// order that doesn't fill at its price.
+interface Room {
+  usdg: bigint;
+  asset: bigint;
+}
+
+function exerciseCost(side: number, strike: bigint, amount: bigint, rawUnit: bigint): Room {
+  return side === CALL
+    ? { usdg: ceilDiv(amount * strike, rawUnit), asset: 0n }
+    : { usdg: 0n, asset: amount };
+}
+
+function premiumCost(premium: bigint, amount: bigint, feeBps: number, rawUnit: bigint): bigint {
+  return ceilDiv(amount * premium * (BPS + BigInt(feeBps)), rawUnit * BPS);
+}
+
+function freeRoom(s: MakerSnapshot, e: EpochTerms): Room {
+  const room: Room = { usdg: s.usdgBalance, asset: s.assetBalance };
+  const take = (cost: Room): void => {
+    room.usdg = room.usdg > cost.usdg ? room.usdg - cost.usdg : 0n;
+    room.asset = room.asset > cost.asset ? room.asset - cost.asset : 0n;
+  };
+  for (const h of s.holdings) {
+    if (s.now < h.windowEnd) take(exerciseCost(h.side, h.strike, h.balance, e.rawUnit));
+  }
+  if (s.now < e.batchDeadline) {
+    for (const b of s.buckets) {
+      if (b.ownBid === null) continue;
+      take(exerciseCost(b.side, b.strike, b.ownBid.amount, e.rawUnit));
+      take({
+        usdg: premiumCost(b.ownBid.premium, b.ownBid.amount, s.feeBps, e.rawUnit),
+        asset: 0n,
+      });
+    }
+  }
+  return room;
+}
+
+// The most `room` can buy at `premium`, fee on top, keeping back what exercising it takes, in
+// whole lots.
+function affordable(
+  room: Room,
+  side: number,
+  strike: bigint,
+  premium: bigint,
+  feeBps: number,
+  e: EpochTerms,
+): bigint {
+  const perRaw = premium * (BPS + BigInt(feeBps)) + (side === CALL ? strike * BPS : 0n);
+  const byUsdg = perRaw === 0n ? MAX_UINT : (room.usdg * e.rawUnit * BPS) / perRaw;
+  return floorTo(side === CALL ? byUsdg : min(byUsdg, room.asset), e.lot);
+}
+
+function spend(
+  room: Room,
+  side: number,
+  strike: bigint,
+  premium: bigint,
+  amount: bigint,
+  feeBps: number,
+  e: EpochTerms,
+): void {
+  const cost = exerciseCost(side, strike, amount, e.rawUnit);
+  const usdg = cost.usdg + premiumCost(premium, amount, feeBps, e.rawUnit);
+  room.usdg = room.usdg > usdg ? room.usdg - usdg : 0n;
+  room.asset = room.asset > cost.asset ? room.asset - cost.asset : 0n;
 }
 
 function housekeeping(s: MakerSnapshot): MakerAction[] {
@@ -183,7 +253,7 @@ function bids(s: MakerSnapshot, pricing: PricingConfig): MakerAction[] {
   const opens = e.opening + e.windowLength;
   if (s.now < opens || s.now >= opens + s.bidWindow) return [];
   const actions: MakerAction[] = [];
-  let budget = s.usdgBalance;
+  const room = freeRoom(s, e);
   for (const b of s.buckets) {
     if (b.bestBidder === s.maker) continue;
     if (!b.registered) {
@@ -192,10 +262,13 @@ function bids(s: MakerSnapshot, pricing: PricingConfig): MakerAction[] {
     }
     const premium = premiumFor(s, pricing, b.side, b.strike);
     if (premium === null) continue;
-    const amount = min(pricing.maxPerSeries, affordable(budget, premium, s.feeBps, e));
+    const amount = min(
+      pricing.maxPerSeries,
+      affordable(room, b.side, b.strike, premium, s.feeBps, e),
+    );
     const lots = floorTo(amount, e.lot);
     if (lots === 0n) continue;
-    budget -= (lots * premium * (BPS + BigInt(s.feeBps))) / (e.rawUnit * BPS);
+    spend(room, b.side, b.strike, premium, lots, s.feeBps, e);
     actions.push({
       kind: "bid",
       quote: {
@@ -217,7 +290,7 @@ function quotes(s: MakerSnapshot, pricing: PricingConfig): MakerAction[] {
   if (!pricing.rfq || e === null) return [];
   if (s.now < e.batchDeadline || s.now >= e.expiry - RFQ_CUTOFF) return [];
   const actions: MakerAction[] = [];
-  let budget = s.usdgBalance;
+  const free = freeRoom(s, e);
   const room = new Map(s.buckets.map((b) => [b.series, b.seriesRoom]));
   for (const o of s.idle) {
     if (o.frozen) continue;
@@ -232,13 +305,13 @@ function quotes(s: MakerSnapshot, pricing: PricingConfig): MakerAction[] {
         bucket.fillSize,
         left,
         pricing.maxPerSeries,
-        affordable(budget, premium, s.feeBps, e),
+        affordable(free, o.side, o.target, premium, s.feeBps, e),
       ),
       e.lot,
     );
     if (amount === 0n) continue;
     room.set(bucket.series, left - amount);
-    budget -= (amount * premium * (BPS + BigInt(s.feeBps))) / (e.rawUnit * BPS);
+    spend(free, o.side, o.target, premium, amount, s.feeBps, e);
     actions.push({
       kind: "fill",
       orderId: o.id,

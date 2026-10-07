@@ -41,6 +41,7 @@ function bucket(overrides: Partial<Bucket> = {}): Bucket {
     series: 11n,
     registered: true,
     bestBidder: null,
+    ownBid: null,
     fillSize: 2n * ONE,
     seriesRoom: 6n * ONE,
     ...overrides,
@@ -142,14 +143,70 @@ describe("maker plan", () => {
   });
 
   it("bids only what its USDG covers, fee included", () => {
-    // #given: enough for a little over one token's premium
-    const s0 = snapshot({ now: BID_OPEN, buckets: [bucket()] });
-    const premium = premiumFor(s0, pricing, 0, CALL_STRIKE) ?? 0n;
-    const s = snapshot({ now: BID_OPEN, buckets: [bucket()], usdgBalance: premium + premium / 2n });
+    // #given: a put, so exercising it takes NVDA, and USDG for a token and a half of premium
+    const put = bucket({ side: 1, strike: PUT_STRIKE, series: 12n });
+    const s0 = snapshot({ now: BID_OPEN, buckets: [put] });
+    const premium = premiumFor(s0, pricing, 1, PUT_STRIKE) ?? 0n;
+    const s = snapshot({ now: BID_OPEN, buckets: [put], usdgBalance: premium + premium / 2n });
     // #when
     const bid = plan(s, pricing).find((a) => a.kind === "bid");
     // #then
     assert.equal(bid?.quote.maxAmount, 150n * LOT);
+  });
+
+  it("keeps back the strike it would pay to exercise the calls it bids for", () => {
+    // #given: USDG for two tokens' premium plus two tokens at the strike, and a little over
+    const s0 = snapshot({ now: BID_OPEN, buckets: [bucket()] });
+    const premium = premiumFor(s0, pricing, 0, CALL_STRIKE) ?? 0n;
+    const usdgBalance = 2n * (premium + CALL_STRIKE) + 1000n;
+    const s = snapshot({ now: BID_OPEN, buckets: [bucket()], usdgBalance });
+    // #when
+    const bid = plan(s, pricing).find((a) => a.kind === "bid");
+    // #then
+    assert.equal(bid?.quote.maxAmount, 2n * ONE);
+  });
+
+  it("bids on puts only as far as it holds the NVDA to deliver", () => {
+    // #given
+    const put = bucket({ side: 1, strike: PUT_STRIKE, series: 12n });
+    const s = snapshot({ now: BID_OPEN, buckets: [put], assetBalance: ONE + ONE / 2n });
+    // #when
+    const bid = plan(s, pricing).find((a) => a.kind === "bid");
+    // #then
+    assert.equal(bid?.quote.maxAmount, 150n * LOT);
+  });
+
+  it("keeps back what its open longs and its own pending bids will take to exercise", () => {
+    // #given: a call long still to expire, its own bid on a put bucket, and a fresh call bucket
+    const s0 = snapshot({ now: BID_OPEN, buckets: [bucket()] });
+    const premium = premiumFor(s0, pricing, 0, CALL_STRIKE) ?? 0n;
+    const held: Holding = {
+      series: 5n,
+      side: 0,
+      strike: CALL_STRIKE,
+      expiry: OCT_09,
+      windowEnd: OCT_09 + 7200,
+      balance: ONE,
+    };
+    const pending = bucket({
+      side: 1,
+      strike: PUT_STRIKE,
+      series: 12n,
+      bestBidder: MAKER,
+      ownBid: { premium: 3_000_000n, amount: 2n * ONE },
+    });
+    const s = snapshot({
+      now: BID_OPEN,
+      buckets: [pending, bucket()],
+      holdings: [held],
+      // The long's strike, the pending bid's premium, and one token of the new call.
+      usdgBalance: CALL_STRIKE + 6_000_000n + premium + CALL_STRIKE + 1000n,
+      assetBalance: 2n * ONE,
+    });
+    // #when
+    const bid = plan(s, pricing).find((a) => a.kind === "bid");
+    // #then
+    assert.equal(bid?.quote.maxAmount, ONE);
   });
 
   it("exercises an in-the-money call in its window and leaves an out-of-the-money one", () => {

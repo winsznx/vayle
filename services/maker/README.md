@@ -1,11 +1,17 @@
 # Maker
 
-The maker that buys the options holders write is operated by the Vayle team, and every fill it makes is tagged team-operated onchain. This Worker is that maker. Each minute it:
+The maker that buys the options holders write is operated by the Vayle team, and the market marks its address as team-operated. Its direct fills carry that flag in their event, and batch fills name the maker, whose flag anyone can read. This Worker is that maker. Each minute it:
 
 - Bids into each weekly renewal batch for the buckets that have orders, at one price per series.
 - Quotes orders that arrive mid-week, if quoting is on, at the same price it would bid.
 - Exercises the options it holds when they finish in the money, as far as its balances pay for them.
 - Withdraws what the market credits it.
+
+It never bids or quotes for more than it could exercise. Before spending USDG on premiums it keeps back the strike of every call it holds or has bid for, and it bids on puts only as far as it holds the NVDA to deliver. A holder's order that finishes past its price fills only if the maker exercises it, so an underfunded maker bids less rather than leaving those orders unfilled.
+
+## Funding
+
+USDG for the premiums it bids plus the strike of every call it may hold, and NVDA for every put it may hold. The per-series limit, `MAKER_MAX_PER_SERIES`, bounds both.
 
 ## Pricing
 

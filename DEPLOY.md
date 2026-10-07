@@ -43,4 +43,6 @@ The deploy script creates every contract owned by a timelock that starts with no
 
 5. Give the watcher the market, liveness, calendar and registry addresses and the deploy block.
 
+6. Fund the maker before the first bid window, which opens two hours after the close. It needs USDG for the premiums it bids plus the strike of every call it may end up holding, and NVDA for every put. It bids only as much as it could exercise, so an underfunded maker bids less instead of leaving in-the-money orders unfilled.
+
 `test/deploy/DeployVayle.fork.t.sol` runs the same deploy on a fork and checks the end state: the delay, the multisig's roles, the deployer holding none, every owner, the guardian, the fee, the caps, the listing and the calendar, and a full week of trading.

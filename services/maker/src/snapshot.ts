@@ -111,7 +111,8 @@ export async function readSnapshot(
     }),
   );
 
-  const buckets = epoch === null ? [] : await readBuckets(client, config, blockNumber, idle, epoch);
+  const buckets =
+    epoch === null ? [] : await readBuckets(client, config, maker, blockNumber, idle, epoch);
   const held = [...new Set(orders.filter(({ o }) => o.series !== 0n).map(({ o }) => o.series))];
   const holdings = (
     await inBatches(held, async (series): Promise<Holding | null> => {
@@ -161,6 +162,7 @@ export async function readSnapshot(
 async function readBuckets(
   client: PublicClient,
   config: MakerConfig,
+  maker: Address,
   blockNumber: bigint,
   idle: readonly IdleOrder[],
   epoch: EpochTerms,
@@ -205,6 +207,10 @@ async function readBuckets(
         series,
         registered,
         bestBidder: bid.maker === zero ? null : bid.maker,
+        ownBid:
+          bid.maker.toLowerCase() === maker.toLowerCase()
+            ? { premium: bid.premium, amount: bid.amount }
+            : null,
         fillSize: caps.fillSize,
         seriesRoom:
           caps.seriesOpenInterest > pool.written ? caps.seriesOpenInterest - pool.written : 0n,
