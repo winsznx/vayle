@@ -2,6 +2,7 @@ import { vayleMarketAbi } from "@vayle/abi";
 import {
   balanceOf,
   claimable,
+  finalizeBlockedUntil,
   ordersOf,
   seriesId,
   seriesState,
@@ -16,6 +17,9 @@ import { ladder, type Epoch } from "./week.ts";
 export interface AccountView {
   readonly orders: readonly OrderState[];
   readonly series: ReadonlyMap<bigint, SeriesState>;
+  // Series whose window the view says is over but that finalize would still find open, with the
+  // end it reports. The chain has been quiet, and quiet time extends windows.
+  readonly heldOpen: ReadonlyMap<bigint, bigint>;
   readonly claimableAsset: bigint;
   readonly claimableUsdg: bigint;
   readonly balanceAsset: bigint;
@@ -103,6 +107,7 @@ async function readAccount(
   client: PublicClient,
   config: AppConfig,
   owner: Address,
+  now: bigint,
 ): Promise<AccountView> {
   const orders = await ordersOf(client, config.market, owner);
   const ids = [...new Set(orders.filter((o) => o.series !== 0n).map((o) => o.series))];
@@ -111,6 +116,12 @@ async function readAccount(
       ids.map(async (id) => [id, await seriesState(client, config.market, id)] as const),
     ),
   );
+  const due = [...series.values()].filter((s) => !s.settled && now >= s.windowEnd);
+  const heldOpen = new Map<bigint, bigint>();
+  for (const s of due) {
+    const until = await finalizeBlockedUntil(client, config.market, owner, s.id);
+    if (until !== null) heldOpen.set(s.id, until);
+  }
   const allowance = (token: Address): Promise<bigint> =>
     client.readContract({
       address: token,
@@ -130,6 +141,7 @@ async function readAccount(
   return {
     orders,
     series,
+    heldOpen,
     claimableAsset,
     claimableUsdg,
     balanceAsset,
@@ -152,7 +164,7 @@ async function readMarket(
   ]);
   const [bids, account] = await Promise.all([
     epoch === null ? Promise.resolve(new Map<bigint, bigint>()) : readBids(client, config, epoch),
-    owner === null ? Promise.resolve(null) : readAccount(client, config, owner),
+    owner === null ? Promise.resolve(null) : readAccount(client, config, owner, block.timestamp),
   ]);
   return {
     block: block.number,

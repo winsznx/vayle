@@ -113,6 +113,36 @@ describe("describeOrder", () => {
     );
   });
 
+  it("waits instead of offering to settle when finalize would find the window still open", () => {
+    // #given
+    const series: SeriesState = {
+      id: 9n,
+      side: 0,
+      strike: 245_000_000n,
+      expiry: BigInt(epoch.expiry),
+      windowEnd: BigInt(epoch.expiry + 7200),
+      settled: false,
+    };
+    const heldUntil = BigInt(epoch.expiry + 4 * 3600);
+    // #when
+    const line = describeOrder(
+      order({ series: 9n, committed: ONE }),
+      series,
+      epoch,
+      epoch.expiry + 3 * 3600,
+      "NVDA",
+      heldUntil,
+    );
+    // #then
+    assert.deepEqual(
+      [line.action, line.status],
+      [
+        "wait",
+        "The week ended, and its result is final from Fri, Oct 9, 8:00\u00a0PM\u00a0EDT at the earliest. The chain has been quiet, and quiet time keeps the window open longer.",
+      ],
+    );
+  });
+
   it("offers to settle once the written week has settled", () => {
     // #given
     const series: SeriesState = {

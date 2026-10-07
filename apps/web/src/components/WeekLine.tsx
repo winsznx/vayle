@@ -24,7 +24,7 @@ export function WeekLine({
     where === "settling"
       ? `Bids for this week open at ${easternClock(bidOpensAt(e))}, and the batch starts at ${easternClock(bidOpensAt(e) + BID_WINDOW)}.`
       : where === "expired"
-        ? `This week ended at ${easternTime(e.expiry)}. Next week's prices are set at that close.`
+        ? `This week ended ${easternTime(e.expiry)}. Next week's prices are set at that close.`
         : `This week ends ${easternTime(e.expiry)}.`;
   return (
     <p className="weekline">

@@ -42,8 +42,12 @@ function writtenStatus(
   series: SeriesState,
   now: number,
   symbol: string,
+  heldUntil: bigint | null,
 ): string {
   if (series.settled) return "This week's result is in. Settle to collect it.";
+  if (heldUntil !== null && BigInt(now) >= series.windowEnd) {
+    return `The week ended, and its result is final from ${easternTime(Number(heldUntil))} at the earliest. The chain has been quiet, and quiet time keeps the window open longer.`;
+  }
   if (BigInt(now) < series.expiry) {
     const part = order.committed === order.size ? "It" : `${tokens(order.committed, symbol)} of it`;
     const ends = easternTime(Number(series.expiry));
@@ -57,20 +61,25 @@ function writtenStatus(
   return "The week is over. Settle to collect the result.";
 }
 
+// `heldUntil` is the end finalize reports for the order's series when the view says its window is
+// over but finalize would still find it open.
 export function describeOrder(
   order: OrderState,
   series: SeriesState | null,
   epoch: Epoch | null,
   now: number,
   symbol: string,
+  heldUntil: bigint | null = null,
 ): OrderLine {
   const side = order.side === 0 ? "sell" : "buy";
   const verb = side === "sell" ? "Sell" : "Buy";
   const title = `${verb} ${tokens(order.size, symbol)} at`;
-  const action = nextStep(order, series, BigInt(now));
+  const step = nextStep(order, series, BigInt(now));
+  const action = step === "finalize-then-settle" && heldUntil !== null ? "wait" : step;
   let status: string;
-  if (order.series !== 0n && series !== null) status = writtenStatus(order, series, now, symbol);
-  else if (order.status === "active") status = idleStatus(order, epoch, now);
+  if (order.series !== 0n && series !== null) {
+    status = writtenStatus(order, series, now, symbol, heldUntil);
+  } else if (order.status === "active") status = idleStatus(order, epoch, now);
   else status = order.status === "cancelled" ? "Cancelled." : "Closed.";
   return { side, title, price: dollars(order.target), status, action };
 }

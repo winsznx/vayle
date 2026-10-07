@@ -57,7 +57,14 @@ export function Orders(props: {
     order: OrderState,
   ): { label: string; calls: Call[]; quiet: boolean } | null => {
     const series = order.series === 0n ? null : (account.series.get(order.series) ?? null);
-    const line = describeOrder(order, series, view.epoch, view.now, config.assetSymbol);
+    const line = describeOrder(
+      order,
+      series,
+      view.epoch,
+      view.now,
+      config.assetSymbol,
+      account.heldOpen.get(order.series) ?? null,
+    );
     if (line.action === "settle")
       return { label: "Settle", calls: [settleOrder(config.market, order.id)], quiet: false };
     if (line.action === "finalize-then-settle") {
@@ -76,7 +83,14 @@ export function Orders(props: {
     <ul className="order-list">
       {visible.map((order) => {
         const series = order.series === 0n ? null : (account.series.get(order.series) ?? null);
-        const line = describeOrder(order, series, view.epoch, view.now, config.assetSymbol);
+        const line = describeOrder(
+          order,
+          series,
+          view.epoch,
+          view.now,
+          config.assetSymbol,
+          account.heldOpen.get(order.series) ?? null,
+        );
         const action = actionFor(order);
         const past = history.get(order.id);
         return (

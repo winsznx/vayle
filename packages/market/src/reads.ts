@@ -177,3 +177,47 @@ export function nextStep(order: OrderState, series: SeriesState | null, now: big
   if (order.status === "active") return order.frozen ? "wait" : "cancel";
   return "none";
 }
+
+// The decoded revert inside a viem error, found by name so it works across copies of viem.
+function revertOf(
+  error: unknown,
+): { readonly errorName?: string; readonly args?: readonly unknown[] } | null {
+  for (
+    let e: unknown = error;
+    typeof e === "object" && e !== null;
+    e = (e as { cause?: unknown }).cause
+  ) {
+    if ((e as { name?: unknown }).name === "ContractFunctionRevertedError") {
+      return (e as { data?: { errorName?: string; args?: readonly unknown[] } }).data ?? null;
+    }
+  }
+  return null;
+}
+
+// When finalizing `series` would revert because its window is still open, the end the market
+// reports; null when finalize would go through. The windowEnd view only counts quiet time that's
+// been recorded, and finalize records it first, so finalize can find a window open after the view
+// says it closed. While the chain stays quiet the reported end keeps moving, up to the extension
+// cap. Any other failure is thrown.
+export async function finalizeBlockedUntil(
+  client: PublicClient,
+  market: Address,
+  account: Address,
+  series: bigint,
+): Promise<bigint | null> {
+  try {
+    await client.simulateContract({
+      address: market,
+      abi: vayleMarketAbi,
+      functionName: "finalize",
+      args: [series],
+      account,
+    });
+    return null;
+  } catch (error) {
+    const revert = revertOf(error);
+    const end = revert?.errorName === "WindowStillOpen" ? revert.args?.[1] : undefined;
+    if (typeof end === "bigint") return end;
+    throw error;
+  }
+}

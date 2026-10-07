@@ -5,6 +5,7 @@ import {
   claimable,
   exercise,
   finalize,
+  finalizeBlockedUntil,
   ordersOf,
   seriesState,
   settleOrder,
@@ -16,8 +17,6 @@ import {
   type SeriesState,
 } from "@vayle/market";
 import {
-  BaseError,
-  ContractFunctionRevertedError,
   createPublicClient,
   createWalletClient,
   custom,
@@ -153,39 +152,6 @@ function source(): { readonly client: PublicClient; readonly account: Address } 
   return { client: createPublicClient({ chain, transport: http(state.rpcText.trim()) }), account };
 }
 
-// The end finalize reports for a series whose window the view says is over, or null when
-// finalize would go through now.
-async function stillOpenUntil(
-  client: PublicClient,
-  market: Address,
-  account: Address,
-  series: bigint,
-): Promise<bigint | null> {
-  try {
-    await client.simulateContract({
-      address: market,
-      abi: vayleMarketAbi,
-      functionName: "finalize",
-      args: [series],
-      account,
-    });
-    return null;
-  } catch (error) {
-    const revert =
-      error instanceof BaseError
-        ? error.walk((e) => e instanceof ContractFunctionRevertedError)
-        : null;
-    if (
-      revert instanceof ContractFunctionRevertedError &&
-      revert.data?.errorName === "WindowStillOpen"
-    ) {
-      const end = revert.data.args?.[1];
-      if (typeof end === "bigint") return end;
-    }
-    throw error;
-  }
-}
-
 async function readMarket(client: PublicClient, market: Address, owner: Address): Promise<Read> {
   const chainId = await client.getChainId();
   if (chainId !== chain.id) {
@@ -237,7 +203,7 @@ async function readMarket(client: PublicClient, market: Address, owner: Address)
     ]);
     const quietSince = block.timestamp - lastSeen > threshold ? lastSeen : null;
     for (const s of due) {
-      const until = await stillOpenUntil(client, market, owner, s.id);
+      const until = await finalizeBlockedUntil(client, market, owner, s.id);
       if (until !== null) held.set(s.id, { until, quietSince, latest: s.windowEnd + cap });
     }
   }
