@@ -1,0 +1,15 @@
+{
+  "name": "@vayle/indexer",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node --test \"test/*.test.ts\""
+  },
+  "dependencies": {
+    "@vayle/abi": "workspace:*",
+    "viem": "2.57.3"
+  }
+}

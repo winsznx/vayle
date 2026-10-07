@@ -1,0 +1,8 @@
+# Deployed by the owner's Cloudflare account. Secrets: ROBINHOOD_RPC_URL, SUPABASE_URL and
+# SUPABASE_SERVICE_ROLE_KEY. Vars, once the contracts are deployed: VAYLE_MARKET and VAYLE_START_BLOCK.
+name = "vayle-indexer"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+[triggers]
+crons = ["* * * * *"]
