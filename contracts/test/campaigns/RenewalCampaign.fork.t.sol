@@ -50,8 +50,8 @@ contract RenewalCampaignForkTest is VayleMarketFork {
     function _placeFromPlan(BatchPlan memory plan, uint256 i) internal returns (uint256 id) {
         address owner = [alice, bob, carol][plan.owners[i] % 3];
         CollateralVault.OrderParams memory p =
-            _params(OptionType.Call, callStrike, bound(plan.lots[i], 1, 100) * LOT);
-        p.minPremium = bound(plan.floorTicks[i], 0, 2000) * PRICE_TICK;
+            _params(OptionType.Call, callStrike, bound(plan.lots[i], 1, 100) * lot);
+        p.minPremium = bound(plan.floorTicks[i], 0, 2000) * priceTick;
         vm.prank(owner);
         id = market.placeOrder(p);
     }
@@ -59,12 +59,12 @@ contract RenewalCampaignForkTest is VayleMarketFork {
     /// @dev The pro rata share each eligible order should get, worked out from the plan alone.
     function _expectedFill(uint256 size, Expected memory x, uint256 fillCap)
         internal
-        pure
+        view
         returns (uint256 amount)
     {
         amount = (size * x.capacity) / x.eligible;
         if (amount > fillCap) amount = fillCap;
-        amount -= amount % LOT;
+        amount -= amount % lot;
     }
 
     function _eligibleIds(uint256[] memory ids, uint256 premium)
@@ -87,19 +87,19 @@ contract RenewalCampaignForkTest is VayleMarketFork {
     /// forge-config: ci.fuzz.runs = 1024
     function testFuzz_aBatchTreatsEveryHolderAlike(BatchPlan memory plan) public {
         // #given: random orders, minimums, caps, fee and one bid
-        uint256 fillCap = bound(plan.fillCapLots, 1, 200) * LOT;
-        uint256 seriesCap = bound(plan.seriesCapLots, 1, 600) * LOT;
+        uint256 fillCap = bound(plan.fillCapLots, 1, 200) * lot;
+        uint256 seriesCap = bound(plan.seriesCapLots, 1, 600) * lot;
         uint16 feeBps = uint16(bound(plan.feeBps, 0, 500));
         vm.startPrank(timelock);
-        market.setCaps(nvda, OptionType.Call, _wideCaps(seriesCap, fillCap));
+        market.setCaps(stock, OptionType.Call, _wideCaps(seriesCap, fillCap));
         market.setFee(feeBps, treasury);
         vm.stopPrank();
         uint256[] memory ids = new uint256[](bound(plan.count, 1, MAX_ORDERS));
         for (uint256 i; i < ids.length; ++i) {
             ids[i] = _placeFromPlan(plan, i);
         }
-        uint256 premium = bound(plan.bidTicks, 0, 2000) * PRICE_TICK;
-        uint256 bidAmount = bound(plan.bidLots, 1, 600) * LOT;
+        uint256 premium = bound(plan.bidTicks, 0, 2000) * priceTick;
+        uint256 bidAmount = bound(plan.bidLots, 1, 600) * lot;
 
         // #when
         vm.warp(BID_OPEN);
@@ -116,7 +116,7 @@ contract RenewalCampaignForkTest is VayleMarketFork {
         }
         uint256 capacity = bidAmount < x.eligible ? bidAmount : x.eligible;
         capacity = capacity < seriesCap ? capacity : seriesCap;
-        x.capacity = capacity - capacity % LOT;
+        x.capacity = capacity - capacity % lot;
         if (market.batchOf(callSeries).phase == RenewalBatch.Phase.Filling) {
             market.fillBatch(callSeries, _eligibleIds(ids, premium));
         }
@@ -161,12 +161,12 @@ contract RenewalCampaignForkTest is VayleMarketFork {
         // #when
         _exerciseAndSettle(id, callSeries);
         // #then: the strike she received buys as many whole lots as it covers at the put strike
-        uint256 perLot = Units.valueExact(LOT, putStrike, RAW_UNIT);
+        uint256 perLot = Units.valueExact(lot, putStrike, RAW_UNIT);
         uint256 lots = callStrike / perLot;
         CollateralVault.Order memory flipped = market.orderOf(market.orderCount());
         assertEq(uint8(flipped.side), uint8(OptionType.Put));
         assertEq(flipped.target, putStrike);
-        assertEq(flipped.size, lots * LOT);
+        assertEq(flipped.size, lots * lot);
         assertFalse(flipped.flip);
         assertEq(market.claimable(alice, usdg), PREMIUM + callStrike - lots * perLot);
         _assertConserved(_claimants());
@@ -181,14 +181,14 @@ contract RenewalCampaignForkTest is VayleMarketFork {
         CollateralVault.Order memory flipped = market.orderOf(market.orderCount());
         assertEq(uint8(flipped.side), uint8(OptionType.Call));
         assertEq(flipped.size, ONE);
-        assertEq(market.claimable(alice, nvda), 0);
+        assertEq(market.claimable(alice, stock), 0);
     }
 
     function test_aFlipIntoAClosedSideCreditsTheProceedsInstead() public {
         // #given: buy orders are closed
         MarketGuard.Caps memory closed;
         vm.prank(timelock);
-        market.setCaps(nvda, OptionType.Put, closed);
+        market.setCaps(stock, OptionType.Put, closed);
         uint256 id = _flipOrder(OptionType.Call, putStrike);
         uint256 orders = market.orderCount();
         // #when

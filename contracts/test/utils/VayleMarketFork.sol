@@ -33,8 +33,8 @@ abstract contract VayleMarketFork is CoreFork {
     function _deployCore() internal override returns (CollateralVault) {
         market = _deployMarket(calendar, timelock, guardian, treasury);
         vm.startPrank(timelock);
-        market.setCaps(nvda, OptionType.Call, _pilotCaps());
-        market.setCaps(nvda, OptionType.Put, _pilotCaps());
+        market.setCaps(stock, OptionType.Call, _pilotCaps());
+        market.setCaps(stock, OptionType.Put, _pilotCaps());
         market.setBatchBidder(makeAddr("quoter"), true);
         vm.stopPrank();
         return market;
@@ -46,7 +46,7 @@ abstract contract VayleMarketFork is CoreFork {
         _fund(quoter, 10 * ONE, 100_000e6);
         vm.startPrank(quoter);
         IERC20(usdg).approve(address(market), type(uint256).max);
-        IERC20(nvda).approve(address(market), type(uint256).max);
+        IERC20(stock).approve(address(market), type(uint256).max);
         vm.stopPrank();
     }
 
@@ -68,7 +68,7 @@ abstract contract VayleMarketFork is CoreFork {
             premium: premium,
             maxFeeBps: market.feeBps(),
             maxAmount: amount,
-            minFill: LOT,
+            minFill: lot,
             nonce: ++nonce,
             deadline: OCT_09
         });

@@ -30,7 +30,7 @@ contract SettlementEngineForkTest is CoreFork {
         for (uint256 t = from; t <= to; t += 1 minutes) {
             vm.warp(t);
             liveness.checkpoint();
-            engine.observePauses(nvda);
+            engine.observePauses(stock);
         }
     }
 
@@ -54,7 +54,7 @@ contract SettlementEngineForkTest is CoreFork {
         );
         // #when
         vm.prank(maker);
-        engine.exercise(callSeries, LOT);
+        engine.exercise(callSeries, lot);
     }
 
     function test_aCallExercisedInTheWindowPaysTheStrikeAndCreditsTheAsset() public {
@@ -67,7 +67,7 @@ contract SettlementEngineForkTest is CoreFork {
         engine.exercise(callSeries, ONE / 2);
         // #then
         assertEq(IERC20(usdg).balanceOf(maker), usdgBefore - _value(ONE / 2, callStrike));
-        assertEq(engine.claimable(maker, nvda), ONE / 2);
+        assertEq(engine.claimable(maker, stock), ONE / 2);
         assertEq(engine.balanceOf(maker, callSeries), ONE / 2);
         _assertConserved(_everyone());
     }
@@ -76,12 +76,12 @@ contract SettlementEngineForkTest is CoreFork {
         // #given
         _writePut(ONE);
         _keep(OCT_09 - 10 minutes, OCT_09 + 5 minutes);
-        uint256 nvdaBefore = IERC20(nvda).balanceOf(maker);
+        uint256 stockBefore = IERC20(stock).balanceOf(maker);
         // #when
         vm.prank(maker);
         engine.exercise(putSeries, ONE);
         // #then
-        assertEq(IERC20(nvda).balanceOf(maker), nvdaBefore - ONE);
+        assertEq(IERC20(stock).balanceOf(maker), stockBefore - ONE);
         assertEq(engine.claimable(maker, usdg), _value(ONE, putStrike));
         _assertConserved(_everyone());
     }
@@ -98,7 +98,7 @@ contract SettlementEngineForkTest is CoreFork {
         );
         // #when
         vm.prank(maker);
-        engine.exercise(callSeries, LOT);
+        engine.exercise(callSeries, lot);
     }
 
     function test_finalizeWaitsForTheWindowAndAnyoneMayCallIt() public {
@@ -132,10 +132,10 @@ contract SettlementEngineForkTest is CoreFork {
         vm.warp(OCT_09 + 2 hours + 30 minutes);
         // #when: the first call after the silence records the gap and still gets in
         vm.prank(maker);
-        engine.exercise(callSeries, LOT);
+        engine.exercise(callSeries, lot);
         // #then
         assertEq(engine.windowEnd(callSeries), OCT_09 + 4 hours);
-        assertEq(engine.claimable(maker, nvda), LOT);
+        assertEq(engine.claimable(maker, stock), lot);
     }
 
     function test_theLivenessExtensionIsCappedAtADay() public {
@@ -151,7 +151,7 @@ contract SettlementEngineForkTest is CoreFork {
         );
         // #when
         vm.prank(maker);
-        engine.exercise(callSeries, LOT);
+        engine.exercise(callSeries, lot);
     }
 
     function test_anIssuerPauseInsideTheWindowExtendsItByThePausedTime() public {
@@ -159,24 +159,24 @@ contract SettlementEngineForkTest is CoreFork {
         _writePut(ONE);
         _keep(OCT_09 - 10 minutes, OCT_09 + 1 hours);
         vm.prank(ChainActors.REGISTRY_PAUSER);
-        IPausableRegistry(nvdaAccessRegistry).pause();
+        IPausableRegistry(stockAccessRegistry).pause();
         _keep(OCT_09 + 1 hours + 1 minutes, OCT_09 + 3 hours);
         // #then: delivering the asset fails while it's paused
         vm.expectRevert();
         vm.prank(maker);
-        engine.exercise(putSeries, LOT);
+        engine.exercise(putSeries, lot);
         // #given
         _keep(OCT_09 + 3 hours + 1 minutes, OCT_09 + 5 hours);
         vm.prank(ChainActors.REGISTRY_PAUSER);
-        IPausableRegistry(nvdaAccessRegistry).unpause();
+        IPausableRegistry(stockAccessRegistry).unpause();
         _keep(OCT_09 + 5 hours + 1 minutes, OCT_09 + 5 hours + 30 minutes);
         // #when: after the pause, the window has grown by about the four paused hours
         vm.prank(maker);
-        engine.exercise(putSeries, LOT);
+        engine.exercise(putSeries, lot);
         // #then
         assertGe(engine.windowEnd(putSeries), OCT_09 + 6 hours);
         assertLe(engine.windowEnd(putSeries), OCT_09 + 6 hours + 2 minutes);
-        assertEq(engine.claimable(maker, usdg), _value(LOT, putStrike));
+        assertEq(engine.claimable(maker, usdg), _value(lot, putStrike));
     }
 
     function test_observingPausesOnAnAssetWithoutFlagsIsHarmless() public {

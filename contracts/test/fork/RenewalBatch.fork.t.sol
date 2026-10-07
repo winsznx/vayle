@@ -25,7 +25,7 @@ contract RenewalBatchForkTest is VayleMarketFork {
     /// @dev Three call orders in one bucket: alice and bob accept the bid, carol wants twice it.
     function setUp() public override {
         super.setUp();
-        a = _placeAt(alice, OptionType.Call, ONE, PRICE_TICK * 10);
+        a = _placeAt(alice, OptionType.Call, ONE, priceTick * 10);
         b = _placeAt(bob, OptionType.Call, 2 * ONE, PREMIUM);
         c = _placeAt(carol, OptionType.Call, ONE, 2 * PREMIUM);
     }
@@ -92,7 +92,7 @@ contract RenewalBatchForkTest is VayleMarketFork {
             premium: 10 * PREMIUM,
             maxFeeBps: market.feeBps(),
             maxAmount: ONE,
-            minFill: LOT,
+            minFill: lot,
             nonce: 1,
             deadline: OCT_09
         });
@@ -139,26 +139,26 @@ contract RenewalBatchForkTest is VayleMarketFork {
 
     function test_theSeriesCapCutsTheBatchProRata() public {
         // #given: room for one token in the series
-        MarketGuard.Caps memory caps = market.capsOf(nvda, OptionType.Call);
+        MarketGuard.Caps memory caps = market.capsOf(stock, OptionType.Call);
         caps.seriesOpenInterest = ONE;
         vm.prank(timelock);
-        market.setCaps(nvda, OptionType.Call, caps);
+        market.setCaps(stock, OptionType.Call, caps);
         // #when
         _runBatch(PREMIUM, 10 * ONE);
         // #then: a third and two thirds of a token, floored to lots
-        assertEq(market.orderOf(a).committed, 33 * LOT);
-        assertEq(market.orderOf(b).committed, 66 * LOT);
+        assertEq(market.orderOf(a).committed, 33 * lot);
+        assertEq(market.orderOf(b).committed, 66 * lot);
     }
 
     function test_theHighestBidSetsThePrice() public {
         // #given
         vm.warp(BID_OPEN);
         _bid(PREMIUM, 10 * ONE);
-        _bid(PREMIUM + PRICE_TICK, 10 * ONE);
+        _bid(PREMIUM + priceTick, 10 * ONE);
         // #when
         RenewalBatch.Bid memory best = market.bestBid(callSeries);
         // #then
-        assertEq(best.premium, PREMIUM + PRICE_TICK);
+        assertEq(best.premium, PREMIUM + priceTick);
     }
 
     function test_anEqualLaterBidDoesntReplaceTheEarlierOne() public {
@@ -230,7 +230,7 @@ contract RenewalBatchForkTest is VayleMarketFork {
 
     function test_aBatchWaitsUntilEveryOrderInItsBucketIsSettled() public {
         // #given: one of the bucket's orders is attached to a series
-        _fillQuote(a, callSeries, LOT);
+        _fillQuote(a, callSeries, lot);
         vm.warp(BID_OPEN);
         _bid(PREMIUM, ONE);
         vm.warp(BID_CLOSE);
@@ -447,14 +447,14 @@ contract RenewalBatchForkTest is VayleMarketFork {
 
     function test_unusedEscrowGoesBackToTheMaker() public {
         // #given: a cap that floors fills below the escrowed capacity
-        MarketGuard.Caps memory caps = market.capsOf(nvda, OptionType.Call);
+        MarketGuard.Caps memory caps = market.capsOf(stock, OptionType.Call);
         caps.seriesOpenInterest = ONE;
         vm.prank(timelock);
-        market.setCaps(nvda, OptionType.Call, caps);
+        market.setCaps(stock, OptionType.Call, caps);
         // #when
         _runBatch(PREMIUM, 10 * ONE);
         // #then: escrow for one token, 0.99 written
-        assertEq(market.claimable(quoter, usdg), Units.valueExact(LOT, PREMIUM, RAW_UNIT));
+        assertEq(market.claimable(quoter, usdg), Units.valueExact(lot, PREMIUM, RAW_UNIT));
         _assertConserved(_claimants());
     }
 

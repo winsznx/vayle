@@ -33,7 +33,7 @@ contract LifecycleCampaignForkTest is VayleMarketFork {
     }
 
     struct Ledger {
-        int256 nvda;
+        int256 stock;
         int256 usdg;
     }
 
@@ -44,7 +44,7 @@ contract LifecycleCampaignForkTest is VayleMarketFork {
         parties = [alice, bob, carol, quoter, treasury];
         for (uint256 i; i < parties.length; ++i) {
             address party = parties[i];
-            start[party] = Ledger(_balance(nvda, party), _balance(usdg, party));
+            start[party] = Ledger(_balance(stock, party), _balance(usdg, party));
         }
     }
 
@@ -54,7 +54,7 @@ contract LifecycleCampaignForkTest is VayleMarketFork {
 
     function _change(address party) internal view returns (Ledger memory) {
         return Ledger(
-            _balance(nvda, party) - start[party].nvda, _balance(usdg, party) - start[party].usdg
+            _balance(stock, party) - start[party].stock, _balance(usdg, party) - start[party].usdg
         );
     }
 
@@ -65,14 +65,14 @@ contract LifecycleCampaignForkTest is VayleMarketFork {
         uint256 lots = bound(o.lots, 1, 100);
         OptionType side = o.put ? OptionType.Put : OptionType.Call;
         CollateralVault.OrderParams memory p =
-            _params(side, o.put ? putStrike : callStrike, lots * LOT);
-        p.minPremium = bound(o.floorTicks, 0, 1000) * PRICE_TICK;
+            _params(side, o.put ? putStrike : callStrike, lots * lot);
+        p.minPremium = bound(o.floorTicks, 0, 1000) * priceTick;
         vm.prank(owner);
         id = market.placeOrder(p);
 
-        uint256 amount = ((lots * bound(o.fillPercent, 0, PERCENT)) / PERCENT) * LOT;
+        uint256 amount = ((lots * bound(o.fillPercent, 0, PERCENT)) / PERCENT) * lot;
         if (amount == 0) return (id, 0);
-        uint256 premium = p.minPremium + bound(o.premiumTicks, 0, 1_000_000) * PRICE_TICK;
+        uint256 premium = p.minPremium + bound(o.premiumTicks, 0, 1_000_000) * priceTick;
         uint256 credited = market.claimable(owner, usdg);
         (QuoteSettlement.Quote memory q, bytes memory sig) =
             _signedQuoteAt(o.put ? putSeries : callSeries, amount, premium);
@@ -91,8 +91,8 @@ contract LifecycleCampaignForkTest is VayleMarketFork {
     }
 
     function _exerciseShare(uint256 series, uint256 percent) internal returns (uint256 amount) {
-        uint256 lots = market.poolOf(series).written / LOT;
-        amount = ((lots * bound(percent, 0, PERCENT)) / PERCENT) * LOT;
+        uint256 lots = market.poolOf(series).written / lot;
+        amount = ((lots * bound(percent, 0, PERCENT)) / PERCENT) * lot;
         if (amount == 0) return 0;
         vm.prank(quoter);
         market.exercise(series, amount);
@@ -103,7 +103,7 @@ contract LifecycleCampaignForkTest is VayleMarketFork {
     function _settleSeries(uint256[] memory ids, uint256 series) internal {
         CollateralVault.Pool memory pool = market.poolOf(series);
         bool isCall = market.seriesKey(series).optionType == OptionType.Call;
-        (address backToken, address proceedsToken) = isCall ? (nvda, usdg) : (usdg, nvda);
+        (address backToken, address proceedsToken) = isCall ? (stock, usdg) : (usdg, stock);
         uint256 backPaid;
         uint256 proceedsPaid;
         for (uint256 i; i < ids.length; ++i) {
@@ -126,7 +126,7 @@ contract LifecycleCampaignForkTest is VayleMarketFork {
     function _withdrawAll() internal {
         for (uint256 i; i < parties.length; ++i) {
             for (uint256 t; t < 2; ++t) {
-                address token = t == 0 ? nvda : usdg;
+                address token = t == 0 ? stock : usdg;
                 uint256 amount = market.claimable(parties[i], token);
                 if (amount == 0) continue;
                 vm.prank(parties[i]);
@@ -167,12 +167,12 @@ contract LifecycleCampaignForkTest is VayleMarketFork {
         _withdrawAll();
 
         // #then: nothing is left in the market, and the maker paid and received exactly its trades
-        assertEq(IERC20(nvda).balanceOf(address(market)), 0, "no NVDA left");
+        assertEq(IERC20(stock).balanceOf(address(market)), 0, "no NVDA left");
         assertEq(IERC20(usdg).balanceOf(address(market)), 0, "no USDG left");
         Ledger memory maker = _change(quoter);
         int256 strikesPaid = int256(_value(calls, callStrike)) - int256(_value(puts, putStrike));
         assertEq(maker.usdg, -int256(premiums + fees) - strikesPaid, "maker USDG");
-        assertEq(maker.nvda, int256(calls) - int256(puts), "maker NVDA");
+        assertEq(maker.stock, int256(calls) - int256(puts), "maker NVDA");
         assertEq(_change(treasury).usdg, int256(fees), "fees");
     }
 }

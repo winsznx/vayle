@@ -24,7 +24,7 @@ contract VayleMarketForkTest is VayleMarketFork {
         );
         // #when
         vm.prank(guardian);
-        market.setCaps(nvda, OptionType.Call, _pilotCaps());
+        market.setCaps(stock, OptionType.Call, _pilotCaps());
     }
 
     function test_aMakerCantCallOwnerFunctions() public {
@@ -110,7 +110,7 @@ contract VayleMarketForkTest is VayleMarketFork {
         vm.prank(guardian);
         market.setPaused(true);
         // #then
-        vm.expectRevert(abi.encodeWithSelector(MarketGuard.MarketPaused.selector, nvda));
+        vm.expectRevert(abi.encodeWithSelector(MarketGuard.MarketPaused.selector, stock));
         // #when
         _place(alice, OptionType.Call, ONE);
     }
@@ -122,7 +122,7 @@ contract VayleMarketForkTest is VayleMarketFork {
         vm.prank(guardian);
         market.setPaused(true);
         // #then
-        vm.expectRevert(abi.encodeWithSelector(MarketGuard.MarketPaused.selector, nvda));
+        vm.expectRevert(abi.encodeWithSelector(MarketGuard.MarketPaused.selector, stock));
         // #when
         market.fillQuote(q, sig, id, ONE);
     }
@@ -130,9 +130,9 @@ contract VayleMarketForkTest is VayleMarketFork {
     function test_anAssetPauseRefusesThatAssetsOrders() public {
         // #given
         vm.prank(guardian);
-        market.setAssetPaused(nvda, true);
+        market.setAssetPaused(stock, true);
         // #then
-        vm.expectRevert(abi.encodeWithSelector(MarketGuard.MarketPaused.selector, nvda));
+        vm.expectRevert(abi.encodeWithSelector(MarketGuard.MarketPaused.selector, stock));
         // #when
         _place(alice, OptionType.Put, ONE);
     }
@@ -158,7 +158,7 @@ contract VayleMarketForkTest is VayleMarketFork {
         // #when: the holder cancels and withdraws, the maker exercises, the series settles
         vm.startPrank(alice);
         market.cancelOrder(id);
-        market.withdraw(nvda, ONE);
+        market.withdraw(stock, ONE);
         vm.stopPrank();
         _intoTheWindow();
         vm.prank(quoter);
@@ -179,9 +179,9 @@ contract VayleMarketForkTest is VayleMarketFork {
         uint256 id = _place(alice, OptionType.Call, ONE);
         (QuoteSettlement.Quote memory q, bytes memory sig) = _signedQuote(callSeries, ONE);
         vm.prank(ChainActors.ORACLE_PAUSER);
-        IOracleAdmin(nvda).pauseOracle();
+        IOracleAdmin(stock).pauseOracle();
         // #then
-        vm.expectRevert(abi.encodeWithSelector(MarketGuard.OraclePaused.selector, nvda));
+        vm.expectRevert(abi.encodeWithSelector(MarketGuard.OraclePaused.selector, stock));
         // #when
         market.fillQuote(q, sig, id, ONE);
     }
@@ -206,7 +206,7 @@ contract VayleMarketForkTest is VayleMarketFork {
         market.placeOrder(p);
         vm.expectRevert(halted);
         vm.prank(bob);
-        market.updateOrder(open, PRICE_TICK, false, 0);
+        market.updateOrder(open, priceTick, false, 0);
         vm.expectRevert(halted);
         vm.prank(bob);
         market.cancelOrder(open);
@@ -223,7 +223,7 @@ contract VayleMarketForkTest is VayleMarketFork {
         vm.prank(alice);
         market.withdraw(usdg, PREMIUM);
         vm.expectRevert(halted);
-        market.createEpoch(nvda, 1);
+        market.createEpoch(stock, 1);
     }
 
     function test_haltedUntilReportsTheActiveHaltsEnd() public {
@@ -368,7 +368,7 @@ contract VayleMarketForkTest is VayleMarketFork {
         vm.prank(quoter);
         market.exercise(callSeries, ONE);
         // #then
-        assertEq(market.claimable(quoter, nvda), ONE);
+        assertEq(market.claimable(quoter, stock), ONE);
     }
 
     // Caps
@@ -393,11 +393,11 @@ contract VayleMarketForkTest is VayleMarketFork {
         // #then
         vm.expectRevert(
             abi.encodeWithSelector(
-                MarketGuard.CapExceeded.selector, MarketGuard.Cap.WalletSize, 4 * ONE + LOT, 4 * ONE
+                MarketGuard.CapExceeded.selector, MarketGuard.Cap.WalletSize, 4 * ONE + lot, 4 * ONE
             )
         );
         // #when
-        _place(alice, OptionType.Call, LOT);
+        _place(alice, OptionType.Call, lot);
     }
 
     function test_aFillOverTheFillSizeCapIsRefused() public {
@@ -420,33 +420,33 @@ contract VayleMarketForkTest is VayleMarketFork {
         _writeCall(bob, 2 * ONE);
         uint256 id = _place(carol, OptionType.Call, 3 * ONE);
         _fillQuote(id, callSeries, 2 * ONE);
-        (QuoteSettlement.Quote memory q, bytes memory sig) = _signedQuote(callSeries, LOT);
+        (QuoteSettlement.Quote memory q, bytes memory sig) = _signedQuote(callSeries, lot);
         // #then
         vm.expectRevert(
             abi.encodeWithSelector(
                 MarketGuard.CapExceeded.selector,
                 MarketGuard.Cap.SeriesOpenInterest,
-                6 * ONE + LOT,
+                6 * ONE + lot,
                 6 * ONE
             )
         );
         // #when
-        market.fillQuote(q, sig, id, LOT);
+        market.fillQuote(q, sig, id, lot);
     }
 
     function test_aZeroCapKeepsASideClosed() public {
         // #given
         MarketGuard.Caps memory closed;
         vm.prank(timelock);
-        market.setCaps(nvda, OptionType.Put, closed);
+        market.setCaps(stock, OptionType.Put, closed);
         // #then
         vm.expectRevert(
             abi.encodeWithSelector(
-                MarketGuard.CapExceeded.selector, MarketGuard.Cap.OpenSize, LOT, 0
+                MarketGuard.CapExceeded.selector, MarketGuard.Cap.OpenSize, lot, 0
             )
         );
         // #when
-        _place(alice, OptionType.Put, LOT);
+        _place(alice, OptionType.Put, lot);
     }
 
     function test_loweringCapsNeverTouchesALiveSeries() public {
@@ -454,7 +454,7 @@ contract VayleMarketForkTest is VayleMarketFork {
         uint256 id = _writeCall(alice, ONE);
         MarketGuard.Caps memory closed;
         vm.prank(timelock);
-        market.setCaps(nvda, OptionType.Call, closed);
+        market.setCaps(stock, OptionType.Call, closed);
         // #when
         _intoTheWindow();
         vm.prank(quoter);
@@ -475,7 +475,7 @@ contract VayleMarketForkTest is VayleMarketFork {
         // #when
         uint256 again = _place(alice, OptionType.Call, 4 * ONE);
         // #then
-        assertEq(market.walletSize(alice, nvda, OptionType.Call), 4 * ONE);
+        assertEq(market.walletSize(alice, stock, OptionType.Call), 4 * ONE);
         assertEq(market.orderOf(again).size, 4 * ONE);
     }
 
@@ -494,7 +494,7 @@ contract VayleMarketForkTest is VayleMarketFork {
         market.settleOrder(cancelled);
         // #then
         uint256 sum = market.orderOf(renewing).size + market.orderOf(cancelled).size + 2 * ONE;
-        assertEq(market.openSize(nvda, OptionType.Call), sum);
+        assertEq(market.openSize(stock, OptionType.Call), sum);
         assertEq(sum, 3 * ONE);
     }
 
@@ -516,7 +516,7 @@ contract VayleMarketForkTest is VayleMarketFork {
         // #then: alice sold at the target and kept the premium, and the order stopped
         assertEq(market.claimable(alice, usdg), 0);
         assertEq(uint8(market.orderOf(id).status), uint8(CollateralVault.OrderStatus.Closed));
-        assertEq(market.claimable(quoter, nvda), ONE);
+        assertEq(market.claimable(quoter, stock), ONE);
         _assertConserved(_claimants());
     }
 

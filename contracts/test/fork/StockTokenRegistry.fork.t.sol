@@ -36,7 +36,7 @@ contract StockTokenRegistryForkTest is ForkTest {
         internal
     {
         vm.prank(admin);
-        registry.list(token, uid, IPriceFeed(nvdaFeed), LOT, priceTick, strikeTick, range);
+        registry.list(token, uid, IPriceFeed(stockFeed), LOT, priceTick, strikeTick, range);
     }
 
     function test_readsUsdgDecimalsFromTheChain() public view {
@@ -47,15 +47,15 @@ contract StockTokenRegistryForkTest is ForkTest {
     function test_listsTheRealNvdaToken() public {
         // #then
         vm.expectEmit(address(registry));
-        emit AssetListed(nvda, nvdaUid, nvdaFeed, LOT, PRICE_TICK, STRIKE_TICK, STRIKE_RANGE_BPS);
+        emit AssetListed(stock, stockUid, stockFeed, LOT, PRICE_TICK, STRIKE_TICK, STRIKE_RANGE_BPS);
         // #when
-        _list(nvda, nvdaUid, PRICE_TICK, STRIKE_TICK, STRIKE_RANGE_BPS);
+        _list(stock, stockUid, PRICE_TICK, STRIKE_TICK, STRIKE_RANGE_BPS);
         // #then
-        StockTokenRegistry.Asset memory listed = registry.asset(nvda);
-        assertEq(listed.uid, nvdaUid);
-        assertEq(listed.decimals, nvdaDecimals);
-        assertEq(listed.rawUnit, 10 ** nvdaDecimals);
-        assertEq(listed.feedDecimals, IPriceFeed(nvdaFeed).decimals());
+        StockTokenRegistry.Asset memory listed = registry.asset(stock);
+        assertEq(listed.uid, stockUid);
+        assertEq(listed.decimals, stockDecimals);
+        assertEq(listed.rawUnit, 10 ** stockDecimals);
+        assertEq(listed.feedDecimals, IPriceFeed(stockFeed).decimals());
         assertTrue(listed.listed);
     }
 
@@ -64,17 +64,17 @@ contract StockTokenRegistryForkTest is ForkTest {
         bytes32 wrong = keccak256("not the uid");
         // #then
         vm.expectRevert(
-            abi.encodeWithSelector(StockTokenRegistry.UidMismatch.selector, nvda, wrong, nvdaUid)
+            abi.encodeWithSelector(StockTokenRegistry.UidMismatch.selector, stock, wrong, stockUid)
         );
         // #when
-        _list(nvda, wrong, PRICE_TICK, STRIKE_TICK, STRIKE_RANGE_BPS);
+        _list(stock, wrong, PRICE_TICK, STRIKE_TICK, STRIKE_RANGE_BPS);
     }
 
     function test_refusesAContractThatIsntAStockToken() public {
         // #then
         vm.expectRevert(abi.encodeWithSelector(ExternalReads.NotAStockToken.selector, usdg));
         // #when
-        _list(usdg, nvdaUid, PRICE_TICK, STRIKE_TICK, STRIKE_RANGE_BPS);
+        _list(usdg, stockUid, PRICE_TICK, STRIKE_TICK, STRIKE_RANGE_BPS);
     }
 
     function test_refusesAFeedThatIsntAPriceFeed() public {
@@ -83,7 +83,7 @@ contract StockTokenRegistryForkTest is ForkTest {
         // #when
         vm.prank(admin);
         registry.list(
-            nvda, nvdaUid, IPriceFeed(usdg), LOT, PRICE_TICK, STRIKE_TICK, STRIKE_RANGE_BPS
+            stock, stockUid, IPriceFeed(usdg), LOT, PRICE_TICK, STRIKE_TICK, STRIKE_RANGE_BPS
         );
     }
 
@@ -93,18 +93,18 @@ contract StockTokenRegistryForkTest is ForkTest {
         // #then
         vm.expectRevert(abi.encodeWithSelector(StockTokenRegistry.NotAContract.selector, empty));
         // #when
-        _list(empty, nvdaUid, PRICE_TICK, STRIKE_TICK, STRIKE_RANGE_BPS);
+        _list(empty, stockUid, PRICE_TICK, STRIKE_TICK, STRIKE_RANGE_BPS);
     }
 
     function test_refusesAGridThatCantDivideExactly() public {
         // #then
         vm.expectRevert(
             abi.encodeWithSelector(
-                StockTokenRegistry.InexactGrid.selector, LOT, 1, 10 ** nvdaDecimals
+                StockTokenRegistry.InexactGrid.selector, LOT, 1, 10 ** stockDecimals
             )
         );
         // #when
-        _list(nvda, nvdaUid, 1, STRIKE_TICK, STRIKE_RANGE_BPS);
+        _list(stock, stockUid, 1, STRIKE_TICK, STRIKE_RANGE_BPS);
     }
 
     function test_refusesAStrikeTickOffThePriceTick() public {
@@ -118,7 +118,7 @@ contract StockTokenRegistryForkTest is ForkTest {
             )
         );
         // #when
-        _list(nvda, nvdaUid, PRICE_TICK, STRIKE_TICK + 1, STRIKE_RANGE_BPS);
+        _list(stock, stockUid, PRICE_TICK, STRIKE_TICK + 1, STRIKE_RANGE_BPS);
     }
 
     function test_refusesAStrikeRangeOfZeroOrTheWholePrice() public {
@@ -129,7 +129,7 @@ contract StockTokenRegistryForkTest is ForkTest {
             )
         );
         // #when
-        _list(nvda, nvdaUid, PRICE_TICK, STRIKE_TICK, 0);
+        _list(stock, stockUid, PRICE_TICK, STRIKE_TICK, 0);
         // #then
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -137,30 +137,30 @@ contract StockTokenRegistryForkTest is ForkTest {
             )
         );
         // #when
-        _list(nvda, nvdaUid, PRICE_TICK, STRIKE_TICK, 10_000);
+        _list(stock, stockUid, PRICE_TICK, STRIKE_TICK, 10_000);
     }
 
     function test_refusesListingTwice() public {
         // #given
-        _list(nvda, nvdaUid, PRICE_TICK, STRIKE_TICK, STRIKE_RANGE_BPS);
+        _list(stock, stockUid, PRICE_TICK, STRIKE_TICK, STRIKE_RANGE_BPS);
         // #then
-        vm.expectRevert(abi.encodeWithSelector(StockTokenRegistry.AlreadyListed.selector, nvda));
+        vm.expectRevert(abi.encodeWithSelector(StockTokenRegistry.AlreadyListed.selector, stock));
         // #when
-        _list(nvda, nvdaUid, PRICE_TICK, STRIKE_TICK, STRIKE_RANGE_BPS);
+        _list(stock, stockUid, PRICE_TICK, STRIKE_TICK, STRIKE_RANGE_BPS);
     }
 
     function test_delistingStopsLookupsAndAllowsRelisting() public {
         // #given
-        _list(nvda, nvdaUid, PRICE_TICK, STRIKE_TICK, STRIKE_RANGE_BPS);
+        _list(stock, stockUid, PRICE_TICK, STRIKE_TICK, STRIKE_RANGE_BPS);
         // #when
         vm.prank(admin);
-        registry.delist(nvda);
+        registry.delist(stock);
         // #then
-        assertFalse(registry.isListed(nvda));
-        vm.expectRevert(abi.encodeWithSelector(StockTokenRegistry.NotListed.selector, nvda));
-        registry.asset(nvda);
-        _list(nvda, nvdaUid, PRICE_TICK, STRIKE_TICK, STRIKE_RANGE_BPS);
-        assertTrue(registry.isListed(nvda));
+        assertFalse(registry.isListed(stock));
+        vm.expectRevert(abi.encodeWithSelector(StockTokenRegistry.NotListed.selector, stock));
+        registry.asset(stock);
+        _list(stock, stockUid, PRICE_TICK, STRIKE_TICK, STRIKE_RANGE_BPS);
+        assertTrue(registry.isListed(stock));
     }
 
     function test_listingAndDelistingAreOwnerOnly() public {
@@ -172,13 +172,13 @@ contract StockTokenRegistryForkTest is ForkTest {
         );
         // #when
         vm.prank(stranger);
-        registry.list(nvda, nvdaUid, IPriceFeed(nvdaFeed), LOT, PRICE_TICK, STRIKE_TICK, 1000);
+        registry.list(stock, stockUid, IPriceFeed(stockFeed), LOT, PRICE_TICK, STRIKE_TICK, 1000);
         // #then
         vm.expectRevert(
             abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, stranger)
         );
         // #when
         vm.prank(stranger);
-        registry.delist(nvda);
+        registry.delist(stock);
     }
 }

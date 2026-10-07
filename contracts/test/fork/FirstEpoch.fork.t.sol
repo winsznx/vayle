@@ -53,18 +53,18 @@ contract FirstEpochForkTest is MarketFork {
             openSize: 10 * ONE, walletSize: 4 * ONE, seriesOpenInterest: 6 * ONE, fillSize: 2 * ONE
         });
         vm.startPrank(admin);
-        market.setCaps(nvda, OptionType.Call, caps);
-        market.setCaps(nvda, OptionType.Put, caps);
+        market.setCaps(stock, OptionType.Call, caps);
+        market.setCaps(stock, OptionType.Put, caps);
         market.setBatchBidder(maker, true);
         vm.stopPrank();
         address[3] memory wallets = [alice, bob, maker];
         for (uint256 i; i < wallets.length; ++i) {
             vm.startPrank(ChainActors.FUNDING_SOURCE);
-            IERC20(nvda).transfer(wallets[i], 10 * ONE);
+            IERC20(stock).transfer(wallets[i], 10 * ONE);
             IERC20(usdg).transfer(wallets[i], 100_000e6);
             vm.stopPrank();
             vm.startPrank(wallets[i]);
-            IERC20(nvda).approve(address(market), type(uint256).max);
+            IERC20(stock).approve(address(market), type(uint256).max);
             IERC20(usdg).approve(address(market), type(uint256).max);
             vm.stopPrank();
         }
@@ -76,24 +76,24 @@ contract FirstEpochForkTest is MarketFork {
         uint256 atClose = _referencePriceFrom(closeAnswer);
         uint256 high = atClose > openingReference ? atClose : openingReference;
         uint256 low = atClose < openingReference ? atClose : openingReference;
-        callTarget = (high / STRIKE_TICK + 1) * STRIKE_TICK;
-        putTarget = ((low - 1) / STRIKE_TICK) * STRIKE_TICK;
+        callTarget = (high / strikeTick + 1) * strikeTick;
+        putTarget = ((low - 1) / strikeTick) * strikeTick;
     }
 
     /// @dev Pings for the half hour before the opening, then opens the first week.
     function _openFirstWeek() internal returns (uint64) {
         _keepAlive(OPENING - 35 minutes, OPENING);
-        return market.createFirstEpoch(nvda, openingRound);
+        return market.createFirstEpoch(stock, openingRound);
     }
 
     function _order(address owner, OptionType side, uint256 target) internal returns (uint256) {
         vm.prank(owner);
         return market.placeOrder(
             CollateralVault.OrderParams({
-                asset: nvda,
+                asset: stock,
                 side: side,
                 target: target,
-                minPremium: PRICE_TICK * 10,
+                minPremium: priceTick * 10,
                 size: ONE,
                 flip: false,
                 flipTarget: 0
@@ -112,7 +112,7 @@ contract FirstEpochForkTest is MarketFork {
             premium: PREMIUM,
             maxFeeBps: 0,
             maxAmount: amount,
-            minFill: LOT,
+            minFill: lot,
             nonce: ++nonce,
             deadline: deadline
         });
@@ -132,19 +132,19 @@ contract FirstEpochForkTest is MarketFork {
         // #then
         vm.expectEmit(address(market));
         emit EpochCreated(
-            nvda, SEP_18, OPENING, openingReference, openingRound, uint64(updatedAt), 2 hours
+            stock, SEP_18, OPENING, openingReference, openingRound, uint64(updatedAt), 2 hours
         );
         // #when
-        uint64 expiry = market.createFirstEpoch(nvda, openingRound);
+        uint64 expiry = market.createFirstEpoch(stock, openingRound);
         // #then
-        EpochBook.Epoch memory e = market.epoch(nvda, expiry);
+        EpochBook.Epoch memory e = market.epoch(stock, expiry);
         assertEq(expiry, SEP_18);
         assertEq(e.opening, OPENING);
         assertEq(e.batchDeadline, OPENING);
         assertEq(e.referencePrice, openingReference);
-        assertEq(e.strikeTick, STRIKE_TICK);
-        assertEq(market.latestExpiry(nvda), SEP_18);
-        assertTrue(market.isListedStrike(nvda, SEP_18, OptionType.Call, callTarget));
+        assertEq(e.strikeTick, strikeTick);
+        assertEq(market.latestExpiry(stock), SEP_18);
+        assertTrue(market.isListedStrike(stock, SEP_18, OptionType.Call, callTarget));
     }
 
     function test_fillsByQuoteAllWeekWithNoBidBatchOrFreeze() public {
@@ -152,7 +152,7 @@ contract FirstEpochForkTest is MarketFork {
         // bid window
         _openFirstWeek();
         uint256 sell = _order(alice, OptionType.Call, callTarget);
-        uint256 series = market.seriesFor(nvda, SEP_18, OptionType.Call, callTarget);
+        uint256 series = market.seriesFor(stock, SEP_18, OptionType.Call, callTarget);
         _keepAlive(OPENING + 1 minutes, OPENING + 3 hours);
         (QuoteSettlement.Quote memory bid, bytes memory bidSig) = _signed(series, ONE, SEP_18);
         // #then
@@ -177,7 +177,7 @@ contract FirstEpochForkTest is MarketFork {
         _openFirstWeek();
         uint256 sell = _order(alice, OptionType.Call, callTarget);
         uint256 buy = _order(bob, OptionType.Put, putTarget);
-        uint256 firstCalls = market.seriesFor(nvda, SEP_18, OptionType.Call, callTarget);
+        uint256 firstCalls = market.seriesFor(stock, SEP_18, OptionType.Call, callTarget);
         (QuoteSettlement.Quote memory q, bytes memory sig) = _signed(firstCalls, ONE / 2, SEP_18);
         market.fillQuote(q, sig, sell, ONE / 2);
         (uint80 closeRound,,) = _lastRoundAtOrBefore(SEP_18);
@@ -185,12 +185,12 @@ contract FirstEpochForkTest is MarketFork {
         // #when: the regular week opens at the close, the first week's window runs out
         // unexercised, it settles, and both orders go through the new week's batch
         _runKeeper(EpochBook(market), SEP_18, SEP_18 - KEEPER_LEAD, SEP_18 + 10 minutes);
-        uint64 next = market.createEpoch(nvda, closeRound);
+        uint64 next = market.createEpoch(stock, closeRound);
         _keepAlive(SEP_18 + 11 minutes, SEP_18 + 2 hours);
         market.finalize(firstCalls);
         market.settleOrder(sell);
-        uint256 calls = market.seriesFor(nvda, next, OptionType.Call, callTarget);
-        uint256 puts = market.seriesFor(nvda, next, OptionType.Put, putTarget);
+        uint256 calls = market.seriesFor(stock, next, OptionType.Call, callTarget);
+        uint256 puts = market.seriesFor(stock, next, OptionType.Put, putTarget);
         (q, sig) = _signed(calls, 5 * ONE, next);
         market.submitBid(q, sig);
         (q, sig) = _signed(puts, 5 * ONE, next);
@@ -206,7 +206,7 @@ contract FirstEpochForkTest is MarketFork {
 
         // #then
         assertEq(next, SEP_25);
-        assertEq(market.epoch(nvda, next).opening, SEP_18);
+        assertEq(market.epoch(stock, next).opening, SEP_18);
         assertEq(market.orderOf(sell).series, calls);
         assertEq(market.orderOf(sell).committed, ONE);
         assertEq(market.orderOf(buy).series, puts);
@@ -219,9 +219,9 @@ contract FirstEpochForkTest is MarketFork {
         // #given
         _openFirstWeek();
         // #then
-        vm.expectRevert(abi.encodeWithSelector(EpochBook.EpochExists.selector, nvda, SEP_18));
+        vm.expectRevert(abi.encodeWithSelector(EpochBook.EpochExists.selector, stock, SEP_18));
         // #when
-        market.createFirstEpoch(nvda, openingRound);
+        market.createFirstEpoch(stock, openingRound);
     }
 
     function test_refusesOnceTheFirstCloseHasPassed() public {
@@ -231,7 +231,7 @@ contract FirstEpochForkTest is MarketFork {
         // #then
         vm.expectRevert(abi.encodeWithSelector(EpochBook.FirstCloseHasPassed.selector, SEP_18));
         // #when
-        market.createFirstEpoch(nvda, round);
+        market.createFirstEpoch(stock, round);
     }
 
     function test_refusesWithinTheLookbackAfterDeploy() public {
@@ -242,7 +242,7 @@ contract FirstEpochForkTest is MarketFork {
         // #then
         vm.expectRevert(abi.encodeWithSelector(EpochBook.TooSoonAfterDeploy.selector, earliest));
         // #when
-        market.createFirstEpoch(nvda, round);
+        market.createFirstEpoch(stock, round);
     }
 
     function test_refusesAfterALivenessGapInTheLookback() public {
@@ -254,7 +254,7 @@ contract FirstEpochForkTest is MarketFork {
             abi.encodeWithSelector(EpochBook.LivenessGapAtClose.selector, OPENING, 20 minutes)
         );
         // #when
-        market.createFirstEpoch(nvda, openingRound);
+        market.createFirstEpoch(stock, openingRound);
     }
 
     function test_refusesWhileHalted() public {
@@ -267,18 +267,18 @@ contract FirstEpochForkTest is MarketFork {
             abi.encodeWithSelector(MarketGuard.MarketHalted.selector, OPENING + 72 hours)
         );
         // #when
-        market.createFirstEpoch(nvda, openingRound);
+        market.createFirstEpoch(stock, openingRound);
     }
 
     function test_refusesWhileTheOracleIsPaused() public {
         // #given: the real pauser pauses NVDA's oracle
         _keepAlive(OPENING - 35 minutes, OPENING);
         vm.prank(ChainActors.ORACLE_PAUSER);
-        IOracleAdmin(nvda).pauseOracle();
+        IOracleAdmin(stock).pauseOracle();
         // #then
-        vm.expectRevert(abi.encodeWithSelector(PriceAdapter.OraclePaused.selector, nvda));
+        vm.expectRevert(abi.encodeWithSelector(PriceAdapter.OraclePaused.selector, stock));
         // #when
-        market.createFirstEpoch(nvda, openingRound);
+        market.createFirstEpoch(stock, openingRound);
     }
 
     function test_refusesWithoutASchedule() public {
@@ -289,6 +289,6 @@ contract FirstEpochForkTest is MarketFork {
         // #then
         vm.expectRevert(abi.encodeWithSelector(SessionCalendar.NoCloseAfter.selector, OPENING));
         // #when
-        bare.createFirstEpoch(nvda, openingRound);
+        bare.createFirstEpoch(stock, openingRound);
     }
 }

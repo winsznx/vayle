@@ -14,7 +14,10 @@ import {VayleMarketFork} from "../utils/VayleMarketFork.sol";
 
 /// @notice The deployable market with helpers for amending orders.
 abstract contract AmendOrderFork is VayleMarketFork {
-    uint256 internal constant FLOOR = PRICE_TICK * 10;
+    /// @dev The least premium _params places at.
+    function _floor() internal view returns (uint256) {
+        return priceTick * 10;
+    }
 
     function _placeAt(address owner, OptionType side, uint256 target, uint256 size)
         internal
@@ -27,11 +30,11 @@ abstract contract AmendOrderFork is VayleMarketFork {
     /// @dev New terms with the floor _params places at and flip off.
     function _terms(uint256 target, uint256 size)
         internal
-        pure
+        view
         returns (CollateralVault.AmendParams memory)
     {
         return CollateralVault.AmendParams({
-            target: target, minPremium: FLOOR, size: size, flip: false, flipTarget: 0
+            target: target, minPremium: _floor(), size: size, flip: false, flipTarget: 0
         });
     }
 
@@ -59,8 +62,8 @@ contract AmendOrderForkTest is AmendOrderFork {
 
     function test_raisingABuyOrdersPricePullsOnlyTheExtraUsdg() public {
         // #given: bob bids for one NVDA a tick under the put strike
-        uint256 id = _placeAt(bob, OptionType.Put, putStrike - STRIKE_TICK, ONE);
-        uint256 extra = _value(ONE, putStrike) - _value(ONE, putStrike - STRIKE_TICK);
+        uint256 id = _placeAt(bob, OptionType.Put, putStrike - strikeTick, ONE);
+        uint256 extra = _value(ONE, putStrike) - _value(ONE, putStrike - strikeTick);
         uint256 before = IERC20(usdg).balanceOf(bob);
         // #then
         vm.expectCall(usdg, abi.encodeCall(IERC20.transferFrom, (bob, address(market), extra)), 1);
@@ -78,12 +81,12 @@ contract AmendOrderForkTest is AmendOrderFork {
     function test_loweringABuyOrdersPriceReleasesTheDifferenceToClaimable() public {
         // #given
         uint256 id = _placeAt(bob, OptionType.Put, putStrike, ONE);
-        uint256 freed = _value(ONE, putStrike) - _value(ONE, putStrike - STRIKE_TICK);
+        uint256 freed = _value(ONE, putStrike) - _value(ONE, putStrike - strikeTick);
         uint256 before = IERC20(usdg).balanceOf(bob);
         // #then
         vm.expectCall(usdg, abi.encodeWithSelector(IERC20.transferFrom.selector), 0);
         // #when
-        _amend(bob, id, _terms(putStrike - STRIKE_TICK, ONE));
+        _amend(bob, id, _terms(putStrike - strikeTick, ONE));
         // #then
         assertEq(market.claimable(bob, usdg), freed);
         assertEq(IERC20(usdg).balanceOf(bob), before);
@@ -93,65 +96,65 @@ contract AmendOrderForkTest is AmendOrderFork {
     function test_raisingASellOrdersPriceMovesNoCollateral() public {
         // #given
         uint256 id = _placeAt(alice, OptionType.Call, callStrike, ONE);
-        uint256 before = IERC20(nvda).balanceOf(alice);
+        uint256 before = IERC20(stock).balanceOf(alice);
         // #then
-        vm.expectCall(nvda, abi.encodeWithSelector(IERC20.transferFrom.selector), 0);
+        vm.expectCall(stock, abi.encodeWithSelector(IERC20.transferFrom.selector), 0);
         // #when
         vm.recordLogs();
-        _amend(alice, id, _terms(callStrike + STRIKE_TICK, ONE));
+        _amend(alice, id, _terms(callStrike + strikeTick, ONE));
         // #then: the raw tokens backing a sell order don't depend on its price
         assertEq(_credits(vm.getRecordedLogs()), 0);
-        assertEq(IERC20(nvda).balanceOf(alice), before);
-        assertEq(market.claimable(alice, nvda), 0);
-        assertEq(market.idleSize(nvda, OptionType.Call, callStrike), 0);
-        assertEq(market.idleSize(nvda, OptionType.Call, callStrike + STRIKE_TICK), ONE);
+        assertEq(IERC20(stock).balanceOf(alice), before);
+        assertEq(market.claimable(alice, stock), 0);
+        assertEq(market.idleSize(stock, OptionType.Call, callStrike), 0);
+        assertEq(market.idleSize(stock, OptionType.Call, callStrike + strikeTick), ONE);
         _assertConserved(_claimants());
     }
 
     function test_loweringASellOrdersPriceMovesNoCollateral() public {
         // #given
-        uint256 id = _placeAt(alice, OptionType.Call, callStrike + STRIKE_TICK, ONE);
+        uint256 id = _placeAt(alice, OptionType.Call, callStrike + strikeTick, ONE);
         // #then
-        vm.expectCall(nvda, abi.encodeWithSelector(IERC20.transferFrom.selector), 0);
+        vm.expectCall(stock, abi.encodeWithSelector(IERC20.transferFrom.selector), 0);
         // #when
         _amend(alice, id, _terms(callStrike, ONE));
         // #then
-        assertEq(market.claimable(alice, nvda), 0);
-        assertEq(market.idleSize(nvda, OptionType.Call, callStrike + STRIKE_TICK), 0);
-        assertEq(market.idleSize(nvda, OptionType.Call, callStrike), ONE);
+        assertEq(market.claimable(alice, stock), 0);
+        assertEq(market.idleSize(stock, OptionType.Call, callStrike + strikeTick), 0);
+        assertEq(market.idleSize(stock, OptionType.Call, callStrike), ONE);
         _assertConserved(_claimants());
     }
 
     function test_growingASellOrderPullsOnlyTheExtraTokens() public {
         // #given
         uint256 id = _placeAt(alice, OptionType.Call, callStrike, ONE);
-        uint256 before = IERC20(nvda).balanceOf(alice);
+        uint256 before = IERC20(stock).balanceOf(alice);
         // #then
-        vm.expectCall(nvda, abi.encodeCall(IERC20.transferFrom, (alice, address(market), ONE)), 1);
+        vm.expectCall(stock, abi.encodeCall(IERC20.transferFrom, (alice, address(market), ONE)), 1);
         // #when
         _amend(alice, id, _terms(callStrike, 2 * ONE));
         // #then
-        assertEq(before - IERC20(nvda).balanceOf(alice), ONE);
+        assertEq(before - IERC20(stock).balanceOf(alice), ONE);
         assertEq(market.orderOf(id).size, 2 * ONE);
-        assertEq(market.idleSize(nvda, OptionType.Call, callStrike), 2 * ONE);
+        assertEq(market.idleSize(stock, OptionType.Call, callStrike), 2 * ONE);
         _assertConserved(_claimants());
     }
 
     function test_shrinkingASellOrderReleasesTheDifferenceToClaimable() public {
         // #given
         uint256 id = _placeAt(alice, OptionType.Call, callStrike, 3 * ONE);
-        uint256 before = IERC20(nvda).balanceOf(alice);
+        uint256 before = IERC20(stock).balanceOf(alice);
         // #then
-        vm.expectCall(nvda, abi.encodeWithSelector(IERC20.transferFrom.selector), 0);
+        vm.expectCall(stock, abi.encodeWithSelector(IERC20.transferFrom.selector), 0);
         // #when
         _amend(alice, id, _terms(callStrike, ONE));
         // #then: the difference waits as a claim, and withdrawing it works like any payout
-        assertEq(market.claimable(alice, nvda), 2 * ONE);
-        assertEq(market.idleSize(nvda, OptionType.Call, callStrike), ONE);
+        assertEq(market.claimable(alice, stock), 2 * ONE);
+        assertEq(market.idleSize(stock, OptionType.Call, callStrike), ONE);
         _assertConserved(_claimants());
         vm.prank(alice);
-        market.withdraw(nvda, 2 * ONE);
-        assertEq(IERC20(nvda).balanceOf(alice), before + 2 * ONE);
+        market.withdraw(stock, 2 * ONE);
+        assertEq(IERC20(stock).balanceOf(alice), before + 2 * ONE);
     }
 
     function test_growingABuyOrderPullsTheExtraUsdgAtItsTarget() public {
@@ -183,7 +186,7 @@ contract AmendOrderForkTest is AmendOrderFork {
     function test_aLowerPriceAndALargerSizePullOnlyTheNetDifference() public {
         // #given
         uint256 id = _placeAt(bob, OptionType.Put, putStrike, ONE);
-        uint256 lower = putStrike - STRIKE_TICK;
+        uint256 lower = putStrike - strikeTick;
         uint256 owed = _value(2 * ONE, lower) - _value(ONE, putStrike);
         // #then
         vm.expectCall(usdg, abi.encodeCall(IERC20.transferFrom, (bob, address(market), owed)), 1);
@@ -199,7 +202,7 @@ contract AmendOrderForkTest is AmendOrderFork {
 
     function test_aHigherPriceAndASmallerSizeReleaseOnlyTheNetDifference() public {
         // #given
-        uint256 lower = putStrike - STRIKE_TICK;
+        uint256 lower = putStrike - strikeTick;
         uint256 id = _placeAt(bob, OptionType.Put, lower, 2 * ONE);
         uint256 freed = _value(2 * ONE, lower) - _value(ONE, putStrike);
         // #then
@@ -208,8 +211,8 @@ contract AmendOrderForkTest is AmendOrderFork {
         _amend(bob, id, _terms(putStrike, ONE));
         // #then
         assertEq(market.claimable(bob, usdg), freed);
-        assertEq(market.idleSize(nvda, OptionType.Put, lower), 0);
-        assertEq(market.idleSize(nvda, OptionType.Put, putStrike), ONE);
+        assertEq(market.idleSize(stock, OptionType.Put, lower), 0);
+        assertEq(market.idleSize(stock, OptionType.Put, putStrike), ONE);
         _assertConserved(_claimants());
     }
 
@@ -220,7 +223,7 @@ contract AmendOrderForkTest is AmendOrderFork {
         uint256 id = _placeAt(alice, OptionType.Call, callStrike, ONE);
         uint256 orders = market.orderCount();
         CollateralVault.AmendParams memory p = CollateralVault.AmendParams({
-            target: callStrike + STRIKE_TICK,
+            target: callStrike + strikeTick,
             minPremium: PREMIUM,
             size: 2 * ONE,
             flip: true,
@@ -232,26 +235,26 @@ contract AmendOrderForkTest is AmendOrderFork {
         CollateralVault.Order memory o = market.orderOf(id);
         assertEq(market.orderCount(), orders);
         assertEq(o.owner, alice);
-        assertEq(o.asset, nvda);
+        assertEq(o.asset, stock);
         assertEq(uint8(o.side), uint8(OptionType.Call));
         assertEq(uint8(o.status), uint8(CollateralVault.OrderStatus.Active));
-        assertEq(o.target, callStrike + STRIKE_TICK);
+        assertEq(o.target, callStrike + strikeTick);
         assertEq(o.minPremium, PREMIUM);
         assertEq(o.size, 2 * ONE);
         assertTrue(o.flip);
         assertEq(o.flipTarget, putStrike);
         assertEq(o.committed, 0);
         assertEq(o.series, 0);
-        assertEq(market.idleSize(nvda, OptionType.Call, callStrike), 0);
-        assertEq(market.idleSize(nvda, OptionType.Call, callStrike + STRIKE_TICK), 2 * ONE);
-        assertEq(market.openSize(nvda, OptionType.Call), 2 * ONE);
-        assertEq(market.walletSize(alice, nvda, OptionType.Call), 2 * ONE);
+        assertEq(market.idleSize(stock, OptionType.Call, callStrike), 0);
+        assertEq(market.idleSize(stock, OptionType.Call, callStrike + strikeTick), 2 * ONE);
+        assertEq(market.openSize(stock, OptionType.Call), 2 * ONE);
+        assertEq(market.walletSize(alice, stock, OptionType.Call), 2 * ONE);
     }
 
     function test_anAmendEmitsItsFullNewTerms() public {
         // #given
         uint256 id = _placeAt(bob, OptionType.Put, putStrike, 2 * ONE);
-        uint256 lower = putStrike - STRIKE_TICK;
+        uint256 lower = putStrike - strikeTick;
         uint256 freed = _value(2 * ONE, putStrike) - _value(ONE, lower);
         CollateralVault.AmendParams memory p = CollateralVault.AmendParams({
             target: lower, minPremium: PREMIUM, size: ONE, flip: true, flipTarget: callStrike
@@ -275,7 +278,7 @@ contract AmendOrderForkTest is AmendOrderFork {
         p.flipTarget = putStrike + 1;
         // #then
         vm.expectEmit(address(market));
-        emit CollateralVault.OrderAmended(id, callStrike, FLOOR, ONE, false, 0);
+        emit CollateralVault.OrderAmended(id, callStrike, _floor(), ONE, false, 0);
         // #when
         _amend(alice, id, p);
         // #then
@@ -286,8 +289,8 @@ contract AmendOrderForkTest is AmendOrderFork {
     function test_anAmendedOrderFillsOnlyInItsNewTargetsSeries() public {
         // #given: alice moves her sell order a tick up
         uint256 id = _placeAt(alice, OptionType.Call, callStrike, ONE);
-        _amend(alice, id, _terms(callStrike + STRIKE_TICK, ONE));
-        uint256 series = market.seriesFor(nvda, OCT_09, OptionType.Call, callStrike + STRIKE_TICK);
+        _amend(alice, id, _terms(callStrike + strikeTick, ONE));
+        uint256 series = market.seriesFor(stock, OCT_09, OptionType.Call, callStrike + strikeTick);
         (QuoteSettlement.Quote memory q, bytes memory sig) = _signedQuote(callSeries, ONE);
         // #then
         vm.expectRevert(
@@ -311,13 +314,13 @@ contract AmendOrderForkTest is AmendOrderFork {
         market.finalize(callSeries);
         market.settleOrder(id);
         // #when
-        _amend(alice, id, _terms(callStrike + STRIKE_TICK, 2 * ONE));
+        _amend(alice, id, _terms(callStrike + strikeTick, 2 * ONE));
         // #then
         CollateralVault.Order memory o = market.orderOf(id);
         assertEq(o.size, 2 * ONE);
-        assertEq(o.target, callStrike + STRIKE_TICK);
-        assertEq(market.idleSize(nvda, OptionType.Call, callStrike), 0);
-        assertEq(market.idleSize(nvda, OptionType.Call, callStrike + STRIKE_TICK), 2 * ONE);
+        assertEq(o.target, callStrike + strikeTick);
+        assertEq(market.idleSize(stock, OptionType.Call, callStrike), 0);
+        assertEq(market.idleSize(stock, OptionType.Call, callStrike + strikeTick), 2 * ONE);
         _assertConserved(_claimants());
     }
 
@@ -379,9 +382,9 @@ contract AmendOrderForkTest is AmendOrderFork {
         // #given
         uint256 id = _placeAt(alice, OptionType.Call, callStrike, ONE);
         // #then
-        vm.expectRevert(abi.encodeWithSelector(Units.NotALot.selector, LOT + 1, LOT));
+        vm.expectRevert(abi.encodeWithSelector(Units.NotALot.selector, lot + 1, lot));
         // #when
-        _amend(alice, id, _terms(callStrike, LOT + 1));
+        _amend(alice, id, _terms(callStrike, lot + 1));
         // #then
         vm.expectRevert(Units.ZeroAmount.selector);
         // #when
@@ -393,7 +396,7 @@ contract AmendOrderForkTest is AmendOrderFork {
         uint256 id = _placeAt(alice, OptionType.Call, callStrike, ONE);
         // #then
         vm.expectRevert(
-            abi.encodeWithSelector(Units.NotOnTick.selector, callStrike + 1, STRIKE_TICK)
+            abi.encodeWithSelector(Units.NotOnTick.selector, callStrike + 1, strikeTick)
         );
         // #when
         _amend(alice, id, _terms(callStrike + 1, ONE));
@@ -407,11 +410,9 @@ contract AmendOrderForkTest is AmendOrderFork {
         // #given
         uint256 id = _placeAt(alice, OptionType.Call, callStrike, ONE);
         CollateralVault.AmendParams memory p = _terms(callStrike, ONE);
-        p.minPremium = PRICE_TICK + 1;
+        p.minPremium = priceTick + 1;
         // #then
-        vm.expectRevert(
-            abi.encodeWithSelector(Units.NotOnTick.selector, PRICE_TICK + 1, PRICE_TICK)
-        );
+        vm.expectRevert(abi.encodeWithSelector(Units.NotOnTick.selector, priceTick + 1, priceTick));
         // #when
         _amend(alice, id, p);
     }
@@ -422,9 +423,7 @@ contract AmendOrderForkTest is AmendOrderFork {
         CollateralVault.AmendParams memory p = _terms(callStrike, ONE);
         (p.flip, p.flipTarget) = (true, putStrike + 1);
         // #then
-        vm.expectRevert(
-            abi.encodeWithSelector(Units.NotOnTick.selector, putStrike + 1, STRIKE_TICK)
-        );
+        vm.expectRevert(abi.encodeWithSelector(Units.NotOnTick.selector, putStrike + 1, strikeTick));
         // #when
         _amend(alice, id, p);
     }
@@ -433,16 +432,16 @@ contract AmendOrderForkTest is AmendOrderFork {
         // #given
         uint256 id = _placeAt(alice, OptionType.Call, callStrike, ONE);
         vm.prank(admin);
-        registry.delist(nvda);
+        registry.delist(stock);
         // #then
-        vm.expectRevert(abi.encodeWithSelector(StockTokenRegistry.NotListed.selector, nvda));
+        vm.expectRevert(abi.encodeWithSelector(StockTokenRegistry.NotListed.selector, stock));
         // #when
         _amend(alice, id, _terms(callStrike, 2 * ONE));
         // #when
         vm.prank(alice);
         market.cancelOrder(id);
         // #then
-        assertEq(market.claimable(alice, nvda), ONE);
+        assertEq(market.claimable(alice, stock), ONE);
     }
 
     function test_aPauseRefusesAnAmendEvenOneThatShrinksButNotACancel() public {
@@ -451,25 +450,25 @@ contract AmendOrderForkTest is AmendOrderFork {
         vm.prank(guardian);
         market.setPaused(true);
         // #then
-        vm.expectRevert(abi.encodeWithSelector(MarketGuard.MarketPaused.selector, nvda));
+        vm.expectRevert(abi.encodeWithSelector(MarketGuard.MarketPaused.selector, stock));
         // #when
         _amend(alice, id, _terms(callStrike, ONE));
         // #when: the exit stays open
         vm.prank(alice);
         market.cancelOrder(id);
         // #then
-        assertEq(market.claimable(alice, nvda), 2 * ONE);
+        assertEq(market.claimable(alice, stock), 2 * ONE);
     }
 
     function test_anAssetPauseRefusesAnAmend() public {
         // #given
         uint256 id = _placeAt(bob, OptionType.Put, putStrike, ONE);
         vm.prank(guardian);
-        market.setAssetPaused(nvda, true);
+        market.setAssetPaused(stock, true);
         // #then
-        vm.expectRevert(abi.encodeWithSelector(MarketGuard.MarketPaused.selector, nvda));
+        vm.expectRevert(abi.encodeWithSelector(MarketGuard.MarketPaused.selector, stock));
         // #when
-        _amend(bob, id, _terms(putStrike - STRIKE_TICK, ONE));
+        _amend(bob, id, _terms(putStrike - strikeTick, ONE));
     }
 
     // Caps
@@ -478,11 +477,11 @@ contract AmendOrderForkTest is AmendOrderFork {
         // #given: alice's one order fills her whole wallet cap
         uint256 id = _placeAt(alice, OptionType.Call, callStrike, 4 * ONE);
         // #when: she moves all of it to another price
-        _amend(alice, id, _terms(callStrike + STRIKE_TICK, 4 * ONE));
+        _amend(alice, id, _terms(callStrike + strikeTick, 4 * ONE));
         // #then
-        assertEq(market.walletSize(alice, nvda, OptionType.Call), 4 * ONE);
-        assertEq(market.openSize(nvda, OptionType.Call), 4 * ONE);
-        assertEq(market.orderOf(id).target, callStrike + STRIKE_TICK);
+        assertEq(market.walletSize(alice, stock, OptionType.Call), 4 * ONE);
+        assertEq(market.openSize(stock, OptionType.Call), 4 * ONE);
+        assertEq(market.orderOf(id).target, callStrike + strikeTick);
     }
 
     function test_anAmendOverTheWalletCapIsRefused() public {
@@ -492,11 +491,11 @@ contract AmendOrderForkTest is AmendOrderFork {
         // #then
         vm.expectRevert(
             abi.encodeWithSelector(
-                MarketGuard.CapExceeded.selector, MarketGuard.Cap.WalletSize, 4 * ONE + LOT, 4 * ONE
+                MarketGuard.CapExceeded.selector, MarketGuard.Cap.WalletSize, 4 * ONE + lot, 4 * ONE
             )
         );
         // #when
-        _amend(alice, id, _terms(callStrike, 3 * ONE + LOT));
+        _amend(alice, id, _terms(callStrike, 3 * ONE + lot));
     }
 
     function test_anAmendOverTheOpenSizeCapIsRefused() public {
@@ -507,20 +506,20 @@ contract AmendOrderForkTest is AmendOrderFork {
         // #then
         vm.expectRevert(
             abi.encodeWithSelector(
-                MarketGuard.CapExceeded.selector, MarketGuard.Cap.OpenSize, 10 * ONE + LOT, 10 * ONE
+                MarketGuard.CapExceeded.selector, MarketGuard.Cap.OpenSize, 10 * ONE + lot, 10 * ONE
             )
         );
         // #when
-        _amend(carol, id, _terms(callStrike, 2 * ONE + LOT));
+        _amend(carol, id, _terms(callStrike, 2 * ONE + lot));
     }
 
     function test_anAmendLeftOverALoweredCapIsRefusedAndTheOrderStands() public {
         // #given: the wallet cap drops under alice's live order
         uint256 id = _placeAt(alice, OptionType.Call, callStrike, 4 * ONE);
-        MarketGuard.Caps memory caps = market.capsOf(nvda, OptionType.Call);
+        MarketGuard.Caps memory caps = market.capsOf(stock, OptionType.Call);
         caps.walletSize = 2 * ONE;
         vm.prank(timelock);
-        market.setCaps(nvda, OptionType.Call, caps);
+        market.setCaps(stock, OptionType.Call, caps);
         // #then
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -535,7 +534,7 @@ contract AmendOrderForkTest is AmendOrderFork {
         _amend(alice, id, _terms(callStrike, 2 * ONE));
         // #then
         assertEq(market.orderOf(id).size, 2 * ONE);
-        assertEq(market.claimable(alice, nvda), 2 * ONE);
+        assertEq(market.claimable(alice, stock), 2 * ONE);
     }
 }
 
@@ -644,7 +643,7 @@ contract AmendOrderFreezeForkTest is AmendOrderFork {
         assertEq(uint8(market.batchOf(callSeries).phase), uint8(RenewalBatch.Phase.Done));
         assertEq(market.orderOf(a).committed, ONE);
         assertEq(market.orderOf(b).committed, 0);
-        assertEq(market.idleSize(nvda, OptionType.Call, callStrike), ONE);
+        assertEq(market.idleSize(stock, OptionType.Call, callStrike), ONE);
         assertFalse(market.frozen(b));
         _assertConserved(_claimants());
     }
@@ -739,11 +738,11 @@ contract AmendOrderFreezeForkTest is AmendOrderFork {
         market.openBatch(callSeries);
         vm.warp(DEADLINE);
         // #when
-        _amend(alice, a, _terms(callStrike + STRIKE_TICK, ONE));
+        _amend(alice, a, _terms(callStrike + strikeTick, ONE));
         _amend(alice, a, _terms(callStrike, 2 * ONE));
         // #then
         assertEq(market.orderOf(a).size, 2 * ONE);
-        assertEq(market.idleSize(nvda, OptionType.Call, callStrike), 2 * ONE);
+        assertEq(market.idleSize(stock, OptionType.Call, callStrike), 2 * ONE);
     }
 
     function test_aBucketNobodyBidOnUnfreezesAtTheDeadline() public {

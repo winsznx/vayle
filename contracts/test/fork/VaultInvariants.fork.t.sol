@@ -11,7 +11,7 @@ import {VaultFork} from "../utils/VaultFork.sol";
 
 /// @dev Random sequences of holder and settlement actions against the real tokens.
 contract VaultHandler is Test {
-    uint256 internal constant LOT = 1e16;
+    uint256 internal constant lot = 1e16;
 
     VaultHarness internal immutable vault;
     uint256 internal immutable callSeries;
@@ -47,7 +47,7 @@ contract VaultHandler is Test {
             side: put ? OptionType.Put : OptionType.Call,
             target: put ? putStrike : callStrike,
             minPremium: bound(premiumTicks, 0, 1000) * 100,
-            size: lots * LOT,
+            size: lots * lot,
             flip: false,
             flipTarget: 0
         });
@@ -70,18 +70,18 @@ contract VaultHandler is Test {
         if (finalized || count == 0) return;
         uint256 id = seed % count + 1;
         CollateralVault.Order memory o = vault.orderOf(id);
-        uint256 uncommittedLots = (o.size - o.committed) / LOT;
+        uint256 uncommittedLots = (o.size - o.committed) / lot;
         if (o.status != CollateralVault.OrderStatus.Active || uncommittedLots == 0) return;
         uint256 series = o.side == OptionType.Call ? callSeries : putSeries;
-        vault.fill(id, series, bound(lots, 1, uncommittedLots) * LOT, maker);
+        vault.fill(id, series, bound(lots, 1, uncommittedLots) * lot, maker);
     }
 
     function exercise(bool put, uint256 lots) external {
         if (finalized) return;
         uint256 series = put ? putSeries : callSeries;
-        uint256 heldLots = vault.balanceOf(maker, series) / LOT;
+        uint256 heldLots = vault.balanceOf(maker, series) / lot;
         if (heldLots == 0) return;
-        vault.exercise(series, bound(lots, 1, heldLots) * LOT, maker);
+        vault.exercise(series, bound(lots, 1, heldLots) * lot, maker);
     }
 
     function finalize() external {
@@ -165,7 +165,7 @@ contract VaultInvariantsForkTest is VaultFork {
     function _assertOrdersWholeLots() internal view {
         for (uint256 id = 1; id <= vault.orderCount(); ++id) {
             CollateralVault.Order memory o = vault.orderOf(id);
-            assertEq(o.size % LOT, 0);
+            assertEq(o.size % lot, 0);
             assertLe(o.committed, o.size);
         }
     }

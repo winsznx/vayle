@@ -63,7 +63,7 @@ contract QuoteSettlementForkTest is CoreFork {
             premium: PREMIUM,
             maxFeeBps: 0,
             maxAmount: maxAmount,
-            minFill: LOT,
+            minFill: lot,
             nonce: 1,
             deadline: OCT_09
         });
@@ -131,38 +131,38 @@ contract QuoteSettlementForkTest is CoreFork {
         // #then
         vm.expectRevert(
             abi.encodeWithSelector(
-                QuoteSettlement.QuoteOverfilled.selector, market.quoteDigest(q), ONE, LOT, ONE
+                QuoteSettlement.QuoteOverfilled.selector, market.quoteDigest(q), ONE, lot, ONE
             )
         );
         // #when
-        market.fillQuote(q, sig, a, LOT);
+        market.fillQuote(q, sig, a, lot);
     }
 
     function test_aFillBelowTheMinimumIsRefused() public {
         // #given
         uint256 id = _place(alice, OptionType.Call, ONE);
-        QuoteSettlement.Quote memory q = _quote(callSeries, 3 * LOT);
-        q.minFill = 2 * LOT;
+        QuoteSettlement.Quote memory q = _quote(callSeries, 3 * lot);
+        q.minFill = 2 * lot;
         bytes memory sig = _sign(q);
         // #then
         vm.expectRevert(
-            abi.encodeWithSelector(QuoteSettlement.BelowMinimumFill.selector, LOT, 2 * LOT)
+            abi.encodeWithSelector(QuoteSettlement.BelowMinimumFill.selector, lot, 2 * lot)
         );
         // #when
-        market.fillQuote(q, sig, id, LOT);
+        market.fillQuote(q, sig, id, lot);
     }
 
     function test_theLastFillMayTakeLessThanTheMinimum() public {
         // #given
         uint256 id = _place(alice, OptionType.Call, ONE);
-        QuoteSettlement.Quote memory q = _quote(callSeries, 3 * LOT);
-        q.minFill = 2 * LOT;
+        QuoteSettlement.Quote memory q = _quote(callSeries, 3 * lot);
+        q.minFill = 2 * lot;
         bytes memory sig = _sign(q);
-        market.fillQuote(q, sig, id, 2 * LOT);
+        market.fillQuote(q, sig, id, 2 * lot);
         // #when
-        market.fillQuote(q, sig, id, LOT);
+        market.fillQuote(q, sig, id, lot);
         // #then
-        assertEq(market.quoteFilled(market.quoteDigest(q)), 3 * LOT);
+        assertEq(market.quoteFilled(market.quoteDigest(q)), 3 * lot);
     }
 
     function test_aQuoteSignedForAnotherChainDoesntVerify() public {
@@ -180,10 +180,10 @@ contract QuoteSettlementForkTest is CoreFork {
     function test_aQuoteSignedForAnotherDeploymentDoesntVerify() public {
         // #given: the second deployment's own epoch and an order in the same series
         (uint80 round,,) = _lastRoundAtOrBefore(OCT_02);
-        other.createEpoch(nvda, round);
-        other.seriesFor(nvda, OCT_09, OptionType.Call, callStrike);
+        other.createEpoch(stock, round);
+        other.seriesFor(stock, OCT_09, OptionType.Call, callStrike);
         vm.startPrank(alice);
-        IERC20(nvda).approve(address(other), type(uint256).max);
+        IERC20(stock).approve(address(other), type(uint256).max);
         uint256 id = other.placeOrder(_params(OptionType.Call, callStrike, ONE));
         vm.stopPrank();
         QuoteSettlement.Quote memory q = _quote(callSeries, ONE);
@@ -249,7 +249,7 @@ contract QuoteSettlementForkTest is CoreFork {
     function test_aPremiumBelowTheHoldersFloorIsRefused() public {
         // #given
         CollateralVault.OrderParams memory p = _params(OptionType.Call, callStrike, ONE);
-        p.minPremium = PREMIUM + PRICE_TICK;
+        p.minPremium = PREMIUM + priceTick;
         vm.prank(alice);
         uint256 id = market.placeOrder(p);
         QuoteSettlement.Quote memory q = _quote(callSeries, ONE);
@@ -257,7 +257,7 @@ contract QuoteSettlementForkTest is CoreFork {
         // #then
         vm.expectRevert(
             abi.encodeWithSelector(
-                QuoteSettlement.BelowMinimumPremium.selector, PREMIUM, PREMIUM + PRICE_TICK
+                QuoteSettlement.BelowMinimumPremium.selector, PREMIUM, PREMIUM + priceTick
             )
         );
         // #when
@@ -271,7 +271,7 @@ contract QuoteSettlementForkTest is CoreFork {
         q.premium = PREMIUM + 1;
         bytes memory sig = _sign(q);
         // #then
-        vm.expectRevert(abi.encodeWithSelector(Units.NotOnTick.selector, PREMIUM + 1, PRICE_TICK));
+        vm.expectRevert(abi.encodeWithSelector(Units.NotOnTick.selector, PREMIUM + 1, priceTick));
         // #when
         market.fillQuote(q, sig, id, ONE);
     }
@@ -286,11 +286,11 @@ contract QuoteSettlementForkTest is CoreFork {
         // #then
         vm.expectRevert(
             abi.encodeWithSelector(
-                QuoteSettlement.QuoteOverfilled.selector, market.quoteDigest(q), ONE, LOT, ONE
+                QuoteSettlement.QuoteOverfilled.selector, market.quoteDigest(q), ONE, lot, ONE
             )
         );
         // #when
-        market.fillQuote(q, sig, id, LOT);
+        market.fillQuote(q, sig, id, lot);
     }
 
     function test_raisingTheNonceFloorCancelsEveryOlderQuote() public {
@@ -304,7 +304,7 @@ contract QuoteSettlementForkTest is CoreFork {
         // #then
         vm.expectRevert(abi.encodeWithSelector(QuoteSettlement.NonceInvalidated.selector, 2, 3));
         // #when
-        market.fillQuote(q, sig, id, LOT);
+        market.fillQuote(q, sig, id, lot);
     }
 
     function test_onlyTheMakerCanCancelItsQuote() public {

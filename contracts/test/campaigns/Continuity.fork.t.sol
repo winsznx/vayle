@@ -53,7 +53,7 @@ contract ContinuityForkTest is VayleMarketFork {
         vm.prank(quoter);
         market.exercise(callSeries, ONE);
         // #then
-        assertEq(market.claimable(quoter, nvda), ONE);
+        assertEq(market.claimable(quoter, stock), ONE);
     }
 
     function test_aHolderExitsUsingOnlyLogsAndViews() public {
@@ -74,12 +74,12 @@ contract ContinuityForkTest is VayleMarketFork {
             }
         }
         vm.startPrank(alice);
-        market.withdraw(nvda, market.claimable(alice, nvda));
+        market.withdraw(stock, market.claimable(alice, stock));
         market.withdraw(usdg, market.claimable(alice, usdg));
         vm.stopPrank();
         // #then
         assertEq(ids.length, 2);
-        assertEq(market.claimable(alice, nvda) + market.claimable(alice, usdg), 0);
+        assertEq(market.claimable(alice, stock) + market.claimable(alice, usdg), 0);
         _assertConserved(_claimants());
     }
 
@@ -94,7 +94,7 @@ contract ContinuityForkTest is VayleMarketFork {
         vm.stopPrank();
         // #then
         assertEq(market.orderOf(callOrder).committed, 0);
-        assertEq(market.claimable(alice, nvda), 0);
+        assertEq(market.claimable(alice, stock), 0);
         assertEq(market.orderOf(callOrder).size, ONE);
     }
 
@@ -114,11 +114,13 @@ contract ContinuityForkTest is VayleMarketFork {
         vm.startPrank(alice);
         market.cancelOrder(callOrder);
         market.cancelOrder(putOrder);
-        market.withdraw(nvda, market.claimable(alice, nvda));
+        market.withdraw(stock, market.claimable(alice, stock));
         market.withdraw(usdg, market.claimable(alice, usdg));
         vm.stopPrank();
         // #then
-        assertEq(market.openSize(nvda, OptionType.Call) + market.openSize(nvda, OptionType.Put), 0);
+        assertEq(
+            market.openSize(stock, OptionType.Call) + market.openSize(stock, OptionType.Put), 0
+        );
         _assertConserved(_claimants());
     }
 }

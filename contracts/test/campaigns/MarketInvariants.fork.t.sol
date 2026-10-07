@@ -15,9 +15,9 @@ import {VayleMarketFork} from "../utils/VayleMarketFork.sol";
 /// @dev Random interleavings of holder, maker, keeper and guardian actions on the deployable
 /// market. Ghost flags record any user action that succeeded while it shouldn't have.
 contract MarketHandler is Test {
-    uint256 internal constant LOT = 1e16;
-    uint256 internal constant PRICE_TICK = 100;
-    uint256 internal constant STRIKE_TICK = 5e6;
+    uint256 internal constant lot = 1e16;
+    uint256 internal constant priceTick = 100;
+    uint256 internal constant strikeTick = 5e6;
 
     struct Setup {
         VayleMarket market;
@@ -73,22 +73,22 @@ contract MarketHandler is Test {
     /// and the other side's strike, which that side's grid never lists.
     function targets(OptionType side) public view returns (uint256[3] memory) {
         return side == OptionType.Call
-            ? [callStrike, callStrike + STRIKE_TICK, putStrike]
-            : [putStrike, putStrike - STRIKE_TICK, callStrike];
+            ? [callStrike, callStrike + strikeTick, putStrike]
+            : [putStrike, putStrike - strikeTick, callStrike];
     }
 
-    function _collateral(OptionType side, uint256 size, uint256 target, uint256 rawUnit)
+    function _collateral(OptionType side, uint256 size, uint256 target, uint256 RAW_UNIT)
         internal
         pure
         returns (uint256)
     {
-        return side == OptionType.Call ? size : Units.valueExact(size, target, rawUnit);
+        return side == OptionType.Call ? size : Units.valueExact(size, target, RAW_UNIT);
     }
 
     function place(uint256 who, bool put, uint256 lots, uint256 floorTicks) external {
         address owner = holders[who % holders.length];
         OptionType side = put ? OptionType.Put : OptionType.Call;
-        uint256 size = bound(lots, 1, 100) * LOT;
+        uint256 size = bound(lots, 1, 100) * lot;
         MarketGuard.Caps memory caps = market.capsOf(asset, side);
         if (
             market.openSize(asset, side) + size > caps.openSize
@@ -98,7 +98,7 @@ contract MarketHandler is Test {
             asset: asset,
             side: side,
             target: put ? putStrike : callStrike,
-            minPremium: bound(floorTicks, 0, 1000) * PRICE_TICK,
+            minPremium: bound(floorTicks, 0, 1000) * priceTick,
             size: size,
             flip: false,
             flipTarget: 0
@@ -135,7 +135,7 @@ contract MarketHandler is Test {
         uint256 id = seed % count + 1;
         CollateralVault.Order memory o = market.orderOf(id);
         if (o.status != CollateralVault.OrderStatus.Active || o.series != 0) return;
-        uint256 size = bound(lots, 1, 100) * LOT;
+        uint256 size = bound(lots, 1, 100) * lot;
         MarketGuard.Caps memory caps = market.capsOf(asset, o.side);
         if (
             market.openSize(asset, o.side) - o.size + size > caps.openSize
@@ -145,7 +145,7 @@ contract MarketHandler is Test {
         OptionType other = o.side == OptionType.Call ? OptionType.Put : OptionType.Call;
         CollateralVault.AmendParams memory p = CollateralVault.AmendParams({
             target: targets(o.side)[targetSeed % 3],
-            minPremium: bound(floorTicks, 0, 1000) * PRICE_TICK,
+            minPremium: bound(floorTicks, 0, 1000) * priceTick,
             size: size,
             flip: flip,
             flipTarget: flip ? targets(other)[(flipSeed / 2) % 3] : 0
@@ -175,19 +175,19 @@ contract MarketHandler is Test {
         if (o.target != (o.side == OptionType.Call ? callStrike : putStrike)) return;
         MarketGuard.Caps memory caps = market.capsOf(asset, o.side);
         uint256 room = caps.seriesOpenInterest - market.poolOf(series).written;
-        uint256 maxLots = (o.size - o.committed) / LOT;
-        if (caps.fillSize / LOT < maxLots) maxLots = caps.fillSize / LOT;
-        if (room / LOT < maxLots) maxLots = room / LOT;
+        uint256 maxLots = (o.size - o.committed) / lot;
+        if (caps.fillSize / lot < maxLots) maxLots = caps.fillSize / lot;
+        if (room / lot < maxLots) maxLots = room / lot;
         if (o.status != CollateralVault.OrderStatus.Active || maxLots == 0) return;
-        uint256 amount = bound(lots, 1, maxLots) * LOT;
+        uint256 amount = bound(lots, 1, maxLots) * lot;
         QuoteSettlement.Quote memory q = QuoteSettlement.Quote({
             maker: quoter,
             taker: address(0),
             series: series,
-            premium: o.minPremium + bound(premiumTicks, 0, 10_000) * PRICE_TICK,
+            premium: o.minPremium + bound(premiumTicks, 0, 10_000) * priceTick,
             maxFeeBps: market.feeBps(),
             maxAmount: amount,
-            minFill: LOT,
+            minFill: lot,
             nonce: ++nonce,
             deadline: expiry
         });
@@ -217,10 +217,10 @@ contract MarketHandler is Test {
         ) {
             return;
         }
-        uint256 held = market.balanceOf(quoter, series) / LOT;
+        uint256 held = market.balanceOf(quoter, series) / lot;
         if (held == 0) return;
         vm.prank(quoter);
-        market.exercise(series, bound(lots, 1, held) * LOT);
+        market.exercise(series, bound(lots, 1, held) * lot);
         _acted();
     }
 
@@ -286,7 +286,7 @@ contract MarketInvariantsForkTest is VayleMarketFork {
             MarketHandler.Setup({
                 market: market,
                 liveness: liveness,
-                asset: nvda,
+                asset: stock,
                 quoter: quoter,
                 quoterKey: quoterKey,
                 guardian: guardian,
@@ -338,8 +338,8 @@ contract MarketInvariantsForkTest is VayleMarketFork {
             }
             for (uint256 t; t < 3; ++t) {
                 OptionType s = OptionType(side);
-                assertEq(market.idleSize(nvda, s, targets[t]), idle[t], "idle size per bucket");
-                assertEq(market.attachedOrders(nvda, s, targets[t]), attached[t], "attached");
+                assertEq(market.idleSize(stock, s, targets[t]), idle[t], "idle size per bucket");
+                assertEq(market.attachedOrders(stock, s, targets[t]), attached[t], "attached");
             }
         }
     }
@@ -361,7 +361,7 @@ contract MarketInvariantsForkTest is VayleMarketFork {
         uint256[2][3] memory wallet;
         for (uint256 id = 1; id <= market.orderCount(); ++id) {
             CollateralVault.Order memory o = market.orderOf(id);
-            assertEq(o.size % LOT, 0, "whole lots");
+            assertEq(o.size % lot, 0, "whole lots");
             assertLe(o.committed, o.size, "committed within size");
             if (o.status == CollateralVault.OrderStatus.Closed) continue;
             uint256 side = uint256(o.side);
@@ -371,9 +371,9 @@ contract MarketInvariantsForkTest is VayleMarketFork {
             }
         }
         for (uint256 side; side < 2; ++side) {
-            assertEq(market.openSize(nvda, OptionType(side)), open[side], "open size");
+            assertEq(market.openSize(stock, OptionType(side)), open[side], "open size");
             for (uint256 h; h < owners.length; ++h) {
-                assertEq(market.walletSize(owners[h], nvda, OptionType(side)), wallet[h][side]);
+                assertEq(market.walletSize(owners[h], stock, OptionType(side)), wallet[h][side]);
             }
         }
     }
@@ -396,10 +396,10 @@ contract MarketInvariantsForkTest is VayleMarketFork {
 
     function _assertWithinCaps() internal view {
         for (uint256 side; side < 2; ++side) {
-            MarketGuard.Caps memory caps = market.capsOf(nvda, OptionType(side));
+            MarketGuard.Caps memory caps = market.capsOf(stock, OptionType(side));
             uint256 series = side == uint256(OptionType.Call) ? callSeries : putSeries;
             assertLe(market.poolOf(series).written, caps.seriesOpenInterest, "series cap");
-            assertLe(market.openSize(nvda, OptionType(side)), caps.openSize, "open size cap");
+            assertLe(market.openSize(stock, OptionType(side)), caps.openSize, "open size cap");
         }
     }
 }

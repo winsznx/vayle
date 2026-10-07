@@ -30,10 +30,11 @@ abstract contract MarketFork is ForkTest {
     // The keeper starts pinging this long before each close.
     uint64 internal constant KEEPER_LEAD = 45 minutes;
 
-    uint256 internal constant LOT = 1e16;
-    uint256 internal constant PRICE_TICK = 100;
-    uint256 internal constant STRIKE_TICK = 5e6;
-    uint16 internal constant STRIKE_RANGE_BPS = 1000;
+    // The market's order and strike grid, from its entry in deployments/markets.json.
+    uint256 internal lot;
+    uint256 internal priceTick;
+    uint256 internal strikeTick;
+    uint16 internal strikeRangeBps;
 
     address internal admin = makeAddr("admin");
     SessionCalendar internal calendar;
@@ -43,6 +44,11 @@ abstract contract MarketFork is ForkTest {
 
     function setUp() public virtual override {
         super.setUp();
+        lot = vm.parseJsonUint(marketsJson, string.concat(stockEntry, ".lot"));
+        priceTick = vm.parseJsonUint(marketsJson, string.concat(stockEntry, ".priceTick"));
+        strikeTick = vm.parseJsonUint(marketsJson, string.concat(stockEntry, ".strikeTick"));
+        strikeRangeBps =
+            uint16(vm.parseJsonUint(marketsJson, string.concat(stockEntry, ".strikeRangeBps")));
         vm.warp(SEP_18 - 2 days);
         SessionCalendar.Boundary[] memory boundaries = new SessionCalendar.Boundary[](5);
         boundaries[0] = SessionCalendar.Boundary(SEP_18, SEP_21_OPEN);
@@ -54,7 +60,7 @@ abstract contract MarketFork is ForkTest {
         registry = new StockTokenRegistry(admin, IERC20Metadata(usdg));
         vm.prank(admin);
         registry.list(
-            nvda, nvdaUid, IPriceFeed(nvdaFeed), LOT, PRICE_TICK, STRIKE_TICK, STRIKE_RANGE_BPS
+            stock, stockUid, IPriceFeed(stockFeed), lot, priceTick, strikeTick, strikeRangeBps
         );
         adapter = new PriceAdapter(registry);
         liveness = new LivenessCheckpoint();
@@ -80,16 +86,16 @@ abstract contract MarketFork is ForkTest {
         view
         returns (uint80 id, int256 answer, uint256 updatedAt)
     {
-        (id,,,,) = IPriceFeed(nvdaFeed).latestRoundData();
+        (id,,,,) = IPriceFeed(stockFeed).latestRoundData();
         while (true) {
-            (, answer,, updatedAt,) = IPriceFeed(nvdaFeed).getRoundData(id);
+            (, answer,, updatedAt,) = IPriceFeed(stockFeed).getRoundData(id);
             if (updatedAt <= cutoff) return (id, answer, updatedAt);
             id -= 1;
         }
     }
 
     function _referencePriceFrom(int256 answer) internal view returns (uint256) {
-        return uint256(answer) / 10 ** (IPriceFeed(nvdaFeed).decimals() - usdgDecimals);
+        return uint256(answer) / 10 ** (IPriceFeed(stockFeed).decimals() - usdgDecimals);
     }
 
     /// @dev A keeper pinging every minute from `from` to `to`.
@@ -117,7 +123,7 @@ abstract contract MarketFork is ForkTest {
             vm.warp(t);
             if (t + lookback >= close && t <= close) {
                 for (uint256 i; i < books.length; ++i) {
-                    books[i].observeClose(nvda);
+                    books[i].observeClose(stock);
                 }
             } else {
                 liveness.checkpoint();

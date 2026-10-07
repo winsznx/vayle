@@ -47,28 +47,26 @@ abstract contract CoreFork is MarketFork {
         core = _deployCore();
         (uint80 round, int256 answer,) = _lastRoundAtOrBefore(OCT_02);
         _runKeeper(_keeperBooks(), OCT_02, OCT_02 - KEEPER_LEAD, OCT_02 + 10 minutes);
-        core.createEpoch(nvda, round);
+        core.createEpoch(stock, round);
         referencePrice = _referencePriceFrom(answer);
-        callStrike = (referencePrice / STRIKE_TICK + 1) * STRIKE_TICK;
-        putStrike = ((referencePrice - 1) / STRIKE_TICK) * STRIKE_TICK;
+        callStrike = (referencePrice / strikeTick + 1) * strikeTick;
+        putStrike = ((referencePrice - 1) / strikeTick) * strikeTick;
         callSeries =
-            ICoreHarness(address(core)).seriesFor(nvda, OCT_09, OptionType.Call, callStrike);
-        putSeries = ICoreHarness(address(core)).seriesFor(nvda, OCT_09, OptionType.Put, putStrike);
+            ICoreHarness(address(core)).seriesFor(stock, OCT_09, OptionType.Call, callStrike);
+        putSeries = ICoreHarness(address(core)).seriesFor(stock, OCT_09, OptionType.Put, putStrike);
         address[4] memory wallets = [alice, bob, carol, maker];
         for (uint256 i; i < wallets.length; ++i) {
             _fund(wallets[i], 100e18, 1_000_000e6);
             vm.startPrank(wallets[i]);
-            IERC20(nvda).approve(address(core), type(uint256).max);
+            IERC20(stock).approve(address(core), type(uint256).max);
             IERC20(usdg).approve(address(core), type(uint256).max);
             vm.stopPrank();
         }
     }
 
-    function _fund(address to, uint256 nvdaAmount, uint256 usdgAmount) internal {
-        vm.startPrank(ChainActors.FUNDING_SOURCE);
-        IERC20(nvda).transfer(to, nvdaAmount);
-        IERC20(usdg).transfer(to, usdgAmount);
-        vm.stopPrank();
+    function _fund(address to, uint256 stockAmount, uint256 usdgAmount) internal {
+        _fundStock(to, stockAmount);
+        _fundUsdg(to, usdgAmount);
     }
 
     function _params(OptionType side, uint256 target, uint256 size)
@@ -77,10 +75,10 @@ abstract contract CoreFork is MarketFork {
         returns (CollateralVault.OrderParams memory)
     {
         return CollateralVault.OrderParams({
-            asset: nvda,
+            asset: stock,
             side: side,
             target: target,
-            minPremium: PRICE_TICK * 10,
+            minPremium: priceTick * 10,
             size: size,
             flip: false,
             flipTarget: 0
@@ -116,10 +114,10 @@ abstract contract CoreFork is MarketFork {
         owedNvda += c.collateral + p.proceeds;
         owedUsdg += p.collateral + c.proceeds;
         for (uint256 i; i < owners.length; ++i) {
-            owedNvda += core.claimable(owners[i], nvda);
+            owedNvda += core.claimable(owners[i], stock);
             owedUsdg += core.claimable(owners[i], usdg);
         }
-        assertEq(IERC20(nvda).balanceOf(address(core)), owedNvda, "NVDA conservation");
+        assertEq(IERC20(stock).balanceOf(address(core)), owedNvda, "NVDA conservation");
         assertEq(IERC20(usdg).balanceOf(address(core)), owedUsdg, "USDG conservation");
     }
 

@@ -42,7 +42,7 @@ contract EpochBookForkTest is MarketFork {
 
     function _createOct02() internal returns (uint64) {
         _runKeeper(book, OCT_02, OCT_02 - KEEPER_LEAD, OCT_02 + 10 minutes);
-        return book.createEpoch(nvda, oct02Round);
+        return book.createEpoch(stock, oct02Round);
     }
 
     function test_createsTheEpochFromTheLatestCloseToTheNext() public {
@@ -52,19 +52,19 @@ contract EpochBookForkTest is MarketFork {
         // #then
         vm.expectEmit(address(book));
         emit EpochCreated(
-            nvda, OCT_09, OCT_02, oct02Reference, oct02Round, uint64(updatedAt), 2 hours
+            stock, OCT_09, OCT_02, oct02Reference, oct02Round, uint64(updatedAt), 2 hours
         );
         // #when
-        uint64 expiry = book.createEpoch(nvda, oct02Round);
+        uint64 expiry = book.createEpoch(stock, oct02Round);
         // #then
-        EpochBook.Epoch memory e = book.epoch(nvda, expiry);
+        EpochBook.Epoch memory e = book.epoch(stock, expiry);
         assertEq(expiry, OCT_09);
         assertEq(e.opening, OCT_02);
         assertEq(e.referencePrice, oct02Reference);
         assertEq(e.windowLength, 2 hours);
-        assertEq(e.lot, LOT);
-        assertEq(e.strikeTick, STRIKE_TICK);
-        assertEq(book.latestExpiry(nvda), OCT_09);
+        assertEq(e.lot, lot);
+        assertEq(e.strikeTick, strikeTick);
+        assertEq(book.latestExpiry(stock), OCT_09);
     }
 
     function test_refusesOnceTheBoundarysCreationDeadlineHasPassed() public {
@@ -76,7 +76,7 @@ contract EpochBookForkTest is MarketFork {
             abi.encodeWithSelector(EpochBook.CreationWindowClosed.selector, OCT_02, OCT_05_OPEN)
         );
         // #when
-        book.createEpoch(nvda, oct02Round);
+        book.createEpoch(stock, oct02Round);
     }
 
     function test_createsUntilTheSecondBeforeTheDeadline() public {
@@ -84,7 +84,7 @@ contract EpochBookForkTest is MarketFork {
         _runKeeper(book, OCT_02, OCT_02 - KEEPER_LEAD, OCT_02 + 10 minutes);
         vm.warp(OCT_05_OPEN - 1);
         // #when
-        uint64 expiry = book.createEpoch(nvda, oct02Round);
+        uint64 expiry = book.createEpoch(stock, oct02Round);
         // #then
         assertEq(expiry, OCT_09);
     }
@@ -98,14 +98,14 @@ contract EpochBookForkTest is MarketFork {
             abi.encodeWithSelector(EpochBook.LivenessGapAtClose.selector, OCT_02, uint64(1))
         );
         // #when
-        book.createEpoch(nvda, oct02Round);
+        book.createEpoch(stock, oct02Round);
     }
 
     function test_theKeeperLeadAbsorbsAFirstPingFourteenMinutesLate() public {
         // #given
         _runKeeper(book, OCT_02, OCT_02 - KEEPER_LEAD + 14 minutes, OCT_02 + 10 minutes);
         // #when
-        uint64 expiry = book.createEpoch(nvda, oct02Round);
+        uint64 expiry = book.createEpoch(stock, oct02Round);
         // #then
         assertEq(expiry, OCT_09);
     }
@@ -115,26 +115,26 @@ contract EpochBookForkTest is MarketFork {
         // unpauses it five minutes after
         _runKeeper(book, OCT_02, OCT_02 - KEEPER_LEAD, OCT_02 - 11 minutes);
         vm.prank(ChainActors.ORACLE_PAUSER);
-        IOracleAdmin(nvda).pauseOracle();
+        IOracleAdmin(stock).pauseOracle();
         _runKeeper(book, OCT_02, OCT_02 - 10 minutes, OCT_02 + 5 minutes);
         vm.prank(ChainActors.ORACLE_PAUSER);
-        IOracleAdmin(nvda).unpauseOracle();
+        IOracleAdmin(stock).unpauseOracle();
         vm.warp(OCT_02 + 10 minutes);
         // #then
         vm.expectRevert(
-            abi.encodeWithSelector(EpochBook.OraclePausedAtClose.selector, nvda, OCT_02)
+            abi.encodeWithSelector(EpochBook.OraclePausedAtClose.selector, stock, OCT_02)
         );
         // #when
-        book.createEpoch(nvda, oct02Round);
+        book.createEpoch(stock, oct02Round);
     }
 
     function test_refusesWithoutAnyOracleObservation() public {
         // #given: liveness pings only
         _keepAlive(OCT_02 - KEEPER_LEAD, OCT_02 + 10 minutes);
         // #then
-        vm.expectRevert(abi.encodeWithSelector(EpochBook.CloseNotObserved.selector, nvda, OCT_02));
+        vm.expectRevert(abi.encodeWithSelector(EpochBook.CloseNotObserved.selector, stock, OCT_02));
         // #when
-        book.createEpoch(nvda, oct02Round);
+        book.createEpoch(stock, oct02Round);
     }
 
     function test_refusesWhenTheLastObservationIsOlderThanFiveMinutesAtTheClose() public {
@@ -142,18 +142,18 @@ contract EpochBookForkTest is MarketFork {
         _runKeeper(book, OCT_02, OCT_02 - KEEPER_LEAD, OCT_02 - 6 minutes);
         _keepAlive(OCT_02 - 5 minutes, OCT_02 + 10 minutes);
         // #then
-        vm.expectRevert(abi.encodeWithSelector(EpochBook.CloseNotObserved.selector, nvda, OCT_02));
+        vm.expectRevert(abi.encodeWithSelector(EpochBook.CloseNotObserved.selector, stock, OCT_02));
         // #when
-        book.createEpoch(nvda, oct02Round);
+        book.createEpoch(stock, oct02Round);
     }
 
     function test_anObservationRecordsAnUnpausedOracleForTheComingClose() public {
         // #given
         vm.warp(OCT_02 - 1 minutes);
         // #when
-        book.observeClose(nvda);
+        book.observeClose(stock);
         // #then
-        EpochBook.CloseObservation memory seen = book.closeObservation(nvda, OCT_02);
+        EpochBook.CloseObservation memory seen = book.closeObservation(stock, OCT_02);
         assertEq(seen.lastClear, OCT_02 - 1 minutes);
         assertFalse(seen.pausedSeen);
     }
@@ -162,9 +162,9 @@ contract EpochBookForkTest is MarketFork {
         // #given
         vm.warp(OCT_02);
         // #when
-        book.observeClose(nvda);
+        book.observeClose(stock);
         // #then
-        assertEq(book.closeObservation(nvda, OCT_02).lastClear, OCT_02);
+        assertEq(book.closeObservation(stock, OCT_02).lastClear, OCT_02);
     }
 
     function test_refusesAnObservationOutsideTheLookback() public {
@@ -173,7 +173,7 @@ contract EpochBookForkTest is MarketFork {
         // #then
         vm.expectRevert(abi.encodeWithSelector(EpochBook.NotNearAClose.selector, OCT_02));
         // #when
-        book.observeClose(nvda);
+        book.observeClose(stock);
     }
 
     function test_refusesAnObservationOfAnUnlistedAsset() public {
@@ -189,9 +189,9 @@ contract EpochBookForkTest is MarketFork {
         // #given
         _createOct02();
         // #then
-        vm.expectRevert(abi.encodeWithSelector(EpochBook.EpochExists.selector, nvda, OCT_09));
+        vm.expectRevert(abi.encodeWithSelector(EpochBook.EpochExists.selector, stock, OCT_09));
         // #when
-        book.createEpoch(nvda, oct02Round);
+        book.createEpoch(stock, oct02Round);
     }
 
     function test_refusesWhenTheChainWentQuietBeforeTheClose() public {
@@ -206,56 +206,56 @@ contract EpochBookForkTest is MarketFork {
             )
         );
         // #when
-        book.createEpoch(nvda, oct02Round);
+        book.createEpoch(stock, oct02Round);
     }
 
     function test_checksTheJumpAgainstARecentPreviousEpoch() public {
         // #given: an epoch created at the Sep 25 close
         (uint80 sep25Round,,) = _lastRoundAtOrBefore(SEP_25);
         _runKeeper(book, SEP_25, SEP_25 - KEEPER_LEAD, SEP_25 + 10 minutes);
-        book.createEpoch(nvda, sep25Round);
+        book.createEpoch(stock, sep25Round);
         // #when: the next week's epoch, with real prices that moved less than half
         uint64 expiry = _createOct02();
         // #then
         assertEq(expiry, OCT_09);
-        assertEq(book.latestExpiry(nvda), OCT_09);
+        assertEq(book.latestExpiry(stock), OCT_09);
     }
 
     function test_refusesADelistedAsset() public {
         // #given
         vm.prank(admin);
-        registry.delist(nvda);
+        registry.delist(stock);
         vm.warp(OCT_02 + 10 minutes);
         // #then
-        vm.expectRevert(abi.encodeWithSelector(StockTokenRegistry.NotListed.selector, nvda));
+        vm.expectRevert(abi.encodeWithSelector(StockTokenRegistry.NotListed.selector, stock));
         // #when
-        book.createEpoch(nvda, oct02Round);
+        book.createEpoch(stock, oct02Round);
     }
 
     function test_listsOnlyOutOfTheMoneyStrikesOnTheTickWithinTheBand() public {
         // #given
         _createOct02();
-        uint256 firstCall = (oct02Reference / STRIKE_TICK + 1) * STRIKE_TICK;
-        uint256 firstPut = ((oct02Reference - 1) / STRIKE_TICK) * STRIKE_TICK;
-        uint256 band = (oct02Reference * STRIKE_RANGE_BPS) / 10_000;
-        uint256 beyondCalls = ((oct02Reference + band) / STRIKE_TICK + 1) * STRIKE_TICK;
+        uint256 firstCall = (oct02Reference / strikeTick + 1) * strikeTick;
+        uint256 firstPut = ((oct02Reference - 1) / strikeTick) * strikeTick;
+        uint256 band = (oct02Reference * strikeRangeBps) / 10_000;
+        uint256 beyondCalls = ((oct02Reference + band) / strikeTick + 1) * strikeTick;
         // #then
-        assertTrue(book.isListedStrike(nvda, OCT_09, OptionType.Call, firstCall));
-        assertTrue(book.isListedStrike(nvda, OCT_09, OptionType.Put, firstPut));
-        assertFalse(book.isListedStrike(nvda, OCT_09, OptionType.Call, firstPut));
-        assertFalse(book.isListedStrike(nvda, OCT_09, OptionType.Put, firstCall));
-        assertFalse(book.isListedStrike(nvda, OCT_09, OptionType.Call, beyondCalls));
-        assertFalse(book.isListedStrike(nvda, OCT_09, OptionType.Call, firstCall + 1));
-        assertFalse(book.isListedStrike(nvda, OCT_09, OptionType.Put, 0));
+        assertTrue(book.isListedStrike(stock, OCT_09, OptionType.Call, firstCall));
+        assertTrue(book.isListedStrike(stock, OCT_09, OptionType.Put, firstPut));
+        assertFalse(book.isListedStrike(stock, OCT_09, OptionType.Call, firstPut));
+        assertFalse(book.isListedStrike(stock, OCT_09, OptionType.Put, firstCall));
+        assertFalse(book.isListedStrike(stock, OCT_09, OptionType.Call, beyondCalls));
+        assertFalse(book.isListedStrike(stock, OCT_09, OptionType.Call, firstCall + 1));
+        assertFalse(book.isListedStrike(stock, OCT_09, OptionType.Put, 0));
     }
 
     function test_registersASeriesOnceWithEveryTermInItsId() public {
         // #given
         _createOct02();
-        uint256 strike = (oct02Reference / STRIKE_TICK + 1) * STRIKE_TICK;
+        uint256 strike = (oct02Reference / strikeTick + 1) * strikeTick;
         SeriesKey memory expected = SeriesKey({
             chainId: block.chainid,
-            asset: nvda,
+            asset: stock,
             optionType: OptionType.Call,
             strike: strike,
             expiry: OCT_09,
@@ -263,15 +263,15 @@ contract EpochBookForkTest is MarketFork {
             unitBasis: SeriesId.RAW_UNITS,
             exerciseStyle: ExerciseStyle.European,
             settlementType: SettlementType.Physical,
-            collateralToken: nvda,
+            collateralToken: stock,
             collateralMode: CollateralMode.Idle
         });
         // #then
         vm.expectEmit(address(book));
         emit SeriesRegistered(SeriesId.id(expected), expected);
         // #when
-        uint256 id = book.seriesFor(nvda, OCT_09, OptionType.Call, strike);
-        uint256 again = book.seriesFor(nvda, OCT_09, OptionType.Call, strike);
+        uint256 id = book.seriesFor(stock, OCT_09, OptionType.Call, strike);
+        uint256 again = book.seriesFor(stock, OCT_09, OptionType.Call, strike);
         // #then
         assertEq(id, SeriesId.id(expected));
         assertEq(again, id);
@@ -281,9 +281,9 @@ contract EpochBookForkTest is MarketFork {
     function test_putSeriesAreCollateralizedInUsdg() public {
         // #given
         _createOct02();
-        uint256 strike = ((oct02Reference - 1) / STRIKE_TICK) * STRIKE_TICK;
+        uint256 strike = ((oct02Reference - 1) / strikeTick) * strikeTick;
         // #when
-        uint256 id = book.seriesFor(nvda, OCT_09, OptionType.Put, strike);
+        uint256 id = book.seriesFor(stock, OCT_09, OptionType.Put, strike);
         // #then
         assertEq(book.seriesKey(id).collateralToken, usdg);
     }
@@ -291,22 +291,22 @@ contract EpochBookForkTest is MarketFork {
     function test_refusesASeriesAtAnUnlistedStrike() public {
         // #given
         _createOct02();
-        uint256 itmCall = (oct02Reference / STRIKE_TICK) * STRIKE_TICK;
+        uint256 itmCall = (oct02Reference / strikeTick) * strikeTick;
         // #then
         vm.expectRevert(
             abi.encodeWithSelector(
-                EpochBook.StrikeNotListed.selector, nvda, OCT_09, OptionType.Call, itmCall
+                EpochBook.StrikeNotListed.selector, stock, OCT_09, OptionType.Call, itmCall
             )
         );
         // #when
-        book.seriesFor(nvda, OCT_09, OptionType.Call, itmCall);
+        book.seriesFor(stock, OCT_09, OptionType.Call, itmCall);
     }
 
     function test_refusesASeriesForAnEpochThatDoesntExist() public {
         // #then
-        vm.expectRevert(abi.encodeWithSelector(EpochBook.UnknownEpoch.selector, nvda, OCT_16));
+        vm.expectRevert(abi.encodeWithSelector(EpochBook.UnknownEpoch.selector, stock, OCT_16));
         // #when
-        book.seriesFor(nvda, OCT_16, OptionType.Call, STRIKE_TICK);
+        book.seriesFor(stock, OCT_16, OptionType.Call, strikeTick);
     }
 
     function test_unknownSeriesKeysRevert() public {
@@ -319,17 +319,17 @@ contract EpochBookForkTest is MarketFork {
     function test_longsAreTransferableErc1155Balances() public {
         // #given
         _createOct02();
-        uint256 strike = (oct02Reference / STRIKE_TICK + 1) * STRIKE_TICK;
-        uint256 id = book.seriesFor(nvda, OCT_09, OptionType.Call, strike);
+        uint256 strike = (oct02Reference / strikeTick + 1) * strikeTick;
+        uint256 id = book.seriesFor(stock, OCT_09, OptionType.Call, strike);
         address maker = makeAddr("maker");
         address buyer = makeAddr("buyer");
-        book.mint(maker, id, 3 * LOT);
+        book.mint(maker, id, 3 * lot);
         // #when
         vm.prank(maker);
-        book.safeTransferFrom(maker, buyer, id, LOT, "");
+        book.safeTransferFrom(maker, buyer, id, lot, "");
         // #then
-        assertEq(book.balanceOf(maker, id), 2 * LOT);
-        assertEq(book.balanceOf(buyer, id), LOT);
-        assertEq(book.totalSupply(id), 3 * LOT);
+        assertEq(book.balanceOf(maker, id), 2 * lot);
+        assertEq(book.balanceOf(buyer, id), lot);
+        assertEq(book.totalSupply(id), 3 * lot);
     }
 }

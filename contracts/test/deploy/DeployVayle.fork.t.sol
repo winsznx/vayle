@@ -38,13 +38,13 @@ contract DeployVayleForkTest is MarketFork {
         boundaries[4] = SessionCalendar.Boundary(OCT_16, OCT_19_OPEN);
         DeployVayle.Market[] memory markets = new DeployVayle.Market[](1);
         markets[0] = DeployVayle.Market({
-            token: nvda,
-            uid: nvdaUid,
-            feed: nvdaFeed,
-            lot: LOT,
-            priceTick: PRICE_TICK,
-            strikeTick: STRIKE_TICK,
-            strikeRangeBps: STRIKE_RANGE_BPS,
+            token: stock,
+            uid: stockUid,
+            feed: stockFeed,
+            lot: lot,
+            priceTick: priceTick,
+            strikeTick: strikeTick,
+            strikeRangeBps: strikeRangeBps,
             sellCaps: MarketGuard.Caps({
                 openSize: 10 * ONE,
                 walletSize: 4 * ONE,
@@ -123,11 +123,11 @@ contract DeployVayleForkTest is MarketFork {
         assertEq(d.market.feeRecipient(), multisig);
         assertTrue(d.market.teamOperated(teamMaker));
         assertTrue(d.market.batchBidder(teamMaker));
-        assertEq(d.market.capsOf(nvda, OptionType.Call).openSize, 10 * ONE);
-        assertEq(d.market.capsOf(nvda, OptionType.Call).fillSize, 2 * ONE);
-        assertEq(d.market.capsOf(nvda, OptionType.Put).openSize, 4 * ONE);
-        assertEq(d.market.capsOf(nvda, OptionType.Put).walletSize, 2 * ONE);
-        assertEq(d.registry.asset(nvda).strikeTick, 5e6);
+        assertEq(d.market.capsOf(stock, OptionType.Call).openSize, 10 * ONE);
+        assertEq(d.market.capsOf(stock, OptionType.Call).fillSize, 2 * ONE);
+        assertEq(d.market.capsOf(stock, OptionType.Put).openSize, 4 * ONE);
+        assertEq(d.market.capsOf(stock, OptionType.Put).walletSize, 2 * ONE);
+        assertEq(d.registry.asset(stock).strikeTick, 5e6);
         assertEq(d.calendar.boundaryCount(), 5);
         assertEq(d.calendar.boundaryAt(0).close, SEP_18);
     }
@@ -183,11 +183,11 @@ contract DeployVayleForkTest is MarketFork {
         // #given
         string memory json = string.concat(
             '{"markets":[{"token":"',
-            vm.toString(nvda),
+            vm.toString(stock),
             '","uid":"',
-            vm.toString(nvdaUid),
+            vm.toString(stockUid),
             '","feed":"',
-            vm.toString(nvdaFeed),
+            vm.toString(stockFeed),
             '","lot":"10000000000000000","priceTick":"100","strikeTick":"5000000",',
             '"strikeRangeBps":1000,',
             '"sell":{"enabled":true,"openSize":"10","walletSize":"4","seriesOpenInterest":"6",',
@@ -224,10 +224,10 @@ contract DeployVayleForkTest is MarketFork {
         assertEq(config.boundaries[1].close, OCT_16);
         assertEq(config.boundaries[1].creationDeadline, OCT_19_OPEN);
         assertEq(config.multisig, multisig);
-        assertEq(config.markets[0].token, nvda);
-        assertEq(config.markets[0].uid, nvdaUid);
-        assertEq(config.markets[0].feed, nvdaFeed);
-        assertEq(config.markets[0].strikeTick, STRIKE_TICK);
+        assertEq(config.markets[0].token, stock);
+        assertEq(config.markets[0].uid, stockUid);
+        assertEq(config.markets[0].feed, stockFeed);
+        assertEq(config.markets[0].strikeTick, strikeTick);
         assertEq(config.markets[0].sellCaps.openSize, 10 * ONE);
         assertEq(config.markets[0].buyCaps.openSize, 4 * ONE);
     }
@@ -238,11 +238,11 @@ contract DeployVayleForkTest is MarketFork {
         _keepAlive(vm.getBlockTimestamp() + 1 minutes, opening);
         (uint80 round, int256 answer,) = _lastRoundAtOrBefore(opening - 1);
         // #when
-        uint64 expiry = d.market.createFirstEpoch(nvda, round);
+        uint64 expiry = d.market.createFirstEpoch(stock, round);
         // #then
         assertEq(expiry, SEP_18);
-        assertEq(d.market.epoch(nvda, expiry).opening, opening);
-        assertEq(d.market.epoch(nvda, expiry).referencePrice, _referencePriceFrom(answer));
+        assertEq(d.market.epoch(stock, expiry).opening, opening);
+        assertEq(d.market.epoch(stock, expiry).referencePrice, _referencePriceFrom(answer));
     }
 
     function test_theDeployedMarketRunsAWholeWeek() public {
@@ -250,19 +250,19 @@ contract DeployVayleForkTest is MarketFork {
         VayleMarket market = d.market;
         (uint80 round, int256 answer,) = _lastRoundAtOrBefore(OCT_02);
         _runKeeper(EpochBook(market), OCT_02, OCT_02 - KEEPER_LEAD, OCT_02 + 10 minutes);
-        market.createEpoch(nvda, round);
-        uint256 strike = (_referencePriceFrom(answer) / STRIKE_TICK + 1) * STRIKE_TICK;
-        uint256 series = market.seriesFor(nvda, OCT_09, OptionType.Call, strike);
+        market.createEpoch(stock, round);
+        uint256 strike = (_referencePriceFrom(answer) / strikeTick + 1) * strikeTick;
+        uint256 series = market.seriesFor(stock, OCT_09, OptionType.Call, strike);
         address alice = makeAddr("alice");
         vm.startPrank(ChainActors.FUNDING_SOURCE);
-        IERC20(nvda).transfer(alice, ONE);
+        IERC20(stock).transfer(alice, ONE);
         IERC20(usdg).transfer(teamMaker, 10_000e6);
         vm.stopPrank();
         vm.startPrank(alice);
-        IERC20(nvda).approve(address(market), ONE);
+        IERC20(stock).approve(address(market), ONE);
         uint256 id = market.placeOrder(
             CollateralVault.OrderParams({
-                asset: nvda,
+                asset: stock,
                 side: OptionType.Call,
                 target: strike,
                 minPremium: PREMIUM,
@@ -281,7 +281,7 @@ contract DeployVayleForkTest is MarketFork {
             premium: PREMIUM,
             maxFeeBps: 0,
             maxAmount: ONE,
-            minFill: LOT,
+            minFill: lot,
             nonce: 1,
             deadline: OCT_09
         });
@@ -299,6 +299,6 @@ contract DeployVayleForkTest is MarketFork {
         market.withdraw(usdg, proceeds);
         // #then: alice sold one NVDA at the strike and kept the premium
         assertEq(IERC20(usdg).balanceOf(alice), PREMIUM + strike);
-        assertEq(market.claimable(teamMaker, nvda), ONE);
+        assertEq(market.claimable(teamMaker, stock), ONE);
     }
 }

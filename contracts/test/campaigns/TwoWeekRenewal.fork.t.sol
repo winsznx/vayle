@@ -34,18 +34,18 @@ contract TwoWeekRenewalForkTest is MarketFork {
             openSize: 10 * ONE, walletSize: 4 * ONE, seriesOpenInterest: 6 * ONE, fillSize: 2 * ONE
         });
         vm.startPrank(admin);
-        market.setCaps(nvda, OptionType.Call, caps);
-        market.setCaps(nvda, OptionType.Put, caps);
+        market.setCaps(stock, OptionType.Call, caps);
+        market.setCaps(stock, OptionType.Put, caps);
         market.setBatchBidder(maker, true);
         vm.stopPrank();
         address[3] memory wallets = [alice, bob, maker];
         for (uint256 i; i < wallets.length; ++i) {
             vm.startPrank(ChainActors.FUNDING_SOURCE);
-            IERC20(nvda).transfer(wallets[i], 10 * ONE);
+            IERC20(stock).transfer(wallets[i], 10 * ONE);
             IERC20(usdg).transfer(wallets[i], 100_000e6);
             vm.stopPrank();
             vm.startPrank(wallets[i]);
-            IERC20(nvda).approve(address(market), type(uint256).max);
+            IERC20(stock).approve(address(market), type(uint256).max);
             IERC20(usdg).approve(address(market), type(uint256).max);
             vm.stopPrank();
         }
@@ -54,8 +54,8 @@ contract TwoWeekRenewalForkTest is MarketFork {
         (,, uint256 oct02) = _roundAt(OCT_02);
         uint256 high = sep25 > oct02 ? sep25 : oct02;
         uint256 low = sep25 < oct02 ? sep25 : oct02;
-        callTarget = (high / STRIKE_TICK + 1) * STRIKE_TICK;
-        putTarget = ((low - 1) / STRIKE_TICK) * STRIKE_TICK;
+        callTarget = (high / strikeTick + 1) * strikeTick;
+        putTarget = ((low - 1) / strikeTick) * strikeTick;
     }
 
     /// @return round The feed's last round at or before `close`.
@@ -73,17 +73,17 @@ contract TwoWeekRenewalForkTest is MarketFork {
     function _openWeek(uint64 close) internal {
         (uint80 round,,) = _roundAt(close);
         _runKeeper(EpochBook(market), close, close - KEEPER_LEAD, close + 10 minutes);
-        market.createEpoch(nvda, round);
+        market.createEpoch(stock, round);
     }
 
     function _order(address owner, OptionType side, uint256 target) internal returns (uint256) {
         vm.prank(owner);
         return market.placeOrder(
             CollateralVault.OrderParams({
-                asset: nvda,
+                asset: stock,
                 side: side,
                 target: target,
-                minPremium: PRICE_TICK * 10,
+                minPremium: priceTick * 10,
                 size: ONE,
                 flip: false,
                 flipTarget: 0
@@ -99,7 +99,7 @@ contract TwoWeekRenewalForkTest is MarketFork {
             premium: PREMIUM,
             maxFeeBps: 0,
             maxAmount: 5 * ONE,
-            minFill: LOT,
+            minFill: lot,
             nonce: ++nonce,
             deadline: expiry
         });
@@ -118,8 +118,8 @@ contract TwoWeekRenewalForkTest is MarketFork {
         internal
         returns (uint256 calls, uint256 puts)
     {
-        calls = market.seriesFor(nvda, expiry, OptionType.Call, callTarget);
-        puts = market.seriesFor(nvda, expiry, OptionType.Put, putTarget);
+        calls = market.seriesFor(stock, expiry, OptionType.Call, callTarget);
+        puts = market.seriesFor(stock, expiry, OptionType.Put, putTarget);
         _keepAlive(from, close + 2 hours);
         _bid(calls, expiry);
         _bid(puts, expiry);

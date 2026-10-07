@@ -30,11 +30,11 @@ contract AdversarialSettlementForkTest is VayleMarketFork {
         market.exercise(callSeries, ONE);
         // #then
         vm.expectRevert(
-            abi.encodeWithSelector(CollateralVault.ExceedsWritten.selector, callSeries, LOT, 0)
+            abi.encodeWithSelector(CollateralVault.ExceedsWritten.selector, callSeries, lot, 0)
         );
         // #when
         vm.prank(quoter);
-        market.exercise(callSeries, LOT);
+        market.exercise(callSeries, lot);
     }
 
     function test_transferredLongsCantBeExercisedByTheirOldHolder() public {
@@ -133,7 +133,7 @@ contract AdversarialSettlementForkTest is VayleMarketFork {
         vm.expectRevert(abi.encodeWithSelector(OptionSeries.UnknownSeries.selector, 42));
         // #when
         vm.prank(quoter);
-        market.exercise(42, LOT);
+        market.exercise(42, lot);
     }
 
     function test_aCallOrderCantBeFilledIntoThePutSeries() public {
@@ -161,7 +161,7 @@ contract AdversarialSettlementForkTest is VayleMarketFork {
 
     function test_seriesCollateralIsBoundToTheListedTokenAndRealUsdg() public view {
         // #then
-        assertEq(market.seriesKey(callSeries).collateralToken, nvda);
+        assertEq(market.seriesKey(callSeries).collateralToken, stock);
         assertEq(market.seriesKey(putSeries).collateralToken, usdg);
         assertEq(market.usdg(), usdg);
     }
@@ -174,7 +174,7 @@ contract AdversarialSettlementForkTest is VayleMarketFork {
         uint256 aliceClaim = market.claimable(alice, usdg);
         // #when
         vm.startPrank(stranger);
-        IERC20(nvda).transfer(address(market), ONE);
+        IERC20(stock).transfer(address(market), ONE);
         IERC20(usdg).transfer(address(market), 1_000e6);
         vm.stopPrank();
         // #then
@@ -321,24 +321,24 @@ contract AdversarialSettlementForkTest is VayleMarketFork {
         (QuoteSettlement.Quote memory big, bytes memory bigSig) =
             _signedQuoteAt(callSeries, 2 * ONE, PREMIUM);
         (QuoteSettlement.Quote memory put, bytes memory putSig) =
-            _signedQuoteAt(putSeries, ONE, PREMIUM + PRICE_TICK);
+            _signedQuoteAt(putSeries, ONE, PREMIUM + priceTick);
         // #when
-        market.fillQuote(big, bigSig, a, 3 * LOT);
-        market.fillQuote(put, putSig, c, 7 * LOT);
-        market.fillQuote(big, bigSig, b, 61 * LOT);
-        market.fillQuote(big, bigSig, a, 97 * LOT);
-        market.fillQuote(put, putSig, c, 93 * LOT);
+        market.fillQuote(big, bigSig, a, 3 * lot);
+        market.fillQuote(put, putSig, c, 7 * lot);
+        market.fillQuote(big, bigSig, b, 61 * lot);
+        market.fillQuote(big, bigSig, a, 97 * lot);
+        market.fillQuote(put, putSig, c, 93 * lot);
         // #then
-        assertEq(market.quoteFilled(market.quoteDigest(big)), ONE + 61 * LOT);
+        assertEq(market.quoteFilled(market.quoteDigest(big)), ONE + 61 * lot);
         assertEq(market.orderOf(a).committed, ONE);
         _assertConserved(_claimants());
     }
 
     function test_aSizeThatIsntWholeLotsIsRefused() public {
         // #then
-        vm.expectRevert(abi.encodeWithSelector(Units.NotALot.selector, LOT + 1, LOT));
+        vm.expectRevert(abi.encodeWithSelector(Units.NotALot.selector, lot + 1, lot));
         // #when
-        _place(alice, OptionType.Call, LOT + 1);
+        _place(alice, OptionType.Call, lot + 1);
     }
 
     function test_exercisingDustIsRefused() public {
@@ -346,7 +346,7 @@ contract AdversarialSettlementForkTest is VayleMarketFork {
         _writeCall(alice, ONE);
         _intoTheWindow();
         // #then
-        vm.expectRevert(abi.encodeWithSelector(Units.NotALot.selector, 1, LOT));
+        vm.expectRevert(abi.encodeWithSelector(Units.NotALot.selector, 1, lot));
         // #when
         vm.prank(quoter);
         market.exercise(callSeries, 1);
@@ -359,15 +359,15 @@ contract AdversarialSettlementForkTest is VayleMarketFork {
         q.minFill = 1;
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(quoterKey, market.quoteDigest(q));
         // #then
-        vm.expectRevert(abi.encodeWithSelector(Units.NotALot.selector, LOT / 2, LOT));
+        vm.expectRevert(abi.encodeWithSelector(Units.NotALot.selector, lot / 2, lot));
         // #when
-        market.fillQuote(q, abi.encodePacked(r, s, v), id, LOT / 2);
+        market.fillQuote(q, abi.encodePacked(r, s, v), id, lot / 2);
     }
 
     function test_aTargetOffTheStrikeTickIsRefused() public {
         // #then
         vm.expectRevert(
-            abi.encodeWithSelector(Units.NotOnTick.selector, callStrike + 1, STRIKE_TICK)
+            abi.encodeWithSelector(Units.NotOnTick.selector, callStrike + 1, strikeTick)
         );
         // #when
         vm.prank(alice);
@@ -390,7 +390,7 @@ contract AdversarialSettlementForkTest is VayleMarketFork {
     function test_anAbsurdPremiumRevertsWithoutChangingState() public {
         // #given: a quote whose premium the maker can't possibly pay
         uint256 id = _place(alice, OptionType.Call, ONE);
-        uint256 absurd = (uint256(type(uint128).max) / PRICE_TICK) * PRICE_TICK;
+        uint256 absurd = (uint256(type(uint128).max) / priceTick) * priceTick;
         (QuoteSettlement.Quote memory q, bytes memory sig) = _signedQuoteAt(callSeries, ONE, absurd);
         // #then
         vm.expectRevert();

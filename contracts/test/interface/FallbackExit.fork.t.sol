@@ -91,17 +91,17 @@ contract FallbackExitForkTest is VayleMarketFork {
         // #given: dave approves and places a sell order through the builders, and the maker buys it
         address dave = makeAddr("dave");
         vm.prank(ChainActors.FUNDING_SOURCE);
-        IERC20(nvda).transfer(dave, ONE);
+        IERC20(stock).transfer(dave, ONE);
         _send(
             dave,
-            nvda,
-            _args("approve", vm.toString(nvda), vm.toString(address(market)), vm.toString(ONE))
+            stock,
+            _args("approve", vm.toString(stock), vm.toString(address(market)), vm.toString(ONE))
         );
         string[] memory place = new string[](8);
         (place[0], place[1], place[2], place[3]) =
-        ("placeOrder", vm.toString(nvda), "0", vm.toString(callStrike));
+        ("placeOrder", vm.toString(stock), "0", vm.toString(callStrike));
         (place[4], place[5], place[6], place[7]) =
-        (vm.toString(PRICE_TICK * 10), vm.toString(ONE), "false", "0");
+        (vm.toString(priceTick * 10), vm.toString(ONE), "false", "0");
         _send(dave, address(market), place);
         uint256 id = market.orderCount();
         _fillQuote(id, callSeries, ONE);
@@ -119,13 +119,13 @@ contract FallbackExitForkTest is VayleMarketFork {
         _send(dave, address(market), _args("settleOrder", vm.toString(id)));
         _send(dave, address(market), _args("cancelOrder", vm.toString(id)));
         uint256 owedUsdg = market.claimable(dave, usdg);
-        uint256 owedNvda = market.claimable(dave, nvda);
+        uint256 owedNvda = market.claimable(dave, stock);
         _send(dave, address(market), _args("withdraw", vm.toString(usdg), vm.toString(owedUsdg)));
-        _send(dave, address(market), _args("withdraw", vm.toString(nvda), vm.toString(owedNvda)));
+        _send(dave, address(market), _args("withdraw", vm.toString(stock), vm.toString(owedNvda)));
 
         // #then: dave sold half at the strike, kept the premium, and got the other half back
         assertEq(IERC20(usdg).balanceOf(dave), PREMIUM + _value(ONE / 2, callStrike));
-        assertEq(IERC20(nvda).balanceOf(dave), ONE / 2);
+        assertEq(IERC20(stock).balanceOf(dave), ONE / 2);
         assertEq(uint8(market.orderOf(id).status), uint8(CollateralVault.OrderStatus.Closed));
         _assertConserved(_claimants());
     }

@@ -35,7 +35,7 @@ contract CorporateActionsForkTest is VayleMarketFork {
 
     function _setMultiplier(uint256 multiplier, uint256 effectiveAt) internal {
         vm.prank(ChainActors.MULTIPLIER_UPDATER);
-        IMultiplierAdmin(nvda).updateMultiplier(multiplier, effectiveAt);
+        IMultiplierAdmin(stock).updateMultiplier(multiplier, effectiveAt);
     }
 
     /// @dev The maker exercises everything, the series settle, and both holders withdraw.
@@ -56,16 +56,16 @@ contract CorporateActionsForkTest is VayleMarketFork {
     /// keeping the premium, whatever the multiplier did in between.
     function _assertRawEntitlements() internal view {
         assertEq(market.claimable(alice, usdg), PREMIUM + _value(ONE, callStrike), "alice USDG");
-        assertEq(market.claimable(bob, nvda), ONE, "bob NVDA");
+        assertEq(market.claimable(bob, stock), ONE, "bob NVDA");
         assertEq(market.claimable(bob, usdg), PREMIUM, "bob premium");
-        assertEq(market.claimable(quoter, nvda), ONE, "maker NVDA");
+        assertEq(market.claimable(quoter, stock), ONE, "maker NVDA");
         assertEq(market.claimable(quoter, usdg), _value(ONE, putStrike), "maker USDG");
         _assertConserved(_claimants());
     }
 
     function test_aTwoForOneSplitMidWeekPreservesEveryEntitlement() public {
         // #given
-        _setMultiplier(IMultiplierAdmin(nvda).uiMultiplier() * 2, vm.getBlockTimestamp());
+        _setMultiplier(IMultiplierAdmin(stock).uiMultiplier() * 2, vm.getBlockTimestamp());
         // #when
         _settleTheWeek();
         // #then
@@ -74,7 +74,7 @@ contract CorporateActionsForkTest is VayleMarketFork {
 
     function test_aReverseSplitMidWeekPreservesEveryEntitlement() public {
         // #given
-        _setMultiplier(IMultiplierAdmin(nvda).uiMultiplier() / 2, vm.getBlockTimestamp());
+        _setMultiplier(IMultiplierAdmin(stock).uiMultiplier() / 2, vm.getBlockTimestamp());
         // #when
         _settleTheWeek();
         // #then
@@ -84,7 +84,7 @@ contract CorporateActionsForkTest is VayleMarketFork {
     function test_aMultiplierChangeInsideTheWindowSplitsNoExercise() public {
         // #given: a 4-for-1 staged ten minutes ahead, half the longs exercised on each side of it
         _keepAlive(OCT_09 - 5 minutes, OCT_09 + 5 minutes);
-        _setMultiplier(IMultiplierAdmin(nvda).uiMultiplier() * 4, OCT_09 + 15 minutes);
+        _setMultiplier(IMultiplierAdmin(stock).uiMultiplier() * 4, OCT_09 + 15 minutes);
         vm.startPrank(quoter);
         market.exercise(callSeries, ONE / 2);
         market.exercise(putSeries, ONE / 2);
@@ -108,10 +108,10 @@ contract CorporateActionsForkTest is VayleMarketFork {
         // #given: every Stock Token paused an hour into the window, for four hours
         _keepAlive(OCT_09 - 5 minutes, OCT_09 + 1 hours);
         vm.prank(ChainActors.REGISTRY_PAUSER);
-        IPausableRegistry(nvdaAccessRegistry).pause();
+        IPausableRegistry(stockAccessRegistry).pause();
         _keepWatching(OCT_09 + 1 hours + 1 minutes, OCT_09 + 5 hours);
         vm.prank(ChainActors.REGISTRY_PAUSER);
-        IPausableRegistry(nvdaAccessRegistry).unpause();
+        IPausableRegistry(stockAccessRegistry).unpause();
         _keepWatching(OCT_09 + 5 hours + 1 minutes, OCT_09 + 5 hours + 30 minutes);
         // #when: two hours of window are long gone by the clock, but not by live time
         vm.prank(quoter);
@@ -125,11 +125,11 @@ contract CorporateActionsForkTest is VayleMarketFork {
         uint256 id = _place(carol, OptionType.Call, ONE);
         (QuoteSettlement.Quote memory q, bytes memory sig) = _signedQuote(callSeries, ONE);
         vm.prank(admin);
-        registry.delist(nvda);
+        registry.delist(stock);
         // #then: nothing new is written
-        vm.expectRevert(abi.encodeWithSelector(StockTokenRegistry.NotListed.selector, nvda));
+        vm.expectRevert(abi.encodeWithSelector(StockTokenRegistry.NotListed.selector, stock));
         market.fillQuote(q, sig, id, ONE);
-        vm.expectRevert(abi.encodeWithSelector(StockTokenRegistry.NotListed.selector, nvda));
+        vm.expectRevert(abi.encodeWithSelector(StockTokenRegistry.NotListed.selector, stock));
         _place(carol, OptionType.Call, ONE);
         // #when: the live series still settle in full
         vm.prank(carol);
@@ -144,9 +144,9 @@ contract CorporateActionsForkTest is VayleMarketFork {
         uint256 id = _place(carol, OptionType.Call, ONE);
         (QuoteSettlement.Quote memory q, bytes memory sig) = _signedQuote(callSeries, ONE);
         vm.prank(ChainActors.ORACLE_PAUSER);
-        IOracleAdmin(nvda).pauseOracle();
+        IOracleAdmin(stock).pauseOracle();
         // #then
-        vm.expectRevert(abi.encodeWithSelector(MarketGuard.OraclePaused.selector, nvda));
+        vm.expectRevert(abi.encodeWithSelector(MarketGuard.OraclePaused.selector, stock));
         market.fillQuote(q, sig, id, ONE);
         // #when
         vm.prank(carol);
@@ -161,7 +161,7 @@ contract CorporateActionsForkTest is VayleMarketFork {
         for (uint256 t = from; t <= to; t += 1 minutes) {
             vm.warp(t);
             liveness.checkpoint();
-            market.observePauses(nvda);
+            market.observePauses(stock);
         }
     }
 }

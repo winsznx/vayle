@@ -20,6 +20,15 @@ library ChainActors {
     /// https://robinhoodchain.blockscout.com/address/0x8366a39CC670B4001A1121B8F6A443A643e40951
     address internal constant FUNDING_SOURCE = 0x8366a39CC670B4001A1121B8F6A443A643e40951;
 
+    error NoKnownHolder(string symbol);
+
+    /// @notice A real holder of the Stock Token with this symbol, for funding test wallets.
+    function holderOf(string memory symbol) internal pure returns (address) {
+        bytes32 key = keccak256(bytes(symbol));
+        if (key == keccak256("NVDA")) return FUNDING_SOURCE;
+        revert NoKnownHolder(symbol);
+    }
+
     /// @dev Called updateMultiplier(uint256,uint256) on NVDA at block 58952659:
     /// https://robinhoodchain.blockscout.com/tx/0x4ac23f2e58e2c4962dcd701c2beff581e87f3995152a29d527c07a3afd67d956
     address internal constant MULTIPLIER_UPDATER = 0x92905e8d0e2301BA143215B8D86D63fFD4188143;
