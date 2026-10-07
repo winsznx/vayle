@@ -51,6 +51,10 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm build
       - run: pnpm test
+      - name: Tests against the live chain
+        env:
+          ROBINHOOD_RPC_URL: ${{ secrets.ROBINHOOD_RPC_URL }}
+        run: pnpm -r --if-present test:chain
 
   contracts:
     name: Contracts

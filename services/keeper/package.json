@@ -1,0 +1,16 @@
+{
+  "name": "@vayle/keeper",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node --test \"test/*.test.ts\"",
+    "test:chain": "node --test \"test/chain/*.test.ts\""
+  },
+  "dependencies": {
+    "@vayle/abi": "workspace:*",
+    "viem": "2.57.3"
+  }
+}

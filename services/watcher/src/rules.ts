@@ -204,6 +204,7 @@ const EVENT_SEVERITY: Readonly<Record<string, Severity>> = {
   AssetListed: "info",
   AssetDelisted: "info",
   EpochCreated: "info",
+  BatchDone: "info",
   QuoteFilled: "info",
 };
 

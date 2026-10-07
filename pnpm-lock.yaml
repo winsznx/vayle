@@ -49,6 +49,15 @@ importers:
         specifier: 4.10.2
         version: 4.10.2
 
+  services/keeper:
+    dependencies:
+      '@vayle/abi':
+        specifier: workspace:*
+        version: link:../../packages/abi
+      viem:
+        specifier: 2.57.3
+        version: 2.57.3(typescript@6.0.3)
+
   services/watcher:
     dependencies:
       '@vayle/abi':
