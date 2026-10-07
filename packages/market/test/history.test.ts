@@ -9,6 +9,7 @@ import {
   toMarketEvents,
   type MarketEvent,
   type Week,
+  weekSettlesAt,
 } from "../src/history.ts";
 
 const MARKET = "0x00000000000000000000000000000000000000aa";
@@ -198,5 +199,25 @@ describe("orderSummary", () => {
     const summary = orderSummary("5", events, weeks, expiries, NOW);
     // #then
     assert.deepEqual([summary.state, summary.skipStreak], ["cancelled", 0]);
+  });
+});
+
+describe("weekSettlesAt", () => {
+  it("counts a Friday week 3 days after its close, well past its Sunday batch deadline", () => {
+    // #given Fri Oct 9 2026, 16:00 EDT
+    const opening = 1_791_576_000;
+    // #when
+    const settles = weekSettlesAt(opening);
+    // #then
+    assert.equal(settles, opening + 3 * 86_400);
+  });
+
+  it("waits for a Thursday close's batch, whose deadline is more than 3 days out", () => {
+    // #given Thu Dec 24 2026, 13:00 EST, before the Christmas holiday
+    const opening = 1_798_135_200;
+    // #when
+    const settles = weekSettlesAt(opening);
+    // #then the batch deadline, Sun Dec 27 20:00 EST, and an hour more
+    assert.equal(settles, 1_798_419_600 + 3600);
   });
 });

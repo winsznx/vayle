@@ -1,4 +1,5 @@
 import { vayleMarketAbi } from "@vayle/abi";
+import { creationDeadline } from "@vayle/calendar";
 import { parseEventLogs, type Address, type Log, type PublicClient } from "viem";
 
 // The market's events, decoded the same way wherever they're read: by the indexer before it stores
@@ -182,8 +183,20 @@ export interface OrderSummary {
   readonly skipStreak: number;
 }
 
-// A week counts once its batch deadline has passed, which is under 3 days after its opening.
+// A week counts once its batch can no longer fill: 3 days after its opening, or an hour past its
+// batch deadline when that's later, as it is for a Thursday close, whose deadline is still the
+// Sunday evening before the Monday open.
 export const WEEK_SETTLES_AFTER = 3 * 86_400;
+// The market's BATCH_DEADLINE_LEAD: a batch's deadline is this long before the Monday open the
+// calendar gives as the last moment to open the week.
+const BATCH_DEADLINE_LEAD = 13 * 3600 + 30 * 60;
+// A batch sealed by its deadline can still fill a little after it.
+const AFTER_BATCH_DEADLINE = 3600;
+
+export function weekSettlesAt(opening: number): number {
+  const batchDeadline = creationDeadline(opening) - BATCH_DEADLINE_LEAD;
+  return Math.max(opening + WEEK_SETTLES_AFTER, batchDeadline + AFTER_BATCH_DEADLINE);
+}
 // An order placed before the batch opens, 4 hours after the opening, can join that week's batch.
 export const BATCH_OPENS_AFTER = 4 * 3600;
 
@@ -244,7 +257,7 @@ export function orderSummary(
   const placed = own.find((e) => e.name === "OrderPlaced");
   const placedAt = placed === undefined ? Number.POSITIVE_INFINITY : seconds(placed.block_time);
   const counted = weeks
-    .filter((w) => w.opening + WEEK_SETTLES_AFTER <= now)
+    .filter((w) => weekSettlesAt(w.opening) <= now)
     .filter((w) => filledExpiries.has(w.expiry) || placedAt < w.opening + BATCH_OPENS_AFTER)
     .sort((a, b) => b.opening - a.opening);
   let skipStreak = 0;

@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@vayle/abi": "workspace:*",
+    "@vayle/calendar": "workspace:*",
     "viem": "2.57.3"
   }
 }

@@ -153,6 +153,9 @@ importers:
       '@vayle/abi':
         specifier: workspace:*
         version: link:../abi
+      '@vayle/calendar':
+        specifier: workspace:*
+        version: link:../calendar
       viem:
         specifier: 2.57.3
         version: 2.57.3(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.6.5)
