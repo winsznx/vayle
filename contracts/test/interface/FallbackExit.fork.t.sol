@@ -3,6 +3,7 @@ pragma solidity 0.8.37;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {CollateralVault} from "../../src/core/CollateralVault.sol";
+import {SeriesKey} from "../../src/libraries/SeriesId.sol";
 import {ChainActors} from "../utils/ChainActors.sol";
 import {VayleMarketFork} from "../utils/VayleMarketFork.sol";
 
@@ -57,6 +58,33 @@ contract FallbackExitForkTest is VayleMarketFork {
     {
         out = new string[](4);
         (out[0], out[1], out[2], out[3]) = (a, b, c, d);
+    }
+
+    function test_theClientWorksOutTheSameSeriesIdsAsTheMarket() public {
+        // #given
+        uint256[2] memory series = [callSeries, putSeries];
+        for (uint256 i; i < series.length; ++i) {
+            SeriesKey memory key = market.seriesKey(series[i]);
+            string[] memory args = new string[](8);
+            (args[0], args[1], args[2], args[3]) =
+            (
+                "seriesId",
+                vm.toString(key.chainId),
+                vm.toString(key.asset),
+                vm.toString(uint256(key.optionType))
+            );
+            (args[4], args[5], args[6], args[7]) =
+            (
+                vm.toString(key.strike),
+                vm.toString(uint256(key.expiry)),
+                vm.toString(uint256(key.windowLength)),
+                vm.toString(key.collateralToken)
+            );
+            // #when
+            uint256 computed = uint256(bytes32(_built(args)));
+            // #then
+            assertEq(computed, series[i]);
+        }
     }
 
     function test_aHolderPlacesThenExitsThroughTheSharedBuilders() public {

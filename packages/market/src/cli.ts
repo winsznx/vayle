@@ -13,12 +13,14 @@ import {
   withdraw,
   type Call,
 } from "./calls.ts";
+import { seriesId } from "./series.ts";
 
 class UsageError extends Error {
   override readonly name = "UsageError";
 }
 
-// The market's address doesn't change the calldata, so any address stands in for it here.
+// The market's address doesn't change the calldata, so any address stands in for it here. The
+// seriesId action prints an ID instead, as a 32-byte word.
 const MARKET = getAddress("0x0000000000000000000000000000000000000001");
 
 function arg(args: readonly string[], i: number): string {
@@ -62,6 +64,18 @@ function build(action: string, a: readonly string[]): Call {
       return exercise(MARKET, BigInt(arg(a, 0)), BigInt(arg(a, 1)));
     case "withdraw":
       return withdraw(MARKET, getAddress(arg(a, 0)), BigInt(arg(a, 1)));
+    case "seriesId": {
+      const id = seriesId({
+        chainId: BigInt(arg(a, 0)),
+        asset: getAddress(arg(a, 1)),
+        side: Number(arg(a, 2)),
+        strike: BigInt(arg(a, 3)),
+        expiry: BigInt(arg(a, 4)),
+        windowLength: Number(arg(a, 5)),
+        collateralToken: getAddress(arg(a, 6)),
+      });
+      return { to: MARKET, data: `0x${id.toString(16).padStart(64, "0")}` };
+    }
     default:
       throw new UsageError(`unknown action ${action}`);
   }
