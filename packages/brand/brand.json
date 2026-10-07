@@ -1,0 +1,160 @@
+{
+  "brand": {
+    "name": "Vayle",
+    "version": "1.0.0",
+    "status": "draft"
+  },
+  "source": {
+    "designSpec": "design.md",
+    "symbolGeometry": "src/mark.ts",
+    "tokens": "css/tokens.css",
+    "masterLogo": "source/vayle-lockup-horizontal.svg",
+    "masterSymbol": "source/vayle-symbol.svg",
+    "appIcon": "source/vayle-app-icon.svg",
+    "build": "scripts/build_masters.py"
+  },
+  "concept": {
+    "loadBearingIdea": "the held price: one rung on the week's ladder of prices belongs to the holder and stays level while the weeks move",
+    "territory": "the price ladder"
+  },
+  "colour": {
+    "brand": {
+      "value": "#253CEF",
+      "role": "the holder's price and the next step"
+    },
+    "brandOnDark": {
+      "value": "#6879FD",
+      "role": "blue text and the held rung on dark surfaces"
+    },
+    "blue": {
+      "50": "#F0F1FF",
+      "100": "#E0E4FF",
+      "200": "#C2C9FF",
+      "300": "#99A5FF",
+      "400": "#6879FD",
+      "500": "#3F55F8",
+      "600": "#253CEF",
+      "700": "#1E33CC",
+      "800": "#1C2CA0",
+      "900": "#1B2679",
+      "950": "#101746"
+    },
+    "light": {
+      "page": "#E4E7F1",
+      "sheet": "#FFFFFF",
+      "raised": "#FAFBFE",
+      "sunken": "#F3F5F9",
+      "hairline": "#E6E8EF",
+      "control": "#D4D8E2",
+      "faint": "#9298A8",
+      "ghost": "#8A90A2",
+      "muted": "#5B6072",
+      "body": "#1D2030",
+      "ink": "#04060F",
+      "earned": "#067647",
+      "problem": "#C4320A"
+    },
+    "dark": {
+      "page": "#05070D",
+      "sheet": "#0B0E18",
+      "raised": "#121624",
+      "sunken": "#0F1320",
+      "hairline": "#1D2335",
+      "control": "#2A3147",
+      "faint": "#5D6479",
+      "ghost": "#646B80",
+      "muted": "#8E95AA",
+      "body": "#C8CDDB",
+      "ink": "#EEF1F9",
+      "earned": "#47CD89",
+      "problem": "#FF8A65"
+    }
+  },
+  "typography": {
+    "family": "Plus Jakarta Sans",
+    "package": "@fontsource-variable/plus-jakarta-sans@5.3.0",
+    "licence": "SIL Open Font License 1.1",
+    "fallback": ["ui-sans-serif", "system-ui", "sans-serif"],
+    "wordmark": {
+      "weight": 650,
+      "trackingEm": -0.04
+    },
+    "display": {
+      "weight": 400,
+      "trackingEm": -0.035,
+      "leading": 1.02
+    },
+    "heading": {
+      "weight": 600,
+      "trackingEm": -0.025,
+      "leading": 1.12
+    },
+    "body": {
+      "weight": 400,
+      "leading": 1.55
+    },
+    "figures": "tabular-nums"
+  },
+  "geometry": {
+    "symbolGrid": 48,
+    "symbolBounds": [8, 3, 37, 42],
+    "railWidth": 4,
+    "rungHeight": 4,
+    "heldRungHeight": 6,
+    "smallSymbolGrid": 16,
+    "lockup": {
+      "symbolHeightInCaps": 1.86,
+      "gapInSymbolHeights": 0.25
+    },
+    "stacked": {
+      "symbolHeightInCaps": 2.6,
+      "gapInCaps": 0.7
+    },
+    "appIcon": {
+      "cornerRadius": 0.22,
+      "inset": 0.18
+    },
+    "clearSpace": "half the symbol's height on every side",
+    "radiiPx": {
+      "sheet": [24, 40],
+      "card": 28,
+      "inner": 20,
+      "control": 12,
+      "chip": 8
+    },
+    "spacingBasePx": 4
+  },
+  "minimumSize": {
+    "horizontalLockupWidthPx": 64,
+    "symbolPx": 24,
+    "smallSymbolPx": 16
+  },
+  "icons": {
+    "grid": 18,
+    "stroke": 1.5,
+    "caps": "round",
+    "joins": "round",
+    "fill": "none",
+    "tokenLogos": "assets/tokens/manifest.json"
+  },
+  "render": {
+    "photography": false,
+    "threeD": false,
+    "imagery": "the product's own UI: the ladder, order states and real token logos",
+    "lighting": "flat, with depth only from the shadow tokens",
+    "finish": "matte"
+  },
+  "forbidden": [
+    "candlesticks, rising arrows, rockets, bulls and bears",
+    "options vocabulary in holder-facing copy",
+    "wording that makes the premium sound guaranteed",
+    "blue for bids, other prices or decoration",
+    "green or red to show price direction",
+    "text in the faint grey",
+    "the chain's or the token issuer's artwork as decoration",
+    "glows, glass effects, neon, purple-to-blue gradient washes",
+    "the symbol used as an icon, bullet or loading indicator",
+    "any other icon that draws a ladder",
+    "recoloured or redrawn token logos"
+  ]
+}

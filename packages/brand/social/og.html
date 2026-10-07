@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Vayle social card</title>
+    <style>
+      @font-face {
+        font-family: "Plus Jakarta Sans Variable";
+        src: url("../node_modules/@fontsource-variable/plus-jakarta-sans/files/plus-jakarta-sans-latin-wght-normal.woff2")
+          format("woff2");
+        font-weight: 200 800;
+      }
+      html,
+      body {
+        margin: 0;
+      }
+      body {
+        width: 1200px;
+        height: 630px;
+        background: #e4e7f1;
+        font-family: "Plus Jakarta Sans Variable", sans-serif;
+      }
+      .sheet {
+        position: absolute;
+        inset: 18px;
+        overflow: hidden;
+        border-radius: 34px;
+        background: #ffffff;
+      }
+      .lockup {
+        position: absolute;
+        top: 56px;
+        left: 64px;
+        height: 44px;
+      }
+      .title {
+        position: absolute;
+        top: 176px;
+        left: 64px;
+        margin: 0;
+        font-size: 52px;
+        font-weight: 400;
+        letter-spacing: -0.035em;
+        line-height: 1.04;
+        color: #04060f;
+      }
+      .title span {
+        display: block;
+        color: #8a90a2;
+      }
+      .sub {
+        position: absolute;
+        top: 318px;
+        left: 66px;
+        margin: 0;
+        width: 520px;
+        font-size: 22px;
+        line-height: 1.45;
+        color: #5b6072;
+      }
+      .ladder {
+        position: absolute;
+        top: 100px;
+        right: 92px;
+        width: 300px;
+        padding: 18px;
+        border-radius: 26px;
+        background: #fafbfe;
+        box-shadow:
+          0 0 0 1px #e6e8ef,
+          0 28px 56px -18px rgba(4, 6, 15, 0.24);
+      }
+      .head {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid #e6e8ef;
+        font-size: 18px;
+        font-weight: 650;
+        color: #04060f;
+      }
+      .head img {
+        width: 36px;
+        height: 36px;
+        border-radius: 11px;
+      }
+      .rung {
+        position: relative;
+        height: 42px;
+        border-top: 1px solid #e6e8ef;
+      }
+      .rung::after {
+        content: "";
+        position: absolute;
+        top: 17px;
+        left: 12px;
+        width: 44%;
+        height: 8px;
+        border-radius: 4px;
+        background: #f3f5f9;
+      }
+      .rung.held {
+        display: flex;
+        align-items: center;
+        padding-left: 10px;
+        border-radius: 12px;
+        background: #f0f1ff;
+        border-top-color: transparent;
+      }
+      .rung.held::after {
+        display: none;
+      }
+      .rung.held::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 100%;
+        width: 420px;
+        height: 3px;
+        margin-top: -1.5px;
+        background: linear-gradient(90deg, #253cef 30%, rgba(37, 60, 239, 0));
+      }
+      .rung.held + .rung {
+        border-top-color: transparent;
+      }
+      .pill {
+        padding: 5px 12px;
+        border-radius: 999px;
+        background: #253cef;
+        color: #ffffff;
+        font-size: 15px;
+        font-weight: 650;
+        box-shadow: 0 8px 18px -8px rgba(37, 60, 239, 0.7);
+      }
+      .close {
+        height: 30px;
+        border-top: 2px dashed #9298a8;
+      }
+      .foot {
+        position: absolute;
+        bottom: 56px;
+        left: 66px;
+        display: flex;
+        gap: 26px;
+        font-size: 18px;
+        font-weight: 560;
+        color: #04060f;
+      }
+      .foot span {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .foot img {
+        width: 28px;
+        height: 28px;
+      }
+      .tile {
+        border-radius: 9px;
+      }
+      .disc {
+        border-radius: 50%;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="sheet">
+      <img class="lockup" src="../source/vayle-lockup-horizontal.svg" alt="Vayle" />
+      <h1 class="title"><span>Name your price for NVDA.</span>Get paid while it waits.</h1>
+      <p class="sub">Paid limit orders for NVDA on Robinhood Chain, settled in the actual token.</p>
+      <div class="ladder">
+        <div class="head"><img src="../assets/tokens/nvda.png" alt="" />NVDA</div>
+        <div class="rung"></div>
+        <div class="rung"></div>
+        <div class="rung held"><span class="pill">Your price</span></div>
+        <div class="rung"></div>
+        <div class="close"></div>
+        <div class="rung"></div>
+        <div class="rung"></div>
+      </div>
+      <div class="foot">
+        <span><img class="tile" src="../assets/tokens/nvda.png" alt="" />NVDA Stock Token</span>
+        <span><img class="disc" src="../assets/tokens/usdg.png" alt="" />Premium in USDG</span>
+      </div>
+    </div>
+  </body>
+</html>

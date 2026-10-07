@@ -1,0 +1,21 @@
+{
+  "name": "@vayle/brand",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    "./tokens.css": "./css/tokens.css",
+    "./mark": "./src/mark.ts",
+    "./brand.json": "./brand.json",
+    "./assets/*": "./assets/*"
+  },
+  "scripts": {
+    "test": "node --test \"test/*.test.ts\"",
+    "sync-tokens": "node scripts/sync-tokens.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@fontsource-variable/plus-jakarta-sans": "5.3.0"
+  }
+}
