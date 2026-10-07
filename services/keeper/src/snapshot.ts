@@ -13,8 +13,16 @@ import type {
   Snapshot,
 } from "./plan.ts";
 
-// Orders are read for this long after each close: settlement and the batch both fall inside it.
+// Orders are read from each close until the week's batch is done. Three days covers settlement and
+// a Friday close's batch. A Thursday close's batch deadline falls later, so the read runs to an hour
+// past the week's own deadline, which leaves time to finish a sealed batch or close a dead one.
 export const ORDERS_AFTER_CLOSE = 3 * 86_400;
+export const AFTER_BATCH_DEADLINE = 3_600;
+
+export function ordersReadUntil(close: number, batchDeadline: number | null): number {
+  const settled = close + ORDERS_AFTER_CLOSE;
+  return batchDeadline === null ? settled : Math.max(settled, batchDeadline + AFTER_BATCH_DEADLINE);
+}
 const READ_BATCH = 20;
 
 // OrderStatus in the contract: None, Active, Cancelled, Closed. None never comes back for a real ID.
@@ -87,7 +95,11 @@ export async function readSnapshot(client: PublicClient, config: KeeperConfig): 
   const readOrders =
     latestBoundary !== null &&
     now >= latestBoundary.close &&
-    now < latestBoundary.close + ORDERS_AFTER_CLOSE;
+    now <
+      ordersReadUntil(
+        latestBoundary.close,
+        epochAtLatest && epoch !== null ? epoch.batchDeadline : null,
+      );
   const orders = readOrders ? await readAllOrders(client, config, blockNumber) : null;
   const series = orders === null ? [] : await readSeries(client, config, blockNumber, orders);
   const buckets =
