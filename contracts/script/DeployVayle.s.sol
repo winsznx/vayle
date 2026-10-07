@@ -68,7 +68,7 @@ contract DeployVayle is Script {
 
     function readConfig() public view returns (Config memory config) {
         string memory facts = vm.readFile(_path("robinhood-mainnet.json"));
-        string memory boundaries = vm.readFile(_path("calendar-boundaries.json"));
+        string memory boundaries = vm.readFile(_path(_boundariesFile()));
         config.multisig = vm.envAddress("MULTISIG");
         config.guardian = vm.envAddress("GUARDIAN");
         config.feeRecipient = vm.envAddress("FEE_RECIPIENT");
@@ -177,6 +177,16 @@ contract DeployVayle is Script {
         });
     }
 
+    /// @dev Under deployments/: the boundaries this deploy schedules, and where it writes the
+    /// deployed addresses. DeployFork points both at deployments/fork/.
+    function _boundariesFile() internal pure virtual returns (string memory) {
+        return "calendar-boundaries.json";
+    }
+
+    function _recordFile() internal pure virtual returns (string memory) {
+        return "vayle-robinhood-mainnet.json";
+    }
+
     function _path(string memory file) internal view returns (string memory) {
         return string.concat(vm.projectRoot(), "/../deployments/", file);
     }
@@ -191,6 +201,6 @@ contract DeployVayle is Script {
         vm.serializeAddress(key, "registry", address(d.registry));
         vm.serializeAddress(key, "priceAdapter", address(d.adapter));
         string memory json = vm.serializeAddress(key, "market", address(d.market));
-        vm.writeJson(json, _path("vayle-robinhood-mainnet.json"));
+        vm.writeJson(json, _path(_recordFile()));
     }
 }

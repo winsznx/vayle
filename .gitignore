@@ -26,6 +26,8 @@ coverage/
 contracts/out/
 contracts/cache/
 contracts/broadcast/
+# Local anvil fork state: generated keys, boundaries and addresses (pnpm fork up)
+deployments/fork/
 
 # OS and editor files
 .DS_Store

@@ -17,4 +17,5 @@ Until `/disclosures.json` is published, the app is read-only: it shows the ladde
 ```sh
 pnpm --filter @vayle/web test        # formats, tickets, order lines and the week, without a network
 pnpm --filter @vayle/web build
+pnpm --filter @vayle/web dev:fork    # against a local fork, see tools/local-fork
 ```

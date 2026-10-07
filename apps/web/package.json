@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:fork": "vite --mode fork",
     "build": "vite build",
     "typecheck": "tsc -p tsconfig.json",
     "test": "node --test \"test/*.test.ts\""

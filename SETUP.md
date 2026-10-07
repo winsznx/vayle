@@ -45,6 +45,10 @@ The lists aren't in the repository. If you hold them, the hooks read them from t
 
 Don't bypass the hooks with `--no-verify`. The repository is public, so CI can only catch a leak after it's already pushed.
 
+## Local fork
+
+`pnpm fork up` runs the contracts, keeper and maker on a local fork of mainnet, and `pnpm --filter @vayle/web dev:fork` points the app at it. [tools/local-fork/README.md](tools/local-fork/README.md) covers it.
+
 ## Fork tests
 
 Fork tests run against Robinhood Chain mainnet state. They need `ROBINHOOD_RPC_URL` set to an RPC with archive access. Without it they fail with a named error, and nothing falls back to another endpoint.

@@ -29,11 +29,15 @@ The deploy script creates every contract owned by a timelock that starts with no
    forge script script/DeployVayle.s.sol --rpc-url robinhood
    ```
 
+   `pnpm fork up` goes further: it broadcasts the same script to a local fork and runs a week on it with the keeper and maker. See [tools/local-fork/README.md](tools/local-fork/README.md).
+
 4. Broadcast:
 
    ```sh
    forge script script/DeployVayle.s.sol --rpc-url robinhood --broadcast --slow
    ```
+
+   forge warns that the market is over Ethereum's 24,576-byte contract size limit and asks whether to continue. The chain's limit is 98,304 bytes, `chain.maxCodeSize` in the chain facts, and `test/Deployables.t.sol` checks every contract against it, so continue.
 
    The script writes the deployed addresses to `deployments/vayle-robinhood-mainnet.json`.
 

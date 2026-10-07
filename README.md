@@ -12,6 +12,7 @@ Status: in development. No contracts are deployed.
 | `packages/`    | Shared TypeScript packages                               |
 | `services/`    | Offchain services                                        |
 | `apps/`        | Web app and fallback interface                           |
+| `tools/`       | Developer tools, like the local fork                     |
 | `deployments/` | Chain facts and deployed addresses, each with its source |
 
 [SETUP.md](SETUP.md) covers building and testing. [SECURITY.md](SECURITY.md) covers reporting a vulnerability. Licensed under MIT.

@@ -4,7 +4,7 @@ import { plan, type MakerAction } from "./plan.ts";
 import { readSnapshot } from "./snapshot.ts";
 
 export interface RunResult {
-  readonly sent: number;
+  readonly sent: readonly MakerAction[];
   readonly failed: readonly { readonly action: MakerAction; readonly reason: string }[];
 }
 
@@ -12,11 +12,11 @@ export interface RunResult {
 export async function runOnce(config: MakerConfig, clients: Clients): Promise<RunResult> {
   const snapshot = await readSnapshot(clients.public, config, clients.signer.address);
   const failed: { action: MakerAction; reason: string }[] = [];
-  let sent = 0;
+  const sent: MakerAction[] = [];
   for (const action of plan(snapshot, config.pricing)) {
     try {
       await execute(clients, config, action);
-      sent++;
+      sent.push(action);
     } catch (error) {
       const reason = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
       console.error(`maker: ${action.kind} failed`, reason);

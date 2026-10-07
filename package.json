@@ -15,7 +15,8 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "build": "pnpm -r --if-present build",
     "test": "pnpm -r --if-present test",
-    "guard": "node packages/repo-guard/src/cli.ts tree"
+    "guard": "node packages/repo-guard/src/cli.ts tree",
+    "fork": "node --env-file-if-exists=.env tools/local-fork/src/cli.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

@@ -138,6 +138,24 @@ importers:
         specifier: 2.57.3
         version: 2.57.3(typescript@6.0.3)(zod@4.6.5)
 
+  tools/local-fork:
+    dependencies:
+      '@vayle/abi':
+        specifier: workspace:*
+        version: link:../../packages/abi
+      '@vayle/calendar':
+        specifier: workspace:*
+        version: link:../../packages/calendar
+      '@vayle/keeper':
+        specifier: workspace:*
+        version: link:../../services/keeper
+      '@vayle/maker':
+        specifier: workspace:*
+        version: link:../../services/maker
+      viem:
+        specifier: 2.57.3
+        version: 2.57.3(typescript@6.0.3)(zod@4.6.5)
+
 packages:
 
   '@adraffy/ens-normalize@1.11.1':
