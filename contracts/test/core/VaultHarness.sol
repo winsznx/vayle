@@ -54,4 +54,6 @@ contract VaultHarness is CollateralVault {
     }
 
     function _requireNotFrozen(uint256, Order storage) internal pure override {}
+
+    function _requireNotFrozenAt(uint256, Order storage, uint256) internal pure override {}
 }

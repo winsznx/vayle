@@ -59,6 +59,15 @@ abstract contract CollateralVault is EpochBook {
         uint256 flipTarget;
     }
 
+    /// @notice An idle order's new terms. Its asset and side never change.
+    struct AmendParams {
+        uint256 target;
+        uint256 minPremium;
+        uint256 size;
+        bool flip;
+        uint256 flipTarget;
+    }
+
     uint256 public orderCount;
     mapping(uint256 id => Order) private _orders;
     mapping(uint256 series => Pool) private _pools;
@@ -88,6 +97,15 @@ abstract contract CollateralVault is EpochBook {
         uint256 flipTarget
     );
     event OrderUpdated(uint256 indexed id, uint256 minPremium, bool flip, uint256 flipTarget);
+    /// @notice An idle order's terms after an amend. It keeps its ID, asset, side and owner.
+    event OrderAmended(
+        uint256 indexed id,
+        uint256 target,
+        uint256 minPremium,
+        uint256 size,
+        bool flip,
+        uint256 flipTarget
+    );
     event OrderCancelled(uint256 indexed id, uint256 released);
     event OrderCommitted(uint256 indexed id, uint256 indexed series, uint256 amount);
     event OrderSettled(
@@ -117,6 +135,8 @@ abstract contract CollateralVault is EpochBook {
     error NothingToSettle(uint256 orderId);
     error InsufficientClaimable(address owner, address token, uint256 amount, uint256 available);
     error OrderFrozen(uint256 id);
+    error OrderAttached(uint256 id, uint256 series);
+    error TargetFrozen(uint256 id, uint256 target);
 
     function placeOrder(OrderParams calldata p) external nonReentrant returns (uint256 id) {
         liveness.checkpoint();
@@ -167,6 +187,46 @@ abstract contract CollateralVault is EpochBook {
         order.flip = flip;
         order.flipTarget = flip ? flipTarget : 0;
         emit OrderUpdated(id, minPremium, flip, order.flipTarget);
+    }
+
+    /// @notice Moves an order that isn't written into a series to a new target and size, with a
+    /// new minimum premium and flip settings, and keeps its ID. Pass the current values to keep
+    /// any of them.
+    /// @dev The order faces every check a new order with these terms would, with its current size
+    /// released first, so it fits the caps whenever cancelling and placing again would. It can't
+    /// leave or enter a bucket a renewal batch holds, because a running batch counts and fills its
+    /// bucket by order ID. Only the collateral difference moves: a shortfall is pulled now, and a
+    /// surplus becomes claimable like every other payout.
+    function amendOrder(uint256 id, AmendParams calldata p) external nonReentrant {
+        liveness.checkpoint();
+        _requireNotHalted();
+        Order storage order = _ownedActive(id);
+        if (order.series != 0) revert OrderAttached(id, order.series);
+        _requireNotFrozen(id, order);
+        _requireNotFrozenAt(id, order, p.target);
+        StockTokenRegistry.Asset memory a = registry.asset(order.asset);
+        Units.requireLots(p.size, a.lot);
+        _requireStrike(p.target, a.strikeTick);
+        Units.requireOnTick(p.minPremium, a.priceTick);
+        if (p.flip) _requireStrike(p.flipTarget, a.strikeTick);
+
+        // What the old terms hold, worked out before they're overwritten.
+        (address token, uint256 released) = _collateralOf(order, order.size);
+        idleSize[order.asset][order.side][order.target] -= order.size;
+        _shrink(order, order.size);
+        _checkPlacement(msg.sender, order.asset, order.side, p.size);
+        order.target = p.target;
+        order.minPremium = p.minPremium;
+        order.flip = p.flip;
+        order.flipTarget = p.flip ? p.flipTarget : 0;
+        // The asset's current grid, exactly as a new order would take it.
+        (order.rawUnit, order.lot) = (a.rawUnit, a.lot);
+        _grow(order, p.size);
+        idleSize[order.asset][order.side][p.target] += p.size;
+        emit OrderAmended(id, p.target, p.minPremium, p.size, p.flip, order.flipTarget);
+        (, uint256 required) = _collateralOf(order, p.size);
+        if (required > released) _pull(token, msg.sender, required - released);
+        else _credit(msg.sender, token, released - required);
     }
 
     /// @notice Stops the order. Uncommitted collateral becomes claimable now. A part written into
@@ -276,6 +336,13 @@ abstract contract CollateralVault is EpochBook {
     /// @dev Reverts while the order is part of a renewal batch that hasn't settled. RenewalBatch
     /// implements it.
     function _requireNotFrozen(uint256 id, Order storage order) internal view virtual;
+
+    /// @dev Reverts when the order would be frozen at `target`, so an amend can't move an order
+    /// into a bucket its renewal batch holds. RenewalBatch implements it.
+    function _requireNotFrozenAt(uint256 id, Order storage order, uint256 target)
+        internal
+        view
+        virtual;
 
     /// @dev Turns exercise proceeds into the opposite order at the flip target, in whole lots the
     /// proceeds fully collateralize, and returns how much of them it used. Returns 0 and opens

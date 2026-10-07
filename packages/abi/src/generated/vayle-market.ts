@@ -193,6 +193,51 @@ export const vayleMarketAbi = [
   },
   {
     "type": "function",
+    "name": "amendOrder",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "p",
+        "type": "tuple",
+        "internalType": "struct CollateralVault.AmendParams",
+        "components": [
+          {
+            "name": "target",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "minPremium",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "size",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "flip",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "flipTarget",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "assetPaused",
     "inputs": [
       {
@@ -2850,6 +2895,49 @@ export const vayleMarketAbi = [
   },
   {
     "type": "event",
+    "name": "OrderAmended",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "target",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "minPremium",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "size",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "flip",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      },
+      {
+        "name": "flipTarget",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "OrderCancelled",
     "inputs": [
       {
@@ -4164,6 +4252,22 @@ export const vayleMarketAbi = [
   },
   {
     "type": "error",
+    "name": "OrderAttached",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "series",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "OrderFrozen",
     "inputs": [
       {
@@ -4411,6 +4515,22 @@ export const vayleMarketAbi = [
         "name": "owner",
         "type": "address",
         "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "TargetFrozen",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "target",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ]
   },

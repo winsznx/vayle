@@ -2,6 +2,7 @@
 pragma solidity 0.8.37;
 
 import {Test} from "forge-std/Test.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {VayleMarket} from "../../src/VayleMarket.sol";
 import {CollateralVault} from "../../src/core/CollateralVault.sol";
 import {MarketGuard} from "../../src/core/MarketGuard.sol";
@@ -16,6 +17,7 @@ import {VayleMarketFork} from "../utils/VayleMarketFork.sol";
 contract MarketHandler is Test {
     uint256 internal constant LOT = 1e16;
     uint256 internal constant PRICE_TICK = 100;
+    uint256 internal constant STRIKE_TICK = 5e6;
 
     struct Setup {
         VayleMarket market;
@@ -48,6 +50,7 @@ contract MarketHandler is Test {
     bool public finalized;
     bool public actedWhileHalted;
     bool public grewWhilePaused;
+    bool public amendMisaccounted;
 
     constructor(Setup memory s, address[] memory holders_) {
         (market, liveness, asset, quoter, quoterKey, guardian) =
@@ -64,6 +67,22 @@ contract MarketHandler is Test {
 
     function _paused() internal view returns (bool) {
         return market.paused() || market.assetPaused(asset);
+    }
+
+    /// @notice The targets orders move between on a side: its series' strike, a tick further out,
+    /// and the other side's strike, which that side's grid never lists.
+    function targets(OptionType side) public view returns (uint256[3] memory) {
+        return side == OptionType.Call
+            ? [callStrike, callStrike + STRIKE_TICK, putStrike]
+            : [putStrike, putStrike - STRIKE_TICK, callStrike];
+    }
+
+    function _collateral(OptionType side, uint256 size, uint256 target, uint256 rawUnit)
+        internal
+        pure
+        returns (uint256)
+    {
+        return side == OptionType.Call ? size : Units.valueExact(size, target, rawUnit);
     }
 
     function place(uint256 who, bool put, uint256 lots, uint256 floorTicks) external {
@@ -101,12 +120,59 @@ contract MarketHandler is Test {
         _acted();
     }
 
+    /// @dev Moves an idle order to one of its side's targets with a new size, floor and flip.
+    /// Records any amend whose collateral moved by anything other than the exact difference
+    /// between the old and new terms, in one direction.
+    function amend(
+        uint256 seed,
+        uint256 targetSeed,
+        uint256 lots,
+        uint256 floorTicks,
+        uint256 flipSeed
+    ) external {
+        uint256 count = market.orderCount();
+        if (count == 0) return;
+        uint256 id = seed % count + 1;
+        CollateralVault.Order memory o = market.orderOf(id);
+        if (o.status != CollateralVault.OrderStatus.Active || o.series != 0) return;
+        uint256 size = bound(lots, 1, 100) * LOT;
+        MarketGuard.Caps memory caps = market.capsOf(asset, o.side);
+        if (
+            market.openSize(asset, o.side) - o.size + size > caps.openSize
+                || market.walletSize(o.owner, asset, o.side) - o.size + size > caps.walletSize
+        ) return;
+        bool flip = flipSeed % 2 == 1;
+        OptionType other = o.side == OptionType.Call ? OptionType.Put : OptionType.Call;
+        CollateralVault.AmendParams memory p = CollateralVault.AmendParams({
+            target: targets(o.side)[targetSeed % 3],
+            minPremium: bound(floorTicks, 0, 1000) * PRICE_TICK,
+            size: size,
+            flip: flip,
+            flipTarget: flip ? targets(other)[(flipSeed / 2) % 3] : 0
+        });
+        address token = o.side == OptionType.Call ? asset : market.usdg();
+        int256 walletBefore = int256(IERC20(token).balanceOf(o.owner));
+        int256 claimBefore = int256(market.claimable(o.owner, token));
+        vm.prank(o.owner);
+        market.amendOrder(id, p);
+        _acted();
+        if (_paused()) grewWhilePaused = true;
+        int256 owed = int256(_collateral(o.side, size, p.target, o.rawUnit))
+            - int256(_collateral(o.side, o.size, o.target, o.rawUnit));
+        int256 pulled = walletBefore - int256(IERC20(token).balanceOf(o.owner));
+        int256 credited = int256(market.claimable(o.owner, token)) - claimBefore;
+        bool exact = owed >= 0 ? pulled == owed && credited == 0 : credited == -owed && pulled == 0;
+        if (!exact) amendMisaccounted = true;
+    }
+
     function fill(uint256 seed, uint256 lots, uint256 premiumTicks) external {
         uint256 count = market.orderCount();
         if (finalized || count == 0 || vm.getBlockTimestamp() >= expiry) return;
         uint256 id = seed % count + 1;
         CollateralVault.Order memory o = market.orderOf(id);
         uint256 series = o.side == OptionType.Call ? callSeries : putSeries;
+        // Only the two series' strikes have quotes. An order amended elsewhere waits.
+        if (o.target != (o.side == OptionType.Call ? callStrike : putStrike)) return;
         MarketGuard.Caps memory caps = market.capsOf(asset, o.side);
         uint256 room = caps.seriesOpenInterest - market.poolOf(series).written;
         uint256 maxLots = (o.size - o.committed) / LOT;
@@ -210,6 +276,8 @@ contract MarketHandler is Test {
 contract MarketInvariantsForkTest is VayleMarketFork {
     MarketHandler internal handler;
 
+    error UntrackedTarget(uint256 orderId, uint256 target);
+
     function setUp() public override {
         super.setUp();
         address[] memory holders = new address[](3);
@@ -245,10 +313,46 @@ contract MarketInvariantsForkTest is VayleMarketFork {
     function invariant_market() public view {
         _assertConserved(_claimants());
         _assertSizesTracked();
+        _assertBucketsTracked();
         _assertSeriesBacked();
         _assertWithinCaps();
         assertFalse(handler.actedWhileHalted(), "a user action succeeded during a halt");
         assertFalse(handler.grewWhilePaused(), "a placement or fill succeeded during a pause");
+        assertFalse(handler.amendMisaccounted(), "an amend moved other than the difference");
+    }
+
+    /// @dev Every order sits in one of the handler's buckets. Each bucket's idle size is the sum
+    /// over its active orders that aren't written into a series, and its attached count is the
+    /// number of its orders that are. So no order's size is counted in two buckets, or in none.
+    function _assertBucketsTracked() internal view {
+        for (uint256 side; side < 2; ++side) {
+            uint256[3] memory targets = handler.targets(OptionType(side));
+            uint256[3] memory idle;
+            uint256[3] memory attached;
+            for (uint256 id = 1; id <= market.orderCount(); ++id) {
+                CollateralVault.Order memory o = market.orderOf(id);
+                if (uint256(o.side) != side) continue;
+                uint256 t = _bucketOf(targets, id, o.target);
+                if (o.series != 0) ++attached[t];
+                else if (o.status == CollateralVault.OrderStatus.Active) idle[t] += o.size;
+            }
+            for (uint256 t; t < 3; ++t) {
+                OptionType s = OptionType(side);
+                assertEq(market.idleSize(nvda, s, targets[t]), idle[t], "idle size per bucket");
+                assertEq(market.attachedOrders(nvda, s, targets[t]), attached[t], "attached");
+            }
+        }
+    }
+
+    function _bucketOf(uint256[3] memory targets, uint256 id, uint256 target)
+        internal
+        pure
+        returns (uint256 t)
+    {
+        for (; t < 3; ++t) {
+            if (targets[t] == target) return t;
+        }
+        revert UntrackedTarget(id, target);
     }
 
     function _assertSizesTracked() internal view {

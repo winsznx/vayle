@@ -56,6 +56,27 @@ export function updateOrder(
   };
 }
 
+// An idle order's new terms. The market sets every one of them, so pass the order's current
+// minPremium, flip and flipTarget to keep those. Only the collateral difference moves: a larger
+// need is pulled from the owner, so approve it first, and a smaller one becomes claimable.
+export interface AmendParams {
+  // USDG base units per raw token, on the strike tick.
+  readonly target: bigint;
+  // USDG base units per raw token, on the price tick.
+  readonly minPremium: bigint;
+  // Raw token units, whole lots.
+  readonly size: bigint;
+  readonly flip: boolean;
+  readonly flipTarget: bigint;
+}
+
+export function amendOrder(market: Address, id: bigint, p: AmendParams): Call {
+  return {
+    to: market,
+    data: encodeFunctionData({ abi: vayleMarketAbi, functionName: "amendOrder", args: [id, p] }),
+  };
+}
+
 export function cancelOrder(market: Address, id: bigint): Call {
   return {
     to: market,

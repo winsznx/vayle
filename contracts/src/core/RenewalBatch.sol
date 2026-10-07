@@ -2,7 +2,7 @@
 pragma solidity 0.8.37;
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {SeriesKey} from "../libraries/SeriesId.sol";
+import {OptionType, SeriesKey} from "../libraries/SeriesId.sol";
 import {Units} from "../libraries/Units.sol";
 import {QuoteSettlement} from "./QuoteSettlement.sol";
 
@@ -251,15 +251,34 @@ abstract contract RenewalBatch is QuoteSettlement {
         if (_frozen(order)) revert OrderFrozen(id);
     }
 
+    function _requireNotFrozenAt(uint256 id, Order storage order, uint256 target)
+        internal
+        view
+        override
+    {
+        if (_bucketFrozen(order.asset, order.side, target)) revert TargetFrozen(id, target);
+    }
+
     /// @dev An idle order whose target is listed this week is frozen from the bid window until its
     /// series' batch is done or the deadline passes unsealed. A sealed batch holds it until done.
     function _frozen(Order storage o) internal view returns (bool) {
-        if (o.status != OrderStatus.Active || o.series != 0) return false;
-        uint64 expiry = latestExpiry[o.asset];
+        return
+            o.status == OrderStatus.Active && o.series == 0
+                && _bucketFrozen(o.asset, o.side, o.target);
+    }
+
+    /// @dev Whether this week's batch for the bucket holds it now. Every idle order in the bucket
+    /// is frozen exactly while this is true.
+    function _bucketFrozen(address asset, OptionType side, uint256 target)
+        private
+        view
+        returns (bool)
+    {
+        uint64 expiry = latestExpiry[asset];
         if (expiry == 0) return false;
-        Epoch storage e = _epoch(o.asset, expiry);
-        if (!_isListedStrike(e, o.side, o.target)) return false;
-        Phase phase = _batches[_seriesIdIn(e, o.asset, o.side, o.target)].phase;
+        Epoch storage e = _epoch(asset, expiry);
+        if (!_isListedStrike(e, side, target)) return false;
+        Phase phase = _batches[_seriesIdIn(e, asset, side, target)].phase;
         if (phase == Phase.Filling) return true;
         if (phase == Phase.Done) return false;
         return block.timestamp >= _bidOpen(e) && block.timestamp < e.batchDeadline;

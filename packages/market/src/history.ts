@@ -25,6 +25,7 @@ export class MissingBlockTime extends Error {
 const ORDER_ARG: Readonly<Record<string, string>> = {
   OrderPlaced: "id",
   OrderUpdated: "id",
+  OrderAmended: "id",
   OrderCancelled: "id",
   OrderClosed: "id",
   OrderCommitted: "id",
