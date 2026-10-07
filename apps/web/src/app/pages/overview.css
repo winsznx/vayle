@@ -1,53 +1,12 @@
 /* Overview: the holder's home page. It lays out the shared cards from app.css and adds the rows
    and the price strip that only this page has. */
 
-/* Summary row: four cards on a wide screen, two by two below that, one column on a phone. */
+/* The first row: NVDA's price and chart beside what the holder holds. */
 
-.ov-stats {
+.ov-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.3fr) repeat(2, minmax(0, 1fr)) minmax(0, 1.2fr);
+  grid-template-columns: minmax(0, 1.75fr) minmax(300px, 1fr);
   gap: 20px;
-}
-
-/* The shared rule spans the week card across a narrow row; in this grid it keeps its own cell. */
-.ov-stats > .stat-week {
-  grid-column: auto;
-}
-
-.ov-amount {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 4px;
-}
-
-.ov-weeks {
-  color: var(--body);
-  font-size: var(--text-label);
-}
-
-.ov-sources {
-  display: grid;
-  gap: 2px;
-}
-
-/* Before the account is read: the welcome beside the week. */
-
-.ov-intro {
-  display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
-  gap: 20px;
-}
-
-.notice-card.ov-welcome {
-  align-content: center;
-  padding: 32px;
-}
-
-.ov-welcome-line {
-  max-width: 36rem;
-  color: var(--muted);
-  text-wrap: pretty;
 }
 
 /* Links that lead on from a card: blue marks where to go next. */
@@ -143,28 +102,6 @@ a.ov-name:hover .ov-name-text,
 }
 
 /* Needs you: one slim line when there's nothing, a list of settles when there is. */
-
-.ov-needs-none {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 16px;
-  padding: 18px 24px;
-}
-
-.ov-needs-heading {
-  color: var(--ink);
-  font-size: var(--text-body);
-  font-weight: 650;
-  letter-spacing: var(--track-tight);
-}
-
-.ov-needs-line {
-  flex: 1;
-  min-width: 12rem;
-  color: var(--muted);
-  font-size: var(--text-body-s);
-}
 
 .ov-needs {
   container-type: inline-size;
@@ -375,6 +312,34 @@ a.ov-name:hover .ov-name-text,
   font-weight: 600;
 }
 
+.ov-share {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: var(--text-caption);
+}
+
+/* Bids stay neutral beside the holder's own price, which is the one rung in blue. */
+.ov-rung-meter {
+  display: block;
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--sunken);
+}
+
+.ov-rung-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ghost);
+}
+
+.ov-rung-mine .ov-rung-meter > span {
+  background: var(--brand);
+}
+
 .ov-mine {
   padding: 3px 9px;
   border-radius: var(--radius-pill);
@@ -429,7 +394,8 @@ a.ov-name:hover .ov-name-text,
     grid-template-columns: 46px minmax(0, 1fr) auto;
     grid-template-areas:
       "side price bid"
-      ". mine .";
+      ". mine ."
+      ". meter meter";
     align-items: center;
     gap: 0 10px;
     padding: 14px 12px;
@@ -458,6 +424,11 @@ a.ov-name:hover .ov-name-text,
     margin-top: 6px;
   }
 
+  .ov-rung-meter {
+    grid-area: meter;
+    margin-top: 10px;
+  }
+
   .ov-close {
     display: flex;
     gap: 12px;
@@ -477,14 +448,8 @@ a.ov-name:hover .ov-name-text,
   }
 }
 
-@media (max-width: 1340px) {
-  .ov-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 @media (max-width: 1100px) {
-  .ov-intro {
+  .ov-hero {
     grid-template-columns: minmax(0, 1fr);
   }
 }
@@ -496,25 +461,8 @@ a.ov-name:hover .ov-name-text,
 }
 
 @media (max-width: 640px) {
-  .ov-stats {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  /* Stacked, the cards take their own height instead of the row's shared minimum. */
-  .ov-stats > .stat {
-    min-height: 0;
-  }
-
-  .notice-card.ov-welcome {
-    padding: 24px 18px;
-  }
-
   .ov-list {
     padding: 0 18px 6px;
-  }
-
-  .ov-needs-none {
-    padding: 16px 18px;
   }
 
   .ov-foot {

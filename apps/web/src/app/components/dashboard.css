@@ -1,0 +1,490 @@
+/* The dashboard's pieces: NVDA's price and its last month, the holder's holdings, and the week from
+   one close to the next. Blue marks the holder's own prices and the week's current stage. */
+
+/* Price card */
+
+.price-card {
+  display: grid;
+  gap: 18px;
+  padding: 24px 24px 18px;
+}
+
+.price-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
+
+.price-asset {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.price-symbol {
+  color: var(--ink);
+  font-size: var(--text-body-l);
+  font-weight: 650;
+  letter-spacing: var(--track-tight);
+}
+
+.price-name,
+.price-source {
+  color: var(--muted);
+  font-size: var(--text-label);
+}
+
+.price-now {
+  text-align: right;
+}
+
+.price-figure {
+  color: var(--ink);
+  font-size: clamp(2rem, 1.4rem + 1.8vw, 2.75rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: var(--track-display);
+}
+
+.price-change {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: var(--text-label);
+}
+
+.price-change .num {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-weight: 650;
+}
+
+.price-change.is-up .num {
+  color: var(--earned);
+  background: var(--earned-soft);
+}
+
+.price-change.is-down .num {
+  color: var(--problem);
+  background: var(--problem-soft);
+}
+
+.price-chart-state {
+  display: grid;
+  place-items: center;
+  min-height: 230px;
+  color: var(--muted);
+  font-size: var(--text-label);
+  text-align: center;
+  text-wrap: pretty;
+}
+
+/* Chart */
+
+.chart {
+  display: grid;
+  gap: 10px;
+}
+
+.chart-plot {
+  position: relative;
+  height: 230px;
+  touch-action: pan-y;
+}
+
+.chart-plot svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.chart-line {
+  fill: none;
+  stroke: var(--brand);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-fill-top {
+  stop-color: var(--brand);
+  stop-opacity: 0.16;
+}
+
+.chart-fill-bottom {
+  stop-color: var(--brand);
+  stop-opacity: 0;
+}
+
+.chart-level {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.chart-close {
+  border-top: 1.5px dashed var(--faint);
+}
+
+/* The close's label sits at the left, away from the latest rounds at the right, which are the
+   ones nearest the close. */
+.chart-close .close-pill {
+  position: absolute;
+  left: 0;
+  transform: translateY(-50%);
+}
+
+.chart-mark {
+  border-top: 1.5px dotted var(--brand-line);
+}
+
+.chart-mark-label {
+  position: absolute;
+  right: 0;
+  transform: translateY(-50%);
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  color: var(--brand-text);
+  background: var(--brand-soft);
+  box-shadow: inset 0 0 0 1px var(--brand-line);
+  font-size: var(--text-caption);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.chart-cursor {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--control);
+  pointer-events: none;
+}
+
+.chart-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: var(--brand);
+  box-shadow: 0 0 0 3px var(--sheet);
+  pointer-events: none;
+}
+
+.chart-tip {
+  position: absolute;
+  top: 0;
+  display: grid;
+  gap: 2px;
+  padding: 8px 11px;
+  border-radius: 10px;
+  color: var(--inverse);
+  background: var(--ink);
+  box-shadow: var(--shadow-float);
+  font-size: var(--text-caption);
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.chart-tip-price {
+  font-size: var(--text-label);
+  font-weight: 650;
+}
+
+.chart-tip-time {
+  opacity: 0.72;
+}
+
+.chart-axis {
+  display: flex;
+  justify-content: space-between;
+  color: var(--faint);
+  font-size: var(--text-caption);
+}
+
+/* Holdings */
+
+.holdings {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding: 24px;
+}
+
+.holdings-title {
+  color: var(--muted);
+  font-size: var(--text-label);
+  font-weight: 650;
+}
+
+.holdings-total {
+  color: var(--ink);
+  font-size: clamp(1.9rem, 1.3rem + 1.6vw, 2.5rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: var(--track-display);
+}
+
+.holdings-basis {
+  color: var(--muted);
+  font-size: var(--text-caption);
+}
+
+.holdings-bar {
+  display: flex;
+  gap: 3px;
+  height: 10px;
+  margin: 16px 0 8px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--sunken);
+}
+
+.holdings-bar > span {
+  height: 100%;
+}
+
+.holdings-bar-wallet,
+.holdings-swatch-wallet {
+  background: var(--ghost);
+}
+
+.holdings-bar-locked,
+.holdings-swatch-locked {
+  background: var(--brand);
+}
+
+.holdings-bar-claimable,
+.holdings-swatch-claimable {
+  background: var(--earned);
+}
+
+.holdings-row {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  grid-template-areas:
+    "swatch label value"
+    ". amounts amounts";
+  align-items: center;
+  gap: 2px 10px;
+  padding: 12px 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.holdings-swatch {
+  grid-area: swatch;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.holdings-label {
+  grid-area: label;
+  color: var(--ink);
+  font-size: var(--text-body-s);
+  font-weight: 600;
+}
+
+.holdings-value {
+  grid-area: value;
+  color: var(--ink);
+  font-weight: 650;
+  text-align: right;
+}
+
+.holdings-amounts {
+  grid-area: amounts;
+  color: var(--muted);
+  font-size: var(--text-label);
+  overflow-wrap: anywhere;
+}
+
+.holdings-action {
+  justify-self: start;
+  margin-top: 6px;
+}
+
+.holdings-earned {
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--hairline);
+  color: var(--muted);
+  font-size: var(--text-label);
+  text-wrap: pretty;
+}
+
+.holdings-earned-amount {
+  color: var(--earned);
+  font-weight: 650;
+}
+
+.holdings-empty {
+  align-content: center;
+  gap: 12px;
+}
+
+.holdings-empty-line {
+  max-width: 30rem;
+  color: var(--body);
+  text-wrap: pretty;
+}
+
+/* Week track */
+
+.week-track {
+  display: grid;
+  gap: 22px;
+  padding: 22px 24px 26px;
+}
+
+.week-track-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+}
+
+.week-track-empty {
+  gap: 8px;
+}
+
+.week-track-body {
+  position: relative;
+}
+
+/* Five even stages: the line runs from the first dot's center, at a tenth of the width, to the
+   last one's. */
+.week-track-line {
+  position: absolute;
+  top: 5px;
+  right: 10%;
+  left: 10%;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--sunken);
+}
+
+.week-track-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--brand);
+}
+
+.week-track-stages {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.week-track-stages > li {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 4px;
+  padding: 0 8px;
+  text-align: center;
+}
+
+.week-track-dot {
+  width: 13px;
+  height: 13px;
+  margin-bottom: 10px;
+  border-radius: 50%;
+  background: var(--sheet);
+  box-shadow: inset 0 0 0 2px var(--control);
+}
+
+.is-past > .week-track-dot {
+  background: var(--brand);
+  box-shadow: none;
+}
+
+.is-current > .week-track-dot {
+  background: var(--brand);
+  box-shadow: 0 0 0 5px var(--brand-soft);
+}
+
+.week-track-label {
+  color: var(--ink);
+  font-size: var(--text-body-s);
+  font-weight: 650;
+}
+
+.is-current > .week-track-label {
+  color: var(--brand-text);
+}
+
+.week-track-time {
+  color: var(--body);
+  font-size: var(--text-label);
+}
+
+.week-track-note {
+  max-width: 15rem;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: var(--text-caption);
+  text-wrap: pretty;
+}
+
+/* Narrow: the stages stand up as a list, each dot on a line down the left. */
+@media (max-width: 760px) {
+  .week-track-line {
+    display: none;
+  }
+
+  .week-track-stages {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .week-track-stages > li {
+    grid-template-columns: 13px minmax(0, 1fr);
+    grid-template-areas:
+      "dot label"
+      ". time"
+      ". note";
+    justify-items: start;
+    column-gap: 14px;
+    padding: 0;
+    text-align: left;
+  }
+
+  .week-track-dot {
+    grid-area: dot;
+    align-self: center;
+    margin: 0;
+  }
+
+  .week-track-label {
+    grid-area: label;
+  }
+
+  .week-track-time {
+    grid-area: time;
+  }
+
+  .week-track-note {
+    grid-area: note;
+    max-width: none;
+  }
+
+  .price-card,
+  .holdings,
+  .week-track {
+    padding: 20px 18px;
+  }
+
+  .chart-plot {
+    height: 190px;
+  }
+}
