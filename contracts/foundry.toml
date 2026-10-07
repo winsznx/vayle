@@ -13,7 +13,7 @@ via_ir = true
 # The chain's own limit, chain.maxCodeSize in deployments/robinhood-mainnet.json.
 code_size_limit = 98304
 fs_permissions = [
-  { access = "read", path = "../deployments" },
+  { access = "read-write", path = "../deployments" },
   { access = "read", path = "./out" },
 ]
 

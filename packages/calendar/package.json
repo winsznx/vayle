@@ -9,7 +9,8 @@
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "test": "node --test \"test/**/*.test.ts\""
+    "test": "node --test \"test/**/*.test.ts\"",
+    "boundaries": "node src/cli.ts boundaries"
   },
   "devDependencies": {
     "fast-check": "4.10.2"
