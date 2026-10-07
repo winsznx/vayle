@@ -59,6 +59,32 @@ describe("api", () => {
     });
   });
 
+  it("lists an owner's own events and their orders' events, oldest first, once each", async () => {
+    // #given: the placement is filed under both the owner and the order
+    const placed = stored("OrderPlaced", "5");
+    const credited = { ...stored("Credited", null), block_number: 12 };
+    const filled = { ...stored("BatchFilled", "5"), block_number: 11, account: null };
+    const select = (filter: string): Promise<MarketEvent[]> =>
+      Promise.resolve(
+        filter.startsWith("account=")
+          ? [placed, credited]
+          : filter === "order_id=in.(5)"
+            ? [placed, filled]
+            : [],
+      );
+    // #when
+    const response = await handle(new Request(`https://api.example/v1/owners/${OWNER}/events`), {
+      ...deps([]),
+      select,
+    });
+    // #then
+    const payload = (await body(response)) as { events: MarketEvent[] };
+    assert.deepEqual(
+      payload.events.map((e) => e.name),
+      ["OrderPlaced", "BatchFilled", "Credited"],
+    );
+  });
+
   it("refuses an owner that isn't an address", async () => {
     // #when
     const response = await handle(

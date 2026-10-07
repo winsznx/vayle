@@ -36,6 +36,25 @@ async function ownerOrders(address: string, deps: ApiDeps): Promise<Response> {
   return json({ orders: ids, source: await deps.source() });
 }
 
+// Everything an owner did and everything that happened to their orders: placements, credits and
+// withdrawals filed under their address, and every event of the orders they placed.
+async function ownerEvents(address: string, deps: ApiDeps): Promise<Response> {
+  if (!isAddress(address)) return json({ error: "not an address" }, 400);
+  const own = await deps.select(`account=eq.${address.toLowerCase()}`);
+  const ids = [
+    ...new Set(
+      own.flatMap((e) => (e.name === "OrderPlaced" && e.order_id !== null ? [e.order_id] : [])),
+    ),
+  ];
+  const ofOrders = ids.length === 0 ? [] : await deps.select(`order_id=in.(${ids.join(",")})`);
+  const byPosition = new Map<string, MarketEvent>();
+  for (const e of [...own, ...ofOrders]) byPosition.set(`${e.block_number}:${e.log_index}`, e);
+  const events = [...byPosition.values()].sort(
+    (a, b) => a.block_number - b.block_number || a.log_index - b.log_index,
+  );
+  return json({ events, source: await deps.source() });
+}
+
 async function order(id: string, deps: ApiDeps): Promise<Response> {
   if (!DECIMAL.test(id)) return json({ error: "not an order ID" }, 400);
   const events = await deps.select(
@@ -75,6 +94,14 @@ export async function handle(request: Request, deps: ApiDeps): Promise<Response>
     parts.length === 4
   ) {
     return ownerOrders(parts[2], deps);
+  }
+  if (
+    parts[1] === "owners" &&
+    parts[2] !== undefined &&
+    parts[3] === "events" &&
+    parts.length === 4
+  ) {
+    return ownerEvents(parts[2], deps);
   }
   if (parts[1] === "orders" && parts[2] !== undefined && parts.length === 3)
     return order(parts[2], deps);
