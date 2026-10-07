@@ -59,10 +59,8 @@ contract FirstEpochForkTest is MarketFork {
         vm.stopPrank();
         address[3] memory wallets = [alice, bob, maker];
         for (uint256 i; i < wallets.length; ++i) {
-            vm.startPrank(ChainActors.FUNDING_SOURCE);
-            IERC20(stock).transfer(wallets[i], 10 * ONE);
-            IERC20(usdg).transfer(wallets[i], 100_000e6);
-            vm.stopPrank();
+            _fundStock(wallets[i], 10 * ONE);
+            _fundUsdg(wallets[i], 100_000e6);
             vm.startPrank(wallets[i]);
             IERC20(stock).approve(address(market), type(uint256).max);
             IERC20(usdg).approve(address(market), type(uint256).max);

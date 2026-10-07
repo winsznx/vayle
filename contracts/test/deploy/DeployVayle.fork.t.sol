@@ -11,7 +11,6 @@ import {EpochBook} from "../../src/core/EpochBook.sol";
 import {MarketGuard} from "../../src/core/MarketGuard.sol";
 import {QuoteSettlement} from "../../src/core/QuoteSettlement.sol";
 import {OptionType} from "../../src/libraries/SeriesId.sol";
-import {ChainActors} from "../utils/ChainActors.sol";
 import {MarketFork} from "../utils/MarketFork.sol";
 import {RunbookDeploy} from "./RunbookDeploy.sol";
 
@@ -254,10 +253,8 @@ contract DeployVayleForkTest is MarketFork {
         uint256 strike = (_referencePriceFrom(answer) / strikeTick + 1) * strikeTick;
         uint256 series = market.seriesFor(stock, OCT_09, OptionType.Call, strike);
         address alice = makeAddr("alice");
-        vm.startPrank(ChainActors.FUNDING_SOURCE);
-        IERC20(stock).transfer(alice, ONE);
-        IERC20(usdg).transfer(teamMaker, 10_000e6);
-        vm.stopPrank();
+        _fundStock(alice, ONE);
+        _fundUsdg(teamMaker, 10_000e6);
         vm.startPrank(alice);
         IERC20(stock).approve(address(market), ONE);
         uint256 id = market.placeOrder(

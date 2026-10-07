@@ -4,7 +4,6 @@ pragma solidity 0.8.37;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {CollateralVault} from "../../src/core/CollateralVault.sol";
 import {SeriesKey} from "../../src/libraries/SeriesId.sol";
-import {ChainActors} from "../utils/ChainActors.sol";
 import {VayleMarketFork} from "../utils/VayleMarketFork.sol";
 
 /// @notice Campaign E at the interface: with the app, API and indexer off, a holder places an
@@ -90,8 +89,7 @@ contract FallbackExitForkTest is VayleMarketFork {
     function test_aHolderPlacesThenExitsThroughTheSharedBuilders() public {
         // #given: dave approves and places a sell order through the builders, and the maker buys it
         address dave = makeAddr("dave");
-        vm.prank(ChainActors.FUNDING_SOURCE);
-        IERC20(stock).transfer(dave, ONE);
+        _fundStock(dave, ONE);
         _send(
             dave,
             stock,
