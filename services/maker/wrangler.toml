@@ -1,0 +1,10 @@
+# Deployed by the owner's Cloudflare account. Secrets are set with wrangler secret put:
+# ROBINHOOD_RPC_URL and MAKER_KEY (the team maker's account). Vars: VAYLE_MARKET, and the pricing
+# inputs MAKER_VOL_BPS, MAKER_EDGE_BPS, MAKER_DIVIDEND_YIELD_BPS, MAKER_RATE_BPS,
+# MAKER_MAX_PER_SERIES and MAKER_RFQ, which the owner sets.
+name = "vayle-maker"
+main = "src/worker.ts"
+compatibility_date = "2026-10-01"
+
+[triggers]
+crons = ["* * * * *"]
