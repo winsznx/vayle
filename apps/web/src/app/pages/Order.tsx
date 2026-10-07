@@ -4,6 +4,7 @@ import { useId, type ReactNode } from "react";
 import { Link, useParams } from "react-router";
 import { TokenIcon } from "../../ui/TokenIcon.tsx";
 import { HistoryNote } from "../components/HistoryNote.tsx";
+import { EditOrder } from "../components/EditOrder.tsx";
 import { actionFor, lineOf, Ticks } from "../components/Orders.tsx";
 import type { AppConfig } from "../config.ts";
 import { describeEvent, sidesOf, txUrl, type EventLine } from "../events.ts";
@@ -34,6 +35,11 @@ const HISTORY_WAIT: Readonly<Record<Waiting, string>> = {
 };
 
 const WHOLE_NUMBER = /^\d+$/;
+
+interface LastSet {
+  readonly size: bigint;
+  readonly changed: boolean;
+}
 
 // The order number in the URL, when it's a whole number.
 function idOf(param: string | undefined): bigint | null {
@@ -96,21 +102,26 @@ function OrderHead({ order, line }: { readonly order: OrderState; readonly line:
   );
 }
 
-function placedSizeOf(history: MarketHistory, id: string): bigint | null {
+// The size the order was last given, by its placement or its latest change, for an order that has
+// none left.
+function lastSetSizeOf(history: MarketHistory, id: string): LastSet | null {
   if (history.status !== "ready") return null;
-  const placed = history.events.find((e) => e.name === "OrderPlaced" && e.order_id === id);
-  const size = placed?.args["size"];
-  return typeof size === "string" && /^\d+$/.test(size) ? BigInt(size) : null;
+  const set = history.events.findLast(
+    (e) => (e.name === "OrderPlaced" || e.name === "OrderAmended") && e.order_id === id,
+  );
+  const size = set?.args["size"];
+  if (set === undefined || typeof size !== "string" || !/^\d+$/.test(size)) return null;
+  return { size: BigInt(size), changed: set.name === "OrderAmended" };
 }
 
 function OrderTerms(props: {
   readonly config: AppConfig;
   readonly order: OrderState;
   readonly line: OrderLine;
-  // The size from the order's placement, for an order that has none left.
-  readonly placedSize: bigint | null;
+  // The size the order was last given, for an order that has none left.
+  readonly lastSet: LastSet | null;
 }) {
-  const { config, order, line, placedSize } = props;
+  const { config, order, line, lastSet } = props;
   const symbol = config.assetSymbol;
   const nvda = (raw: bigint): string => tokens(raw, symbol, config.assetDecimals);
   const price = (units: bigint): string => dollars(units, config.usdgDecimals);
@@ -134,9 +145,9 @@ function OrderTerms(props: {
         <Term label="Size" className="num">
           {order.size > 0n
             ? nvda(order.size)
-            : placedSize === null
+            : lastSet === null
               ? "Nothing left"
-              : `${nvda(placedSize)} when placed`}
+              : `${nvda(lastSet.size)} when ${lastSet.changed ? "last changed" : "placed"}`}
         </Term>
         <Term label="In this week's trade" className="num">
           {order.committed > 0n
@@ -375,12 +386,15 @@ export function OrderPage(): ReactNode {
         <div className="od-body">
           <div className="od-layout">
             <OrderEarnings config={config} history={history} id={key} />
-            <OrderTerms
-              config={config}
-              order={order}
-              line={line}
-              placedSize={placedSizeOf(history, key)}
-            />
+            <div className="od-side">
+              <OrderTerms
+                config={config}
+                order={order}
+                line={line}
+                lastSet={lastSetSizeOf(history, key)}
+              />
+              <EditOrder order={order} />
+            </div>
             <OrderHistory config={config} history={history} id={key} />
           </div>
         </div>

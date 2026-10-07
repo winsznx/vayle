@@ -61,6 +61,13 @@ export function describeEvent(e: MarketEvent, config: AppConfig, sideOf: SideOf)
         detail: `Least ${premium(units(a, "minPremium"))} per ${config.assetSymbol} a week`,
         amount: null,
       };
+    case "OrderAmended":
+      return {
+        kind: "order",
+        title: "Changed an order",
+        detail: `Now ${nvda(units(a, "size"))} at ${dollars(units(a, "target"))}, taking at least ${premium(units(a, "minPremium"))} per ${config.assetSymbol} a week`,
+        amount: null,
+      };
     case "OrderCommitted":
       return {
         kind: "order",

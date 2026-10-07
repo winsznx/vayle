@@ -7,6 +7,10 @@ const MARKET: Readonly<Record<string, string>> = {
   OraclePaused: "NVDA's price feed is paused, so new orders and fills wait until it's back.",
   CapExceeded: "That's over the market's current limit for this side. Try a smaller amount.",
   OrderFrozen: "This order is in this week's batch. You can change it once the batch finishes.",
+  TargetFrozen:
+    "That price is in this week's batch. Pick another, or change it once the batch finishes.",
+  OrderAttached:
+    "Part of this order is in this week's trade, so its price and amount stay until the week settles.",
   OrderNotActive: "This order isn't active anymore.",
   NotOrderOwner: "This order belongs to another wallet.",
   StrikeNotListed: "That price isn't on this week's ladder.",

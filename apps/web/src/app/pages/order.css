@@ -122,7 +122,7 @@
   /* Stays in view beside a long history, under the sticky top bar, as the ticket does, when the
      window is tall enough to show all of it. */
   @media (min-height: 44rem) {
-    .od-layout > .od-terms {
+    .od-layout > .od-side {
       position: sticky;
       top: 110px;
     }
@@ -134,8 +134,32 @@
   container: od-earnings / inline-size;
 }
 
-.od-terms {
+/* The terms and the form that changes them share the side column. */
+.od-side {
+  display: grid;
   grid-area: terms;
+  align-content: start;
+  gap: 20px;
+}
+
+.od-edit-head {
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.od-edit-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  padding: 0 24px 24px;
+}
+
+.od-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
 }
 
 .od-history {
