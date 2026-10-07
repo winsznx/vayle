@@ -120,7 +120,14 @@ async function mineAt(client: ForkClient, t: number): Promise<void> {
   await client.mine({ blocks: 1 });
 }
 
-// Moves the fork to the next moment of the week, or `minutes` ahead, running the keeper and the
+export interface AdvanceOptions {
+  // Minutes ahead, instead of the next moment of the week.
+  readonly minutes: number | null;
+  // False plays a keeper that has died: no pings, no epochs, nothing settled for anyone.
+  readonly keeper: boolean;
+}
+
+// Moves the fork to the next moment of the week, or some minutes ahead, running the keeper and the
 // maker once a tick the way their crons would. Crossing a close's feed time, it first writes that
 // close's feed round.
 export async function advance(
@@ -128,7 +135,7 @@ export async function advance(
   deployment: Deployment,
   accounts: Accounts,
   closes: readonly number[],
-  minutes: number | null = null,
+  { minutes, keeper: keeperRuns }: AdvanceOptions = { minutes: null, keeper: true },
 ): Promise<void> {
   const { keeper, maker } = services(deployment, accounts);
   const now = await chainTime(client);
@@ -146,7 +153,9 @@ export async function advance(
           Number(bidWindow),
         )
       : minutesTarget(now, minutes);
-  console.log(`Advancing to ${easternTime(target.at)}: ${target.what}.`);
+  console.log(
+    `Advancing to ${easternTime(target.at)}: ${target.what}${keeperRuns ? "" : ", with no keeper"}.`,
+  );
   let t = now;
   for (;;) {
     const previous = t;
@@ -168,7 +177,9 @@ export async function advance(
         );
       }
     }
-    const kept = await runKeeper(keeper.config, keeper.clients);
+    const kept = keeperRuns
+      ? await runKeeper(keeper.config, keeper.clients)
+      : { sent: [], failed: [] };
     const made = await runMaker(maker.config, maker.clients);
     const done = [
       ...kept.sent.map((a) => a.kind).filter((kind) => !PINGS.has(kind)),

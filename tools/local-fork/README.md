@@ -9,6 +9,7 @@ pnpm fork up                        # start the fork, deploy, fund a holder, ope
 pnpm --filter @vayle/web dev:fork   # the app, pointed at the fork
 pnpm fork advance                   # the next moment of the week
 pnpm fork advance 30                # or 30 minutes ahead
+pnpm fork advance --without-keeper  # as if the keeper had died, to try the fallback page
 ```
 
 `pnpm fork up` stays in the foreground, and Ctrl-C stops the fork. It needs `ROBINHOOD_RPC_URL` in `.env`, and anvil and forge on the path.

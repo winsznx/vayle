@@ -3,6 +3,7 @@
 //   pnpm fork up        start the fork, deploy, fund a holder, open the first week (stays running)
 //   pnpm fork advance   move the running fork to the next moment of the week
 //   pnpm fork advance <minutes>   or that many minutes ahead
+//   pnpm fork advance [minutes] --without-keeper   as if the keeper had died
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { boundariesAfter, type Boundary } from "@vayle/calendar";
 import { getAddress, parseEther, parseUnits } from "viem";
@@ -20,7 +21,7 @@ import {
   RECORD_FILE,
   WEB_ENV_FILE,
 } from "./paths.ts";
-import { advance, easternTime, latestWeek } from "./week.ts";
+import { advance, easternTime, latestWeek, type AdvanceOptions } from "./week.ts";
 
 class UsageError extends Error {
   override readonly name = "UsageError";
@@ -115,7 +116,7 @@ async function up(): Promise<void> {
   });
 }
 
-async function advanceRunning(minutes: number | null): Promise<void> {
+async function advanceRunning(options: AdvanceOptions): Promise<void> {
   const client = forkClient();
   await requireFork(client);
   let deployment: Deployment;
@@ -135,27 +136,37 @@ async function advanceRunning(minutes: number | null): Promise<void> {
     deployment,
     readAccounts(),
     readBoundaries().map((b) => b.close),
-    minutes,
+    options,
   );
 }
 
-function minutesArgument(text: string | undefined): number | null {
-  if (text === undefined) return null;
-  const minutes = Number(text);
-  if (!Number.isInteger(minutes) || minutes <= 0) {
-    throw new UsageError(`advance takes a whole number of minutes, not ${text}`);
+function advanceOptions(args: readonly string[]): AdvanceOptions {
+  let minutes: number | null = null;
+  let keeper = true;
+  for (const arg of args) {
+    if (arg === "--without-keeper") {
+      keeper = false;
+      continue;
+    }
+    const value = Number(arg);
+    if (!Number.isInteger(value) || value <= 0 || minutes !== null) {
+      throw new UsageError(
+        `advance takes a whole number of minutes and --without-keeper, not ${arg}`,
+      );
+    }
+    minutes = value;
   }
-  return minutes;
+  return { minutes, keeper };
 }
 
-async function main(command: string | undefined, argument: string | undefined): Promise<void> {
+async function main(command: string | undefined, args: readonly string[]): Promise<void> {
   if (command === "up") return up();
-  if (command === "advance") return advanceRunning(minutesArgument(argument));
-  throw new UsageError("usage: pnpm fork up | pnpm fork advance [minutes]");
+  if (command === "advance") return advanceRunning(advanceOptions(args));
+  throw new UsageError("usage: pnpm fork up | pnpm fork advance [minutes] [--without-keeper]");
 }
 
 try {
-  await main(process.argv[2], process.argv[3]);
+  await main(process.argv[2], process.argv.slice(3));
 } catch (error) {
   console.error(error instanceof Error ? `${error.name}: ${error.message}` : error);
   process.exitCode = 1;
