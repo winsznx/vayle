@@ -1,8 +1,8 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { createPublicClient, http } from "viem";
 import { handle } from "./api.ts";
 import { loadConfig } from "./config.ts";
-import { apiDeps, indexOnce } from "./indexing.ts";
+import { LogRangeRefused } from "./errors.ts";
+import { apiDeps, chainClient, indexOnce } from "./indexing.ts";
 
 // The same indexer as a long-running Node process, for a server instead of a Worker: a pass every
 // minute, never two at once, and the API on PORT.
@@ -11,7 +11,7 @@ import { apiDeps, indexOnce } from "./indexing.ts";
 const PASS_EVERY_MS = 60_000;
 
 const config = loadConfig(process.env);
-const client = createPublicClient({ transport: http(config.rpcUrl, { retryCount: 3 }) });
+const client = chainClient(config.rpcUrl);
 const deps = apiDeps(config);
 const port = Number(process.env["PORT"] ?? "8787");
 
@@ -23,6 +23,11 @@ async function pass(): Promise<void> {
     const cursor = await indexOnce(config, client);
     console.log(`indexed through block ${cursor.toString()}`);
   } catch (error) {
+    if (error instanceof LogRangeRefused) {
+      // Every later pass would send the same request and be refused the same way.
+      console.error(`indexing stopped, the API keeps serving: ${error.message}`);
+      return;
+    }
     console.error("indexing pass failed, retrying next pass:", error);
   }
   if (!stopping) timer = setTimeout(() => void pass(), PASS_EVERY_MS);

@@ -19,6 +19,8 @@ To read the whole record, start without `after` and pass each response's `next` 
 
 Secrets: `ROBINHOOD_RPC_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`. Vars, once the contracts are deployed: `VAYLE_MARKET` and `VAYLE_START_BLOCK`. The tables come from `supabase/migrations`.
 
+A pass reads the market's logs 10,000 blocks per request, at most four requests a pass, and takes each block's time from the `blockTimestamp` on its logs. So `ROBINHOOD_RPC_URL` has to serve eth_getLogs over 10,000 blocks. An RPC that leaves the timestamp off still works, at the cost of one block lookup for each block with events.
+
 ## Running on a server
 
 The same code runs as a long-running Node process instead of a Worker: an indexing pass every minute, never two at once, and the API on `PORT` (8787 by default). It needs Node 24 and the repo checked out with `pnpm install`.
@@ -27,7 +29,7 @@ The same code runs as a long-running Node process instead of a Worker: an indexi
 node --env-file=.env services/indexer/src/node.ts
 ```
 
-The `.env` holds the same settings as the Worker. Under systemd, run that command from the repo root with `Restart=always`, and put the API behind a reverse proxy with TLS. A pass that fails, for example while the database is unreachable, is logged and retried on the next one.
+The `.env` holds the same settings as the Worker. Under systemd, run that command from the repo root with `Restart=always`, and put the API behind a reverse proxy with TLS. A pass that fails, for example while the database is unreachable, is logged and retried on the next one. The exception is an RPC that refuses the log range as too wide. Every pass would get the same answer, so the process stops indexing with `LogRangeRefused` and keeps serving the API. The Worker fails each run with that error until the range or the RPC changes.
 
 ## Development
 

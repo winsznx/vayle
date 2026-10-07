@@ -11,3 +11,8 @@ export class StoreRequestFailed extends IndexerError {
 export class StoreRowMalformed extends IndexerError {
   override readonly name = "StoreRowMalformed";
 }
+// The RPC won't serve a log range this wide. The same request gets the same answer, so retrying
+// can't help.
+export class LogRangeRefused extends IndexerError {
+  override readonly name = "LogRangeRefused";
+}
