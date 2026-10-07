@@ -105,7 +105,7 @@ contract AdversarialSettlementForkTest is VayleMarketFork {
         // #given
         uint256 id = _place(alice, OptionType.Call, ONE);
         (QuoteSettlement.Quote memory q,) = _signedQuote(callSeries, ONE);
-        q.deadline = uint64(block.timestamp + 1 hours);
+        q.deadline = uint64(vm.getBlockTimestamp() + 1 hours);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(quoterKey, market.quoteDigest(q));
         vm.warp(q.deadline + 1);
         // #then

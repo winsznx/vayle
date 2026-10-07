@@ -102,7 +102,7 @@ contract SessionCalendarTest is Test {
     function test_appendRejectsACloseWithinTheMinimumLead() public {
         // #given
         vm.warp(OCT_09 - 12 hours);
-        uint256 earliest = block.timestamp + calendar.MIN_LEAD();
+        uint256 earliest = vm.getBlockTimestamp() + calendar.MIN_LEAD();
         // #then
         vm.expectRevert(abi.encodeWithSelector(SessionCalendar.TooSoon.selector, OCT_09, earliest));
         // #when
@@ -233,7 +233,7 @@ contract SessionCalendarTest is Test {
         vm.prank(timelock);
         calendar.append(boundaries);
         vm.warp(thursday - 1 hours);
-        uint256 earliest = block.timestamp + calendar.MIN_LEAD();
+        uint256 earliest = vm.getBlockTimestamp() + calendar.MIN_LEAD();
         // #then
         vm.expectRevert(abi.encodeWithSelector(SessionCalendar.TooSoon.selector, friday, earliest));
         // #when

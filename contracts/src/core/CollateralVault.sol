@@ -68,6 +68,13 @@ abstract contract CollateralVault is EpochBook {
     /// @notice The same total per owner.
     mapping(address owner => mapping(address asset => mapping(OptionType side => uint256))) public
         walletSize;
+    /// @notice Size of Active orders not attached to a series, per bucket: asset, side and target.
+    /// This is what a renewal batch for the bucket can write.
+    mapping(address asset => mapping(OptionType side => mapping(uint256 target => uint256))) public
+        idleSize;
+    /// @notice Orders attached to a series and not yet settled, per bucket.
+    mapping(address asset => mapping(OptionType side => mapping(uint256 target => uint256))) public
+        attachedOrders;
 
     event OrderPlaced(
         uint256 indexed id,
@@ -91,6 +98,7 @@ abstract contract CollateralVault is EpochBook {
         uint256 renewedSize
     );
     event OrderClosed(uint256 indexed id);
+    event OrderFlipped(uint256 indexed fromId, uint256 indexed toId);
     event Exercised(uint256 indexed series, address indexed exerciser, uint256 amount);
     event SeriesFinalized(uint256 indexed series, uint256 written, uint256 exercised);
     event Credited(address indexed owner, address indexed token, uint256 amount);
@@ -108,6 +116,7 @@ abstract contract CollateralVault is EpochBook {
     error ExceedsWritten(uint256 series, uint256 amount, uint256 outstanding);
     error NothingToSettle(uint256 orderId);
     error InsufficientClaimable(address owner, address token, uint256 amount, uint256 available);
+    error OrderFrozen(uint256 id);
 
     function placeOrder(OrderParams calldata p) external nonReentrant returns (uint256 id) {
         liveness.checkpoint();
@@ -135,6 +144,7 @@ abstract contract CollateralVault is EpochBook {
             series: 0
         });
         _grow(_orders[id], p.size);
+        idleSize[p.asset][p.side][p.target] += p.size;
         emit OrderPlaced(
             id, msg.sender, p.asset, p.side, p.target, p.minPremium, p.size, p.flip, p.flipTarget
         );
@@ -149,6 +159,7 @@ abstract contract CollateralVault is EpochBook {
         liveness.checkpoint();
         _requireNotHalted();
         Order storage order = _ownedActive(id);
+        _requireNotFrozen(id, order);
         StockTokenRegistry.Asset memory a = registry.asset(order.asset);
         Units.requireOnTick(minPremium, a.priceTick);
         if (flip) _requireStrike(flipTarget, a.strikeTick);
@@ -164,8 +175,10 @@ abstract contract CollateralVault is EpochBook {
         liveness.checkpoint();
         _requireNotHalted();
         Order storage order = _ownedActive(id);
+        _requireNotFrozen(id, order);
         uint256 uncommitted = order.size - order.committed;
         (address token, uint256 amount) = _collateralOf(order, uncommitted);
+        if (order.series == 0) idleSize[order.asset][order.side][order.target] -= uncommitted;
         _shrink(order, uncommitted);
         order.status = order.size == 0 ? OrderStatus.Closed : OrderStatus.Cancelled;
         emit OrderCancelled(id, amount);
@@ -194,13 +207,15 @@ abstract contract CollateralVault is EpochBook {
         _shrink(order, shares);
         order.committed = 0;
         order.series = 0;
+        attachedOrders[order.asset][order.side][order.target] -= 1;
 
         bool isCall = order.side == OptionType.Call;
         address collateralToken = isCall ? order.asset : usdg;
         address proceedsToken = isCall ? usdg : order.asset;
         uint256 renewed = 0;
         uint256 released = back;
-        if (order.status == OrderStatus.Active) {
+        bool active = order.status == OrderStatus.Active;
+        if (active) {
             uint256 lotCollateral =
                 isCall ? order.lot : Units.valueExact(order.lot, order.target, order.rawUnit);
             // Only whole lots renew: floor to lots on purpose, the remainder is released below.
@@ -213,9 +228,13 @@ abstract contract CollateralVault is EpochBook {
         if (order.size == 0) {
             order.status = OrderStatus.Closed;
             emit OrderClosed(id);
+        } else if (order.status == OrderStatus.Active) {
+            idleSize[order.asset][order.side][order.target] += order.size;
         }
         emit OrderSettled(id, series, back, proceeds, renewed);
-        _credit(order.owner, proceedsToken, proceeds);
+        // A cancelled order never flips: the holder stopped it.
+        uint256 flipped = active && order.flip && proceeds != 0 ? _flip(id, order, proceeds) : 0;
+        _credit(order.owner, proceedsToken, proceeds - flipped);
         _credit(order.owner, collateralToken, released);
     }
 
@@ -245,6 +264,47 @@ abstract contract CollateralVault is EpochBook {
         internal
         view
         virtual;
+
+    /// @dev The same test without reverting, for orders the market opens itself. MarketGuard
+    /// implements it.
+    function _placementAllowed(address owner, address asset, OptionType side, uint256 size)
+        internal
+        view
+        virtual
+        returns (bool);
+
+    /// @dev Reverts while the order is part of a renewal batch that hasn't settled. RenewalBatch
+    /// implements it.
+    function _requireNotFrozen(uint256 id, Order storage order) internal view virtual;
+
+    /// @dev Turns exercise proceeds into the opposite order at the flip target, in whole lots the
+    /// proceeds fully collateralize, and returns how much of them it used. Returns 0 and opens
+    /// nothing when the new order couldn't be placed: paused, halted, delisted or over a cap.
+    function _flip(uint256 fromId, Order storage from, uint256 proceeds)
+        private
+        returns (uint256 used)
+    {
+        OptionType side = from.side == OptionType.Call ? OptionType.Put : OptionType.Call;
+        uint256 perLot = side == OptionType.Call
+            ? from.lot
+            : Units.valueExact(from.lot, from.flipTarget, from.rawUnit);
+        // Whole lots only: floor on purpose, the remainder is credited by the caller.
+        // slither-disable-next-line divide-before-multiply
+        uint256 lots = proceeds / perLot;
+        uint256 size = lots * from.lot;
+        if (size == 0 || !_placementAllowed(from.owner, from.asset, side, size)) return 0;
+        used = lots * perLot;
+        uint256 id = ++orderCount;
+        Order storage to = _orders[id];
+        (to.owner, to.asset, to.side, to.status) =
+        (from.owner, from.asset, side, OrderStatus.Active);
+        (to.target, to.minPremium, to.rawUnit, to.lot) =
+        (from.flipTarget, from.minPremium, from.rawUnit, from.lot);
+        _grow(to, size);
+        idleSize[to.asset][side][to.target] += size;
+        emit OrderPlaced(id, to.owner, to.asset, side, to.target, to.minPremium, size, false, 0);
+        emit OrderFlipped(fromId, id);
+    }
 
     function _written(uint256 series) internal view returns (uint256) {
         return _pools[series].written;
@@ -279,6 +339,10 @@ abstract contract CollateralVault is EpochBook {
         uint256 uncommitted = order.size - order.committed;
         if (amount > uncommitted) revert ExceedsUncommitted(orderId, amount, uncommitted);
 
+        if (order.series == 0) {
+            idleSize[order.asset][order.side][order.target] -= uncommitted;
+            attachedOrders[order.asset][order.side][order.target] += 1;
+        }
         order.series = series;
         order.committed += amount;
         Pool storage pool = _pools[series];

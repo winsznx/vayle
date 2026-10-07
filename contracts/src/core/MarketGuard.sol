@@ -5,7 +5,7 @@ import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step
 import {StockTokenRegistry} from "../assets/StockTokenRegistry.sol";
 import {ExternalReads} from "../libraries/ExternalReads.sol";
 import {OptionType} from "../libraries/SeriesId.sol";
-import {QuoteSettlement} from "./QuoteSettlement.sol";
+import {RenewalBatch} from "./RenewalBatch.sol";
 
 /// @title MarketGuard
 /// @notice Roles, pauses, the emergency halt and launch caps.
@@ -14,7 +14,7 @@ import {QuoteSettlement} from "./QuoteSettlement.sol";
 /// at most 72 hours, extends every exercise window by exactly the halted time, and the guardian
 /// can't start another one until 72 hours after it ends. Only the owner can renew a halt. Caps are
 /// in raw units of the underlying per asset and side, checked only when exposure grows.
-abstract contract MarketGuard is QuoteSettlement, Ownable2Step {
+abstract contract MarketGuard is RenewalBatch, Ownable2Step {
     uint64 public constant HALT_DURATION = 72 hours;
     uint64 public constant GUARDIAN_HALT_COOLDOWN = 72 hours;
 
@@ -207,6 +207,41 @@ abstract contract MarketGuard is QuoteSettlement, Ownable2Step {
         if (total > caps.openSize) revert CapExceeded(Cap.OpenSize, total, caps.openSize);
         uint256 wallet = walletSize[owner_][asset][side] + size;
         if (wallet > caps.walletSize) revert CapExceeded(Cap.WalletSize, wallet, caps.walletSize);
+    }
+
+    /// @dev For flips: the same tests as a placement, plus the listing, without reverting.
+    function _placementAllowed(address owner_, address asset, OptionType side, uint256 size)
+        internal
+        view
+        override
+        returns (bool)
+    {
+        if (_halted() || paused || assetPaused[asset] || !registry.isListed(asset)) return false;
+        Caps storage caps = _caps[asset][side];
+        return openSize[asset][side] + size <= caps.openSize
+            && walletSize[owner_][asset][side] + size <= caps.walletSize;
+    }
+
+    function _batchLimits(address asset, uint256 series)
+        internal
+        view
+        override
+        returns (uint256 seriesRoom, uint256 fillSize)
+    {
+        Caps storage caps = _caps[asset][_key(series).optionType];
+        uint256 written = _written(series);
+        seriesRoom = caps.seriesOpenInterest > written ? caps.seriesOpenInterest - written : 0;
+        fillSize = caps.fillSize;
+    }
+
+    function _fillsBlocked(address asset) internal view override returns (bool) {
+        return _halted() || !registry.isListed(asset) || paused || assetPaused[asset]
+            || ExternalReads.oraclePaused(asset);
+    }
+
+    function _halted() private view returns (bool) {
+        uint256 count = _halts.length;
+        return count != 0 && block.timestamp < _halts[count - 1].end;
     }
 
     function _setGuardian(address guardian_) private {

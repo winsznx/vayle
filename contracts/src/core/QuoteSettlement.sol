@@ -130,9 +130,29 @@ abstract contract QuoteSettlement is SettlementEngine, EIP712 {
         SeriesKey storage key = _key(quote.series);
         Order storage o = _orderStorage(orderId);
         _requireFillsOpen(key.asset);
+        _requireNotFrozen(orderId, o);
         if (quote.taker != address(0) && quote.taker != o.owner) {
             revert TakerMismatch(quote.taker, o.owner);
         }
+        digest = _authorizeQuote(quote, signature, key);
+        uint256 filled = quoteFilled[digest];
+        if (filled + amount > quote.maxAmount) {
+            revert QuoteOverfilled(digest, filled, amount, quote.maxAmount);
+        }
+        if (amount < quote.minFill && filled + amount != quote.maxAmount) {
+            revert BelowMinimumFill(amount, quote.minFill);
+        }
+        _requirePriced(quote, key);
+        if (quote.premium < o.minPremium) revert BelowMinimumPremium(quote.premium, o.minPremium);
+        _checkFillCaps(key.asset, quote.series, amount);
+    }
+
+    /// @dev The maker's consent: deadline within the series' life, nonce live, signature valid.
+    function _authorizeQuote(Quote calldata quote, bytes calldata signature, SeriesKey storage key)
+        internal
+        view
+        returns (bytes32 digest)
+    {
         if (quote.deadline > key.expiry) revert DeadlineAfterExpiry(quote.deadline, key.expiry);
         if (block.timestamp > quote.deadline) revert QuoteExpired(quote.deadline);
         if (quote.nonce < minNonce[quote.maker]) {
@@ -142,17 +162,12 @@ abstract contract QuoteSettlement is SettlementEngine, EIP712 {
         if (!SignatureChecker.isValidSignatureNow(quote.maker, digest, signature)) {
             revert BadSignature(quote.maker);
         }
-        uint256 filled = quoteFilled[digest];
-        if (filled + amount > quote.maxAmount) {
-            revert QuoteOverfilled(digest, filled, amount, quote.maxAmount);
-        }
-        if (amount < quote.minFill && filled + amount != quote.maxAmount) {
-            revert BelowMinimumFill(amount, quote.minFill);
-        }
+    }
+
+    /// @dev The premium sits on the epoch's price tick, and the fee is within what the maker signed.
+    function _requirePriced(Quote calldata quote, SeriesKey storage key) internal view {
         Units.requireOnTick(quote.premium, _epoch(key.asset, key.expiry).priceTick);
-        if (quote.premium < o.minPremium) revert BelowMinimumPremium(quote.premium, o.minPremium);
         if (feeBps > quote.maxFeeBps) revert FeeAboveQuote(feeBps, quote.maxFeeBps);
-        _checkFillCaps(key.asset, quote.series, amount);
     }
 
     /// @dev Writes the order into the series, collects premium and fee from the maker, credits

@@ -59,7 +59,7 @@ contract MarketHandler is Test {
 
     /// @dev Called right after a user action succeeded. A revert never reaches it.
     function _acted() internal {
-        if (market.haltedUntil() > block.timestamp) actedWhileHalted = true;
+        if (market.haltedUntil() > vm.getBlockTimestamp()) actedWhileHalted = true;
     }
 
     function _paused() internal view returns (bool) {
@@ -103,7 +103,7 @@ contract MarketHandler is Test {
 
     function fill(uint256 seed, uint256 lots, uint256 premiumTicks) external {
         uint256 count = market.orderCount();
-        if (finalized || count == 0 || block.timestamp >= expiry) return;
+        if (finalized || count == 0 || vm.getBlockTimestamp() >= expiry) return;
         uint256 id = seed % count + 1;
         CollateralVault.Order memory o = market.orderOf(id);
         uint256 series = o.side == OptionType.Call ? callSeries : putSeries;
@@ -133,8 +133,10 @@ contract MarketHandler is Test {
 
     /// @dev The keeper pings up to ten minutes into the exercise window.
     function toWindow() external {
-        if (block.timestamp >= expiry) return;
-        uint256 from = block.timestamp > expiry - 5 minutes ? block.timestamp : expiry - 5 minutes;
+        if (vm.getBlockTimestamp() >= expiry) return;
+        uint256 from = vm.getBlockTimestamp() > expiry - 5 minutes
+            ? vm.getBlockTimestamp()
+            : expiry - 5 minutes;
         for (uint256 t = from; t <= expiry + 10 minutes; t += 1 minutes) {
             vm.warp(t);
             liveness.checkpoint();
@@ -143,7 +145,10 @@ contract MarketHandler is Test {
 
     function exercise(bool put, uint256 lots) external {
         uint256 series = put ? putSeries : callSeries;
-        if (finalized || block.timestamp < expiry || block.timestamp >= market.windowEnd(series)) {
+        if (
+            finalized || vm.getBlockTimestamp() < expiry
+                || vm.getBlockTimestamp() >= market.windowEnd(series)
+        ) {
             return;
         }
         uint256 held = market.balanceOf(quoter, series) / LOT;
@@ -156,7 +161,7 @@ contract MarketHandler is Test {
     /// @dev Moves past both windows, beyond the 24-hour gap budget and every halt so far.
     function finalize() external {
         if (finalized) return;
-        uint256 base = block.timestamp > expiry ? block.timestamp : expiry;
+        uint256 base = vm.getBlockTimestamp() > expiry ? vm.getBlockTimestamp() : expiry;
         vm.warp(base + 27 hours + 72 hours * market.haltCount());
         market.finalize(callSeries);
         market.finalize(putSeries);
@@ -189,13 +194,13 @@ contract MarketHandler is Test {
     }
 
     function halt() external {
-        if (market.haltedUntil() > block.timestamp) return;
+        if (market.haltedUntil() > vm.getBlockTimestamp()) return;
         vm.prank(guardian);
         market.halt();
     }
 
     function endHalt() external {
-        if (market.haltedUntil() <= block.timestamp) return;
+        if (market.haltedUntil() <= vm.getBlockTimestamp()) return;
         vm.prank(guardian);
         market.endHalt();
     }

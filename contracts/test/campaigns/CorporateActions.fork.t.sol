@@ -65,7 +65,7 @@ contract CorporateActionsForkTest is VayleMarketFork {
 
     function test_aTwoForOneSplitMidWeekPreservesEveryEntitlement() public {
         // #given
-        _setMultiplier(IMultiplierAdmin(nvda).uiMultiplier() * 2, block.timestamp);
+        _setMultiplier(IMultiplierAdmin(nvda).uiMultiplier() * 2, vm.getBlockTimestamp());
         // #when
         _settleTheWeek();
         // #then
@@ -74,7 +74,7 @@ contract CorporateActionsForkTest is VayleMarketFork {
 
     function test_aReverseSplitMidWeekPreservesEveryEntitlement() public {
         // #given
-        _setMultiplier(IMultiplierAdmin(nvda).uiMultiplier() / 2, block.timestamp);
+        _setMultiplier(IMultiplierAdmin(nvda).uiMultiplier() / 2, vm.getBlockTimestamp());
         // #when
         _settleTheWeek();
         // #then

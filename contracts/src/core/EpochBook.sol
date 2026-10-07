@@ -30,10 +30,15 @@ abstract contract EpochBook is OptionSeries, ReentrancyGuardTransient {
     uint64 public constant CLOSE_OBSERVATION_RECENCY = 5 minutes;
     uint256 public constant REFERENCE_RECENCY = 8 days;
     uint32 public constant WINDOW_LENGTH = 2 hours;
+    /// @notice The renewal batch deadline is Sunday 20:00 ET, this long before the boundary's
+    /// Monday 09:30 ET creation deadline. A DST change happens at 02:00 on a Sunday, so the two
+    /// times always share an offset.
+    uint64 public constant BATCH_DEADLINE_LEAD = 13 hours + 30 minutes;
 
     struct Epoch {
         uint64 opening;
         uint64 expiry;
+        uint64 batchDeadline;
         uint32 windowLength;
         uint64 referenceUpdatedAt;
         uint80 referenceRound;
@@ -128,6 +133,7 @@ abstract contract EpochBook is OptionSeries, ReentrancyGuardTransient {
         _epochs[asset][expiry] = Epoch({
             opening: opening,
             expiry: expiry,
+            batchDeadline: boundary.creationDeadline - BATCH_DEADLINE_LEAD,
             windowLength: WINDOW_LENGTH,
             referenceUpdatedAt: updatedAt,
             referenceRound: round,
@@ -221,20 +227,35 @@ abstract contract EpochBook is OptionSeries, ReentrancyGuardTransient {
         if (!_isListedStrike(e, optionType, strike)) {
             revert StrikeNotListed(asset, expiry, optionType, strike);
         }
-        id = _register(
-            SeriesKey({
-                chainId: block.chainid,
-                asset: asset,
-                optionType: optionType,
-                strike: strike,
-                expiry: expiry,
-                windowLength: e.windowLength,
-                unitBasis: SeriesId.RAW_UNITS,
-                exerciseStyle: ExerciseStyle.European,
-                settlementType: SettlementType.Physical,
-                collateralToken: optionType == OptionType.Call ? asset : usdg,
-                collateralMode: CollateralMode.Idle
-            })
-        );
+        id = _register(_seriesKey(e, asset, optionType, strike));
+    }
+
+    /// @dev The ID a series in epoch `e` has, whether or not it's registered yet.
+    function _seriesIdIn(Epoch storage e, address asset, OptionType optionType, uint256 strike)
+        internal
+        view
+        returns (uint256)
+    {
+        return SeriesId.id(_seriesKey(e, asset, optionType, strike));
+    }
+
+    function _seriesKey(Epoch storage e, address asset, OptionType optionType, uint256 strike)
+        private
+        view
+        returns (SeriesKey memory)
+    {
+        return SeriesKey({
+            chainId: block.chainid,
+            asset: asset,
+            optionType: optionType,
+            strike: strike,
+            expiry: e.expiry,
+            windowLength: e.windowLength,
+            unitBasis: SeriesId.RAW_UNITS,
+            exerciseStyle: ExerciseStyle.European,
+            settlementType: SettlementType.Physical,
+            collateralToken: optionType == OptionType.Call ? asset : usdg,
+            collateralMode: CollateralMode.Idle
+        });
     }
 }

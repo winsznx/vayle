@@ -321,7 +321,7 @@ contract CollateralVaultForkTest is VaultFork {
         uint256 multiplier = IMultiplierAdmin(nvda).uiMultiplier();
         // #when: the real updater applies a 4-for-1 split immediately
         vm.prank(ChainActors.MULTIPLIER_UPDATER);
-        IMultiplierAdmin(nvda).updateMultiplier(multiplier * 4, block.timestamp);
+        IMultiplierAdmin(nvda).updateMultiplier(multiplier * 4, vm.getBlockTimestamp());
         // #then
         assertEq(IMultiplierAdmin(nvda).uiMultiplier(), multiplier * 4);
         assertEq(abi.encode(vault.poolOf(callSeries)), abi.encode(callBefore));

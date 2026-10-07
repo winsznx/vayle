@@ -60,7 +60,8 @@ contract DeployVayleForkTest is MarketFork {
         (teamMaker, teamMakerKey) = makeAddrAndKey("teamMaker");
         // The multisig is a contract on mainnet. Any code stands in for it here.
         vm.etch(multisig, hex"00");
-        script = new DeployVayle();
+        // Loaded from its artifact: embedding it would push this test past the code size limit.
+        script = DeployVayle(vm.deployCode("DeployVayle.s.sol:DeployVayle"));
         d = script.deploy(_config(), address(script));
         // The fixture's helpers now drive the deployed contracts.
         (calendar, registry, adapter, liveness) = (d.calendar, d.registry, d.adapter, d.liveness);
@@ -129,7 +130,7 @@ contract DeployVayleForkTest is MarketFork {
         bytes memory call = abi.encodeCall(MarketGuard.setFee, (uint16(100), treasury));
         vm.prank(multisig);
         d.timelock.schedule(address(d.market), 0, call, bytes32(0), bytes32(0), DELAY);
-        vm.warp(block.timestamp + DELAY);
+        vm.warp(vm.getBlockTimestamp() + DELAY);
         // #when
         vm.prank(multisig);
         d.timelock.execute(address(d.market), 0, call, bytes32(0), bytes32(0));

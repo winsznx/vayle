@@ -205,7 +205,7 @@ contract VayleMarketForkTest is VayleMarketFork {
         // #given
         vm.prank(guardian);
         market.halt();
-        uint64 end = uint64(block.timestamp + 72 hours);
+        uint64 end = uint64(vm.getBlockTimestamp() + 72 hours);
         // #when
         uint64 reported = market.haltedUntil();
         // #then
@@ -216,7 +216,7 @@ contract VayleMarketForkTest is VayleMarketFork {
         // #given
         vm.prank(guardian);
         market.halt();
-        vm.warp(block.timestamp + 72 hours);
+        vm.warp(vm.getBlockTimestamp() + 72 hours);
         // #when
         uint64 reported = market.haltedUntil();
         // #then
@@ -228,7 +228,7 @@ contract VayleMarketForkTest is VayleMarketFork {
         _writeCall(alice, ONE);
         vm.prank(guardian);
         market.halt();
-        vm.warp(block.timestamp + 72 hours);
+        vm.warp(vm.getBlockTimestamp() + 72 hours);
         // #when
         vm.prank(alice);
         market.withdraw(usdg, PREMIUM);
@@ -240,7 +240,7 @@ contract VayleMarketForkTest is VayleMarketFork {
         // #given
         vm.startPrank(guardian);
         market.halt();
-        uint64 end = uint64(block.timestamp + 72 hours);
+        uint64 end = uint64(vm.getBlockTimestamp() + 72 hours);
         // #then
         vm.expectRevert(abi.encodeWithSelector(MarketGuard.AlreadyHalted.selector, end));
         // #when
@@ -252,7 +252,7 @@ contract VayleMarketForkTest is VayleMarketFork {
         // #given
         vm.prank(guardian);
         market.halt();
-        uint64 end = uint64(block.timestamp + 72 hours);
+        uint64 end = uint64(vm.getBlockTimestamp() + 72 hours);
         vm.warp(end + 72 hours - 1);
         // #then
         vm.expectRevert(
@@ -267,7 +267,7 @@ contract VayleMarketForkTest is VayleMarketFork {
         // #given
         vm.prank(guardian);
         market.halt();
-        vm.warp(block.timestamp + 144 hours);
+        vm.warp(vm.getBlockTimestamp() + 144 hours);
         // #when
         vm.prank(guardian);
         market.halt();
@@ -279,8 +279,8 @@ contract VayleMarketForkTest is VayleMarketFork {
         // #given
         vm.prank(guardian);
         market.halt();
-        vm.warp(block.timestamp + 70 hours);
-        uint64 renewedEnd = uint64(block.timestamp + 72 hours);
+        vm.warp(vm.getBlockTimestamp() + 70 hours);
+        uint64 renewedEnd = uint64(vm.getBlockTimestamp() + 72 hours);
         // #when
         vm.prank(timelock);
         market.renewHalt();
@@ -295,7 +295,7 @@ contract VayleMarketForkTest is VayleMarketFork {
         // #given
         vm.prank(guardian);
         market.halt();
-        uint64 start = uint64(block.timestamp);
+        uint64 start = uint64(vm.getBlockTimestamp());
         vm.warp(start + 1 hours);
         // #when
         vm.prank(guardian);
