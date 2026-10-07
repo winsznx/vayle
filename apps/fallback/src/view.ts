@@ -38,6 +38,19 @@ export function moment(seconds: bigint): string {
   return `${EASTERN.format(date)} (${utc} UTC)`;
 }
 
+// A length of time the market defines, in words, so copy never restates one of its numbers.
+export function duration(seconds: bigint): string {
+  const parts = [
+    [seconds / 3600n, "hour"],
+    [(seconds % 3600n) / 60n, "minute"],
+    [seconds % 60n, "second"],
+  ] as const;
+  const words = parts
+    .filter(([count]) => count > 0n)
+    .map(([count, unit]) => `${count} ${unit}${count === 1n ? "" : "s"}`);
+  return words.length === 0 ? "0 seconds" : words.join(" ");
+}
+
 export interface OrderLine {
   readonly what: string;
   readonly state: string;

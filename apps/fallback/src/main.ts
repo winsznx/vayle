@@ -2,10 +2,12 @@ import { livenessCheckpointAbi, vayleMarketAbi } from "@vayle/abi";
 import {
   approve,
   cancelOrder,
+  checkpoint,
   claimable,
   exercise,
   finalize,
   finalizeBlockedUntil,
+  observeClose,
   ordersOf,
   seriesState,
   settleOrder,
@@ -31,6 +33,8 @@ import {
 } from "viem";
 import facts from "../../../deployments/robinhood-mainnet.json" with { type: "json" };
 import { button, field, h } from "./dom.ts";
+import { refusalOf, refusalText } from "./refusals.ts";
+import { readSchedule, scheduleAdvice, type KnownWindow, type Schedule } from "./schedule.ts";
 import {
   amount,
   calldata,
@@ -70,6 +74,10 @@ class NotAMarket extends Error {
   override readonly name = "NotAMarket";
 }
 
+type ScheduleRead =
+  | { readonly ok: true; readonly value: Schedule }
+  | { readonly ok: false; readonly problem: string };
+
 interface Read {
   readonly now: bigint;
   readonly account: Address;
@@ -79,6 +87,7 @@ interface Read {
   readonly held: ReadonlyMap<bigint, HeldOpen>;
   readonly claimableAsset: bigint;
   readonly claimableUsdg: bigint;
+  readonly schedule: ScheduleRead;
 }
 
 interface Exercise {
@@ -168,11 +177,21 @@ async function readMarket(client: PublicClient, market: Address, owner: Address)
   } catch (error) {
     throw new NotAMarket(`${market} isn't a Vayle market.`, { cause: error });
   }
-  const [block, orders, claimableAsset, claimableUsdg] = await Promise.all([
-    client.getBlock({ blockTag: "latest" }),
+  const latest = client.getBlock({ blockTag: "latest" });
+  // The schedule is read beside the rest at the same chain time. A failure there stays in its own
+  // section, so it can never stand between a holder and their exits.
+  const scheduled = latest
+    .then(({ timestamp }) => readSchedule(client, market, asset, timestamp))
+    .then(
+      (value): ScheduleRead => ({ ok: true, value }),
+      (error: unknown): ScheduleRead => ({ ok: false, problem: describe(error) }),
+    );
+  const [block, orders, claimableAsset, claimableUsdg, schedule] = await Promise.all([
+    latest,
     ordersOf(client, market, owner),
     claimable(client, market, owner, asset),
     claimable(client, market, owner, usdg),
+    scheduled,
   ]);
   const ids = [...new Set(orders.filter((o) => o.series !== 0n).map((o) => o.series))];
   const series = new Map(
@@ -216,6 +235,7 @@ async function readMarket(client: PublicClient, market: Address, owner: Address)
     held,
     claimableAsset,
     claimableUsdg,
+    schedule,
   };
 }
 
@@ -286,8 +306,13 @@ async function switchChain(wallet: Wallet): Promise<void> {
   }
 }
 
-// Sends each call after the one before it confirms, then reads everything again.
-async function send(label: string, calls: readonly Call[]): Promise<void> {
+// Sends each call after the one before it confirms, then reads everything again. `explain` turns a
+// failure into the line the activity log shows.
+async function send(
+  label: string,
+  calls: readonly Call[],
+  explain: (error: unknown) => string = describe,
+): Promise<void> {
   const { wallet, account } = state;
   if (wallet === null || account === null) return;
   const walletClient = createWalletClient({ account, chain, transport: custom(wallet.provider) });
@@ -314,7 +339,7 @@ async function send(label: string, calls: readonly Call[]): Promise<void> {
     }
     note(`${label}: done.`);
   } catch (error) {
-    note(`${label} didn't go through: ${describe(error)}`);
+    note(`${label} didn't go through: ${explain(error)}`);
   } finally {
     state.busy = false;
     await load();
@@ -345,7 +370,11 @@ function orderAction(
 }
 
 // A button that sends the calls when a wallet is connected, and their calldata either way.
-function action(label: string, calls: readonly Call[]): HTMLElement {
+function action(
+  label: string,
+  calls: readonly Call[],
+  explain?: (error: unknown) => string,
+): HTMLElement {
   const canSend = state.wallet !== null && state.account !== null;
   return h(
     "div",
@@ -354,12 +383,16 @@ function action(label: string, calls: readonly Call[]): HTMLElement {
       button(
         label,
         () => {
-          void send(label, calls);
+          void send(label, calls, explain);
         },
         state.busy,
       ),
-    h("details", {}, h("summary", {}, "Calldata"), h("pre", {}, calldata(calls))),
+    calldataPanel(calls),
   );
+}
+
+function calldataPanel(calls: readonly Call[]): HTMLElement {
+  return h("details", {}, h("summary", {}, "Calldata"), h("pre", {}, calldata(calls)));
 }
 
 async function prepareExercise(): Promise<void> {
@@ -569,6 +602,59 @@ function withdrawSection(read: Read): HTMLElement {
   );
 }
 
+// The account's own series as windows, with the end finalizing would find when that's later than
+// the market's view, so a window held open by quiet time counts as open.
+function knownWindows(read: Read): KnownWindow[] {
+  return [...read.series.values()].map((s) => {
+    const held = read.held.get(s.id);
+    return {
+      opened: s.expiry,
+      end: held?.until ?? s.windowEnd,
+      closed: s.settled || (held === undefined && read.now >= s.windowEnd),
+    };
+  });
+}
+
+function scheduleSection(read: Read): HTMLElement {
+  const title = h("h2", {}, "Keep the week on schedule");
+  if (!read.schedule.ok) {
+    return h(
+      "section",
+      {},
+      title,
+      h(
+        "p",
+        { class: "problem", role: "alert" },
+        `Couldn't read the market's schedule: ${read.schedule.problem}`,
+      ),
+    );
+  }
+  const schedule = read.schedule.value;
+  const advice = scheduleAdvice(schedule, knownWindows(read), units.assetSymbol);
+  const explain = (error: unknown): string => {
+    const refusal = refusalOf(error);
+    return refusal === null ? describe(error) : refusalText(refusal, schedule.lookback);
+  };
+  const observation = [observeClose(read.market, asset)];
+  return h(
+    "section",
+    {},
+    title,
+    h("p", {}, advice.why),
+    h("p", {}, advice.lastCheckpoint),
+    h("p", {}, advice.ahead),
+    advice.around.length > 0 && h("ul", {}, ...advice.around.map((line) => h("li", {}, line))),
+    h("h3", {}, "Checkpoint"),
+    ...advice.checkpoint.map((line) => h("p", {}, line)),
+    action("Checkpoint the chain", [checkpoint(schedule.liveness)], explain),
+    h("h3", {}, "Observe the close"),
+    h("p", advice.observe.refused ? { class: "problem" } : {}, advice.observe.text),
+    advice.observe.open
+      ? action("Observe the close", observation, explain)
+      : h("div", { class: "action" }, calldataPanel(observation)),
+  );
+}
+
 function exerciseSection(): HTMLElement {
   const prepared = state.exercise;
   return h(
@@ -628,7 +714,7 @@ function render(): void {
   app.replaceChildren(
     walletSection(),
     marketSection(),
-    ...(read === null ? [] : [ordersSection(read), withdrawSection(read)]),
+    ...(read === null ? [] : [ordersSection(read), withdrawSection(read), scheduleSection(read)]),
     exerciseSection(),
     logSection(),
   );

@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { vayleMarketAbi } from "@vayle/abi";
+import { livenessCheckpointAbi, vayleMarketAbi } from "@vayle/abi";
 import { decodeFunctionData, getAddress } from "viem";
 import {
   cancelOrder,
+  checkpoint,
   nextStep,
+  observeClose,
   placeOrder,
   withdraw,
   withGasMargin,
@@ -14,6 +16,7 @@ import {
 
 const MARKET = getAddress("0x00000000000000000000000000000000000000aa");
 const NVDA = getAddress("0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC");
+const LIVENESS = getAddress("0x00000000000000000000000000000000000000cc");
 
 function order(overrides: Partial<OrderState> = {}): OrderState {
   return {
@@ -115,5 +118,29 @@ describe("withGasMargin", () => {
     const limit = withGasMargin(estimate);
     // #then
     assert.equal(limit, 142_786n + 35_696n + 100_000n);
+  });
+});
+
+describe("schedule calls", () => {
+  it("send a checkpoint to the liveness contract, not the market", () => {
+    // #when
+    const call = checkpoint(LIVENESS);
+    const decoded = decodeFunctionData({ abi: livenessCheckpointAbi, data: call.data });
+    // #then
+    assert.deepEqual(
+      [call.to, decoded.functionName, decoded.args],
+      [LIVENESS, "checkpoint", undefined],
+    );
+  });
+
+  it("send a close observation to the market, for the asset", () => {
+    // #when
+    const call = observeClose(MARKET, NVDA);
+    const decoded = decodeFunctionData({ abi: vayleMarketAbi, data: call.data });
+    // #then
+    assert.deepEqual(
+      [call.to, decoded.functionName, decoded.args],
+      [MARKET, "observeClose", [NVDA]],
+    );
   });
 });

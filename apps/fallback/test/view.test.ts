@@ -1,7 +1,15 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { cancelOrder, settleOrder, type OrderState, type SeriesState } from "@vayle/market";
-import { amount, calldata, checkExercise, moment, orderLine, type Position } from "../src/view.ts";
+import {
+  amount,
+  calldata,
+  checkExercise,
+  duration,
+  moment,
+  orderLine,
+  type Position,
+} from "../src/view.ts";
 
 const ONE = 10n ** 18n;
 // Fri Oct 9 2026 16:00 EDT, and its exercise window's end.
@@ -57,6 +65,22 @@ describe("amounts and times", () => {
   it("shows a chain time in New York time and in UTC", () => {
     // #then
     assert.equal(moment(EXPIRY), "Fri, Oct 9, 2026, 16:00 EDT (2026-10-09 20:00 UTC)");
+  });
+
+  it("says a length of time from the chain in words", () => {
+    // #when
+    const words = [300n, 1800n, 3600n, 7200n, 9000n, 86_400n, 61n, 0n].map(duration);
+    // #then
+    assert.deepEqual(words, [
+      "5 minutes",
+      "30 minutes",
+      "1 hour",
+      "2 hours",
+      "2 hours 30 minutes",
+      "24 hours",
+      "1 minute 1 second",
+      "0 seconds",
+    ]);
   });
 });
 

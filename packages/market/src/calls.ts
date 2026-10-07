@@ -1,4 +1,4 @@
-import { vayleMarketAbi } from "@vayle/abi";
+import { livenessCheckpointAbi, vayleMarketAbi } from "@vayle/abi";
 import { encodeFunctionData, erc20Abi, type Address, type Hex } from "viem";
 
 // Every write a holder or a long holder makes, as a call any wallet can send. The app and the
@@ -117,5 +117,22 @@ export function withdraw(market: Address, token: Address, amount: bigint): Call 
       functionName: "withdraw",
       args: [token, amount],
     }),
+  };
+}
+
+// The keeper's two public calls that keep a week on schedule. Anyone may send them, so the
+// fallback page offers them for when the keeper is down.
+
+export function checkpoint(liveness: Address): Call {
+  return {
+    to: liveness,
+    data: encodeFunctionData({ abi: livenessCheckpointAbi, functionName: "checkpoint" }),
+  };
+}
+
+export function observeClose(market: Address, asset: Address): Call {
+  return {
+    to: market,
+    data: encodeFunctionData({ abi: vayleMarketAbi, functionName: "observeClose", args: [asset] }),
   };
 }
