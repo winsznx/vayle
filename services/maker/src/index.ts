@@ -1,4 +1,5 @@
 // For tools that drive the maker outside its Worker, like the local fork.
+export { makerClients } from "./clients.ts";
 export { loadConfig, type MakerConfig } from "./config.ts";
 export type { Clients } from "./execute.ts";
 export type { PriceVerdict, StandDownReason } from "./guard.ts";
