@@ -14,13 +14,13 @@ import {
   type Clients as MakerClients,
   type MakerConfig,
 } from "@vayle/maker";
-import { getAddress } from "viem";
+import { formatUnits, getAddress } from "viem";
 import facts from "../../../deployments/robinhood-mainnet.json" with { type: "json" };
 import type { Accounts } from "./accounts.ts";
 import { FORK_RPC, type ForkClient } from "./anvil.ts";
 import { advanceTarget, FEED_LEAD, minutesTarget, nextTick, type Week } from "./clock.ts";
 import type { Deployment } from "./deploy.ts";
-import { writeCarriedForwardRound } from "./feed.ts";
+import { writeRound } from "./feed.ts";
 import { FEED_WRITES_FILE } from "./paths.ts";
 
 // The maker's pricing inputs on the fork. Illustrative only: the owner sets the real ones.
@@ -116,6 +116,8 @@ export interface AdvanceOptions {
   readonly minutes: number | null;
   // False plays a keeper that has died: no pings, no epochs, nothing settled for anyone.
   readonly keeper: boolean;
+  // The answer the next close crossed gets, in the feed's decimals, or null to repeat the latest.
+  readonly closeAt: bigint | null;
 }
 
 // Moves the fork to the next moment of the week, or some minutes ahead, running the keeper and the
@@ -126,7 +128,11 @@ export async function advance(
   deployment: Deployment,
   accounts: Accounts,
   closes: readonly number[],
-  { minutes, keeper: keeperRuns }: AdvanceOptions = { minutes: null, keeper: true },
+  { minutes, keeper: keeperRuns, closeAt }: AdvanceOptions = {
+    minutes: null,
+    keeper: true,
+    closeAt: null,
+  },
 ): Promise<void> {
   const { keeper, maker } = services(deployment, accounts);
   const now = await chainTime(client);
@@ -147,6 +153,8 @@ export async function advance(
   console.log(
     `Advancing to ${easternTime(target.at)}: ${target.what}${keeperRuns ? "" : ", with no keeper"}.`,
   );
+  // A chosen price goes to the first close crossed. Later closes repeat the latest answer again.
+  let chosen = closeAt;
   let t = now;
   for (;;) {
     const previous = t;
@@ -156,15 +164,19 @@ export async function advance(
     for (const close of closes) {
       const at = close - FEED_LEAD;
       if (previous < at && at <= t) {
-        const write = await writeCarriedForwardRound(
+        const write = await writeRound(
           client,
           getAddress(facts.nvdaUsdFeed.proxy),
           getAddress(facts.nvdaUsdFeed.aggregator),
           at,
+          chosen,
         );
+        chosen = null;
         appendFileSync(FEED_WRITES_FILE, `${JSON.stringify(write)}\n`);
         console.log(
-          `${easternTime(t)}  feed round ${write.round} written: round ${write.copiedFrom}'s answer at ${easternTime(at)}`,
+          write.chosen
+            ? `${easternTime(t)}  feed round ${write.round} written: ${formatUnits(BigInt(write.answer), facts.nvdaUsdFeed.decimals)}, the price chosen with --close-at, at ${easternTime(at)}`
+            : `${easternTime(t)}  feed round ${write.round} written: round ${write.copiedFrom}'s answer at ${easternTime(at)}`,
         );
       }
     }

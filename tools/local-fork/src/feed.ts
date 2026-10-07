@@ -73,6 +73,8 @@ export interface FeedWrite {
   readonly copiedFrom: number;
   readonly answer: string;
   readonly at: number;
+  // True when the answer is a price the person running the fork chose, not the latest real one.
+  readonly chosen: boolean;
 }
 
 const feedAbi = parseAbi([
@@ -96,14 +98,16 @@ async function latest(client: ForkClient, proxy: Address): Promise<[number, bigi
   return [Number(round & AGGREGATOR_ROUND), answer, Number(updatedAt)];
 }
 
-// Appends one round at `at` that repeats the latest real answer: a close the fork can prove, with
-// no price anyone made up. `aggregator` is the one whose layout is described above, and the proxy
-// must still point at it.
-export async function writeCarriedForwardRound(
+// Appends one round at `at`. By default it repeats the latest real answer: a close the fork can
+// prove, with no price anyone made up. A `chosen` answer stands in for a close that moved, to
+// rehearse a week that ends in the money, and the write records that it was chosen.
+// `aggregator` is the one whose layout is described above, and the proxy must still point at it.
+export async function writeRound(
   client: ForkClient,
   proxy: Address,
   aggregator: Address,
   at: number,
+  chosen: bigint | null = null,
 ): Promise<FeedWrite> {
   const current = await client.readContract({
     address: proxy,
@@ -126,7 +130,8 @@ export async function writeCarriedForwardRound(
     );
   }
   const next = round + 1;
-  const value = encodeTransmission({ answer, observedAt: at, recordedAt: at });
+  const written = chosen ?? answer;
+  const value = encodeTransmission({ answer: written, observedAt: at, recordedAt: at });
   await client.setStorageAt({
     address: aggregator,
     index: transmissionSlot(next),
@@ -138,8 +143,15 @@ export async function writeCarriedForwardRound(
     value: toHex(withRound(hotVars, next), { size: 32 }),
   });
   const [readRound, readAnswer, readAt] = await latest(client, proxy);
-  if (readRound !== next || readAnswer !== answer || readAt !== at) {
+  if (readRound !== next || readAnswer !== written || readAt !== at) {
     throw new FeedLayoutChanged(`round ${next} didn't read back through feed ${proxy}`);
   }
-  return { aggregator, round: next, copiedFrom: round, answer: answer.toString(), at };
+  return {
+    aggregator,
+    round: next,
+    copiedFrom: round,
+    answer: written.toString(),
+    at,
+    chosen: chosen !== null,
+  };
 }

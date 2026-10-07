@@ -136,6 +136,7 @@
    ones nearest the close. */
 .chart-close .close-pill {
   position: absolute;
+  z-index: 1;
   left: 0;
   transform: translateY(-50%);
 }
@@ -144,8 +145,10 @@
   border-top: 1.5px dotted var(--brand-line);
 }
 
+/* Labels sit above every level's line, so a price at the close's level doesn't cross out its pill. */
 .chart-mark-label {
   position: absolute;
+  z-index: 1;
   right: 0;
   transform: translateY(-50%);
   padding: 2px 9px;

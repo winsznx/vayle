@@ -4,6 +4,7 @@
 //   pnpm fork advance   move the running fork to the next moment of the week
 //   pnpm fork advance <minutes>   or that many minutes ahead
 //   pnpm fork advance [minutes] --without-keeper   as if the keeper had died
+//   pnpm fork advance --close-at 250.00   the next close at that price, to rehearse a fill
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { boundariesAfter, type Boundary } from "@vayle/calendar";
 import { getAddress, parseEther, parseUnits } from "viem";
@@ -21,11 +22,8 @@ import {
   RECORD_FILE,
   WEB_ENV_FILE,
 } from "./paths.ts";
+import { advanceOptions, USAGE, UsageError } from "./options.ts";
 import { advance, easternTime, latestWeek, type AdvanceOptions } from "./week.ts";
-
-class UsageError extends Error {
-  override readonly name = "UsageError";
-}
 
 const WEEKS = 10;
 const GAS = parseEther("100");
@@ -143,29 +141,12 @@ async function advanceRunning(options: AdvanceOptions): Promise<void> {
   );
 }
 
-function advanceOptions(args: readonly string[]): AdvanceOptions {
-  let minutes: number | null = null;
-  let keeper = true;
-  for (const arg of args) {
-    if (arg === "--without-keeper") {
-      keeper = false;
-      continue;
-    }
-    const value = Number(arg);
-    if (!Number.isInteger(value) || value <= 0 || minutes !== null) {
-      throw new UsageError(
-        `advance takes a whole number of minutes and --without-keeper, not ${arg}`,
-      );
-    }
-    minutes = value;
-  }
-  return { minutes, keeper };
-}
-
 async function main(command: string | undefined, args: readonly string[]): Promise<void> {
   if (command === "up") return up();
-  if (command === "advance") return advanceRunning(advanceOptions(args));
-  throw new UsageError("usage: pnpm fork up | pnpm fork advance [minutes] [--without-keeper]");
+  if (command === "advance") {
+    return advanceRunning(advanceOptions(args, facts.nvdaUsdFeed.decimals));
+  }
+  throw new UsageError(USAGE);
 }
 
 try {

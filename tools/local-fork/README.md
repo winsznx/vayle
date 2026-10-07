@@ -10,6 +10,7 @@ pnpm --filter @vayle/web dev:fork   # the app, pointed at the fork
 pnpm fork advance                   # the next moment of the week
 pnpm fork advance 30                # or 30 minutes ahead
 pnpm fork advance --without-keeper  # as if the keeper had died, to try the fallback page
+pnpm fork advance --close-at 250.00 # the next close at $250, to rehearse an order that fills
 ```
 
 `pnpm fork up` stays in the foreground, and Ctrl-C stops the fork. It needs `ROBINHOOD_RPC_URL` in `.env`, pointing at an RPC with archive state, and anvil and forge on the path.
@@ -30,6 +31,7 @@ To use the app, add a network to your wallet with RPC URL `http://127.0.0.1:8545
 - Contracts, tokens and the feed are mainnet state at the fork block. Balances move from a real holder's account, impersonated.
 - Keys are generated for each fork and are worthless anywhere else. The multisig is a stand-in address with placeholder code, because the deploy requires a contract there.
 - The NVDA/USD feed doesn't update on a fork, so before each close the tool writes one round into the aggregator's storage that repeats the latest real answer. Every write is printed and logged to `deployments/fork/feed-writes.jsonl`, and the tool stops if the aggregator's storage doesn't match the layout it expects.
+- With `--close-at`, the next close the advance crosses gets that price instead, so a week can end in the money and the maker exercises: a sell order above the price sells at its own price, and the NVDA changes hands. The console line and the log entry both mark the price as chosen. Closes after it repeat the latest answer again.
 - The maker's pricing inputs are illustrative. The real ones are the maker Worker's settings.
 - Because the feed only moves at closes here, the maker stands down from mid-week quotes once the round is older than a live feed's would be, and says so each run. Batch bids at the close aren't affected.
 - In fork mode, the app's dev server serves placeholder disclosures and the fork's env file sets `VITE_PLACEMENT=open`, so the order ticket works. Builds never include the placeholder disclosures. The env file also names the market's deploy block, so the app reads history straight from the fork without an indexer.
