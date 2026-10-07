@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "markets": [
+    {
+      "symbol": "NVDA",
+      "token": "0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC",
+      "uid": "0x00000000000000000000000000000000915f477416294f5099a5e0e09f327ce5",
+      "decimals": 18,
+      "feed": "0x379EC4f7C378F34a1B47E4F3cbeBCbAC3E8E9F15",
+      "feedDecimals": 8,
+      "heartbeatSeconds": 86400,
+      "lot": "10000000000000000",
+      "priceTick": "100",
+      "strikeTick": "5000000",
+      "strikeRangeBps": 1000,
+      "strikeStepBasis": { "priceUsdg": "237193720", "block": "82835060" },
+      "sell": {
+        "enabled": true,
+        "openSize": "10000000000000000000",
+        "walletSize": "4000000000000000000",
+        "seriesOpenInterest": "6000000000000000000",
+        "fillSize": "2000000000000000000"
+      },
+      "buy": {
+        "enabled": true,
+        "openSize": "4000000000000000000",
+        "walletSize": "2000000000000000000",
+        "seriesOpenInterest": "4000000000000000000",
+        "fillSize": "2000000000000000000"
+      },
+      "maker": { "realizedVolBps": 2406, "volMarginBps": 1000, "volBps": 3406, "realizedVolBlock": "82835060" }
+    }
+  ]
+}

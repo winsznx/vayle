@@ -160,6 +160,15 @@ importers:
         specifier: 2.57.3
         version: 2.57.3(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.6.5)
 
+  packages/markets:
+    dependencies:
+      '@vayle/units':
+        specifier: workspace:*
+        version: link:../units
+      viem:
+        specifier: 2.57.3
+        version: 2.57.3(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.6.5)
+
   packages/repo-guard: {}
 
   packages/units:
@@ -252,6 +261,18 @@ importers:
       '@vayle/maker':
         specifier: workspace:*
         version: link:../../services/maker
+      viem:
+        specifier: 2.57.3
+        version: 2.57.3(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.6.5)
+
+  tools/market-check:
+    dependencies:
+      '@vayle/calendar':
+        specifier: workspace:*
+        version: link:../../packages/calendar
+      '@vayle/chain-facts':
+        specifier: workspace:*
+        version: link:../../packages/chain-facts
       viem:
         specifier: 2.57.3
         version: 2.57.3(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.6.5)
@@ -4987,7 +5008,7 @@ snapshots:
 
   '@scure/bip32@1.7.0':
     dependencies:
-      '@noble/curves': 1.9.1
+      '@noble/curves': 1.9.7
       '@noble/hashes': 1.8.0
       '@scure/base': 1.2.6
 
@@ -7228,7 +7249,7 @@ snapshots:
   ox@0.6.7(typescript@6.0.3)(zod@3.25.76):
     dependencies:
       '@adraffy/ens-normalize': 1.11.1
-      '@noble/curves': 1.9.1
+      '@noble/curves': 1.9.7
       '@noble/hashes': 1.8.0
       '@scure/bip32': 1.7.0
       '@scure/bip39': 1.6.0
@@ -7242,7 +7263,7 @@ snapshots:
   ox@0.6.9(typescript@6.0.3)(zod@3.25.76):
     dependencies:
       '@adraffy/ens-normalize': 1.11.1
-      '@noble/curves': 1.9.1
+      '@noble/curves': 1.9.7
       '@noble/hashes': 1.8.0
       '@scure/bip32': 1.7.0
       '@scure/bip39': 1.6.0
