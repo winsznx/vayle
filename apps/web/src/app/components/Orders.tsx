@@ -88,7 +88,11 @@ export function Orders(props: {
       {account === null ? (
         <p className="empty-state">Connect a wallet to see your orders.</p>
       ) : visible.length === 0 ? (
-        <p className="empty-state">No orders yet. Choose a price on the ladder to place one.</p>
+        <p className="empty-state">
+          {account.orders.length === 0
+            ? "No orders yet. Choose a price on the ladder to place one."
+            : "No open orders. Choose a price on the ladder to place another."}
+        </p>
       ) : (
         <table className="orders-table" aria-labelledby="orders-title">
           <thead>
