@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Vayle fallback</title>
+    <style>
+      body {
+        font:
+          16px/1.5 system-ui,
+          sans-serif;
+        max-width: 46rem;
+        margin: 0 auto;
+        padding: 1rem;
+      }
+      section {
+        border-top: 1px solid currentColor;
+        margin-top: 2rem;
+        padding-top: 0.5rem;
+      }
+      label {
+        display: block;
+        margin: 0.5rem 0;
+      }
+      input {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+        font: inherit;
+        padding: 0.25rem;
+      }
+      button {
+        font: inherit;
+        margin: 0.25rem 0.5rem 0.25rem 0;
+      }
+      code,
+      pre {
+        font-family: ui-monospace, monospace;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+      }
+      .orders > li {
+        margin-bottom: 1rem;
+        overflow-wrap: anywhere;
+      }
+      .problem {
+        font-weight: bold;
+      }
+      .quiet {
+        opacity: 0.75;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Vayle fallback</h1>
+    <p>
+      This page reaches the Vayle market contracts through your wallet, with no Vayle server in
+      between. Use it to see your orders, settle, cancel, withdraw and exercise when the main app
+      isn't available. Every action also shows its calldata, so you can send it from any wallet.
+    </p>
+    <main id="app">
+      <noscript>This page needs JavaScript to read the chain.</noscript>
+    </main>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
