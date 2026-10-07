@@ -1,7 +1,10 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import { createWriteStream } from "node:fs";
+import { createWriteStream, type WriteStream } from "node:fs";
+import { createInterface } from "node:readline";
+import type { Readable } from "node:stream";
 import { setTimeout as sleep } from "node:timers/promises";
 import { robinhoodChain } from "@vayle/chain-facts/chain";
+import { withoutUrlPaths } from "@vayle/chain-facts/rpc-errors";
 import {
   createTestClient,
   defineChain,
@@ -13,6 +16,7 @@ import {
 } from "viem";
 import facts from "../../../deployments/robinhood-mainnet.json" with { type: "json" };
 import { AnvilDidNotStart, ForkNotRunning } from "./errors.ts";
+import { CONTRACTS_DIR } from "./paths.ts";
 
 const PORT = 8545;
 export const FORK_RPC = `http://127.0.0.1:${PORT}`;
@@ -52,6 +56,19 @@ export async function requireFork(client: ForkClient): Promise<void> {
   }
 }
 
+// The forked RPC's URL carries its key, so it never goes on anvil's command line, where any process
+// listing shows it. anvil resolves this name from contracts/foundry.toml, which reads the URL from
+// ROBINHOOD_RPC_URL in anvil's environment.
+const FORK_ENDPOINT = "robinhood";
+
+// anvil prints the URL it forks in its banner, so its log keeps every URL's origin only, a line at
+// a time so a URL can't be split between two writes.
+function logLines(output: Readable, log: WriteStream): void {
+  createInterface({ input: output }).on("line", (line) => {
+    log.write(`${withoutUrlPaths(line)}\n`);
+  });
+}
+
 // Starts anvil on a fork of `forkUrl` with the chain's own code size limit, and resolves once it
 // answers. Its output goes to `logPath`.
 export async function startAnvil(forkUrl: string, logPath: string): Promise<ChildProcess> {
@@ -60,17 +77,21 @@ export async function startAnvil(forkUrl: string, logPath: string): Promise<Chil
     "anvil",
     [
       "--fork-url",
-      forkUrl,
+      FORK_ENDPOINT,
       "--port",
       String(PORT),
       "--code-size-limit",
       String(facts.chain.maxCodeSize),
       "--no-rate-limit",
     ],
-    { stdio: ["ignore", "pipe", "pipe"] },
+    {
+      cwd: CONTRACTS_DIR,
+      env: { ...process.env, ROBINHOOD_RPC_URL: forkUrl },
+      stdio: ["ignore", "pipe", "pipe"],
+    },
   );
-  anvil.stdout.pipe(log);
-  anvil.stderr.pipe(log);
+  logLines(anvil.stdout, log);
+  logLines(anvil.stderr, log);
   const client = forkClient();
   const deadline = Date.now() + START_TIMEOUT_MS;
   let lastError: unknown = null;
