@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { checkTicket } from "../src/ticket.ts";
-import type { Epoch } from "../src/week.ts";
+import { checkTicket } from "../src/app/ticket.ts";
+import type { Epoch } from "../src/app/week.ts";
 
 const epoch: Epoch = {
   opening: 0,

@@ -4,12 +4,43 @@ import { BID_WINDOW, ladder, type Epoch } from "./week.ts";
 
 // How an order reads on its row: what it is, what's happening to it, and what the holder can do.
 
+export type Tone = "brand" | "earned" | "plain";
+
+// A short state for tables and lists, beside the full sentence in `status`.
+export interface Chip {
+  readonly label: string;
+  readonly tone: Tone;
+}
+
 export interface OrderLine {
   readonly side: "sell" | "buy";
   readonly title: string;
   readonly price: string;
   readonly status: string;
+  readonly chip: Chip;
   readonly action: NextStep;
+}
+
+function chipFor(
+  order: OrderState,
+  series: SeriesState | null,
+  epoch: Epoch | null,
+  now: number,
+  action: NextStep,
+): Chip {
+  if (order.series !== 0n && series !== null) {
+    if (action === "settle" || action === "finalize-then-settle") {
+      return { label: "Ready to settle", tone: "earned" };
+    }
+    return BigInt(now) < series.expiry
+      ? { label: "This week", tone: "brand" }
+      : { label: "Settling", tone: "plain" };
+  }
+  if (order.status === "cancelled") return { label: "Cancelled", tone: "plain" };
+  if (order.status !== "active") return { label: "Closed", tone: "plain" };
+  if (order.frozen) return { label: "In the batch", tone: "brand" };
+  if (epoch !== null && !listedThisWeek(order, epoch)) return { label: "Skipping", tone: "plain" };
+  return { label: "Waiting", tone: "plain" };
 }
 
 function listedThisWeek(order: OrderState, epoch: Epoch): boolean {
@@ -49,11 +80,12 @@ function writtenStatus(
     return `The week ended, and its result is final from ${easternTime(Number(heldUntil))} at the earliest. The chain has been quiet, and quiet time keeps the window open longer.`;
   }
   if (BigInt(now) < series.expiry) {
-    const part = order.committed === order.size ? "It" : `${tokens(order.committed, symbol)} of it`;
+    const whole = order.committed === order.size;
+    const amount = tokens(order.committed, symbol);
     const ends = easternTime(Number(series.expiry));
     return order.side === 0
-      ? `${part} sells at ${dollars(order.target)} if ${symbol} is above that when the week ends on ${ends}.`
-      : `${part} buys at ${dollars(order.target)} if ${symbol} is below that when the week ends on ${ends}.`;
+      ? `If ${symbol} closes above ${dollars(order.target)} on ${ends}, the maker can buy ${whole ? `your ${symbol}` : amount} at that price.`
+      : `If ${symbol} closes below ${dollars(order.target)} on ${ends}, the maker can sell you ${whole ? symbol : amount} at that price.`;
   }
   if (BigInt(now) < series.windowEnd) {
     return `The week ended. The result is final at ${easternTime(Number(series.windowEnd))}.`;
@@ -81,5 +113,6 @@ export function describeOrder(
     status = writtenStatus(order, series, now, symbol, heldUntil);
   } else if (order.status === "active") status = idleStatus(order, epoch, now);
   else status = order.status === "cancelled" ? "Cancelled." : "Closed.";
-  return { side, title, price: dollars(order.target), status, action };
+  const chip = chipFor(order, series, epoch, now, action);
+  return { side, title, price: dollars(order.target), status, chip, action };
 }

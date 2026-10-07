@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { ladder, phase, type Epoch } from "../src/week.ts";
+import { ladder, phase, type Epoch } from "../src/app/week.ts";
 
 const OCT_02 = 1_790_971_200;
 const epoch: Epoch = {

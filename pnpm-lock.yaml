@@ -51,12 +51,15 @@ importers:
 
   apps/web:
     dependencies:
-      '@fontsource-variable/archivo':
+      '@fontsource-variable/plus-jakarta-sans':
         specifier: 5.3.0
         version: 5.3.0
       '@vayle/abi':
         specifier: workspace:*
         version: link:../../packages/abi
+      '@vayle/brand':
+        specifier: workspace:*
+        version: link:../../packages/brand
       '@vayle/market':
         specifier: workspace:*
         version: link:../../packages/market
@@ -306,9 +309,6 @@ packages:
   '@eslint/plugin-kit@0.7.3':
     resolution: {integrity: sha512-IkO+/KEUvwbVpiURZg+P7zF74z5Jxe0UgJxVni+RtoHQ6IZieXaO02kmadomap/q+l6bc/jdPGGqTjhuZnuz1Q==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
-
-  '@fontsource-variable/archivo@5.3.0':
-    resolution: {integrity: sha512-HogK8FJelrD1o7TlZlkIVtHgc20bO5PZRWE7mUeUTdMN055alznQV6/00J00IBeu8FQAH4s3zW9UJNvKExXf+g==}
 
   '@fontsource-variable/plus-jakarta-sans@5.3.0':
     resolution: {integrity: sha512-/l/4r0yyWK9JzAlmA0LiYgGgmJe/Gswt4jTJEzr5QhJfwMbvJZDmYWyW0M4X7yCK69BajMVlV/Lx8g7WDc1+sw==}
@@ -1302,8 +1302,6 @@ snapshots:
     dependencies:
       '@eslint/core': 1.2.1
       levn: 0.4.1
-
-  '@fontsource-variable/archivo@5.3.0': {}
 
   '@fontsource-variable/plus-jakarta-sans@5.3.0': {}
 

@@ -1,0 +1,418 @@
+@import "@fontsource-variable/plus-jakarta-sans/wght.css";
+@import "@vayle/brand/tokens.css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--page);
+  color: var(--body);
+  font-family: var(--font-sans);
+  font-size: 100%;
+  line-height: var(--leading-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+ol,
+ul,
+figure {
+  margin: 0;
+}
+
+ol,
+ul {
+  padding: 0;
+  list-style: none;
+}
+
+img,
+svg {
+  display: block;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+::selection {
+  background: var(--blue-200);
+  color: var(--blue-950);
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Type */
+
+.display-1,
+.display-2 {
+  color: var(--ink);
+  font-weight: 400;
+  letter-spacing: var(--track-display);
+  line-height: var(--leading-display);
+  text-wrap: balance;
+}
+
+.display-1 {
+  font-size: var(--text-display-1);
+}
+
+.display-2 {
+  font-size: var(--text-display-2);
+}
+
+.ghost {
+  color: var(--ghost);
+}
+
+.h1,
+.h2,
+.h3 {
+  color: var(--ink);
+  font-weight: 600;
+  letter-spacing: var(--track-heading);
+  line-height: var(--leading-heading);
+  text-wrap: balance;
+}
+
+.h1 {
+  font-size: var(--text-h1);
+}
+
+.h2 {
+  font-size: var(--text-h2);
+}
+
+.h3 {
+  font-size: var(--text-h3);
+  letter-spacing: var(--track-tight);
+}
+
+.lede {
+  color: var(--muted);
+  font-size: var(--text-body-l);
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+/* Brand */
+
+/* The lockup in em so it scales with its font size: the symbol stands 1.86 cap heights tall (the
+   cap is 0.745em), with a gap of a quarter of its height before the word. */
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.brand-symbol {
+  flex: none;
+  width: 1.221em;
+  height: 1.386em;
+}
+
+.brand-ladder {
+  fill: currentColor;
+}
+
+.brand-held {
+  fill: var(--brand-text);
+}
+
+.brand-word {
+  font-weight: 650;
+  letter-spacing: -0.04em;
+}
+
+/* Buttons: pills only. Ink is the default action, brand marks the one that matters most. */
+
+.btn {
+  --btn-h: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: var(--btn-h);
+  padding: 0 calc(var(--btn-h) * 0.48);
+  border: 0;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-body-s);
+  font-weight: 560;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out),
+    opacity var(--dur-fast) var(--ease-out);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.btn-sm {
+  --btn-h: 36px;
+  font-size: var(--text-label);
+}
+
+.btn-lg {
+  --btn-h: 52px;
+  font-size: var(--text-body);
+}
+
+.btn-ink {
+  color: var(--inverse);
+  background: linear-gradient(180deg, var(--button-ink-top), var(--button-ink-bottom));
+  box-shadow: var(--btn-ink-shadow);
+}
+
+.btn-brand {
+  color: var(--on-brand);
+  background: linear-gradient(180deg, var(--blue-500), var(--blue-600));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.22),
+    0 0 0 1px var(--blue-700),
+    0 6px 16px -6px rgb(37 60 239 / 0.55);
+}
+
+.btn-brand:hover:not(:disabled) {
+  background: linear-gradient(180deg, var(--blue-500), var(--blue-700));
+}
+
+.btn-outline {
+  color: var(--ink);
+  background: var(--sheet);
+  box-shadow:
+    inset 0 0 0 1px var(--control),
+    var(--shadow-xs);
+}
+
+.btn-outline:hover:not(:disabled) {
+  box-shadow:
+    inset 0 0 0 1px var(--faint),
+    var(--shadow-xs);
+}
+
+.btn-ghost {
+  color: var(--ink);
+  background: transparent;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--sunken);
+}
+
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  color: var(--ink);
+  background: var(--sunken);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.icon-button:hover {
+  background: var(--hairline);
+}
+
+.icon-button svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Chips: small labelled states. The dot carries colour, the words carry meaning. */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 28px;
+  padding: 0 11px;
+  border-radius: var(--radius-pill);
+  color: var(--ink);
+  background: var(--sheet);
+  box-shadow:
+    inset 0 0 0 1px var(--control),
+    var(--shadow-xs);
+  font-size: var(--text-label);
+  font-weight: 540;
+  white-space: nowrap;
+}
+
+.chip::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--faint);
+}
+
+.chip-earned::before {
+  background: var(--earned);
+}
+
+.chip-brand::before {
+  background: var(--brand);
+}
+
+.chip-problem::before {
+  background: var(--problem);
+}
+
+.chip-plain::before {
+  display: none;
+}
+
+/* Fields */
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 52px;
+  padding: 0 14px;
+  border-radius: var(--radius-control);
+  background: var(--sunken);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+  transition: box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.field:focus-within {
+  box-shadow:
+    inset 0 0 0 1.5px var(--brand),
+    0 0 0 4px var(--brand-soft);
+}
+
+.field input {
+  flex: 1;
+  width: 0;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 1.125rem;
+  font-weight: 560;
+  font-variant-numeric: tabular-nums;
+}
+
+.field input::placeholder {
+  color: var(--faint);
+}
+
+.field-unit {
+  color: var(--muted);
+  font-size: var(--text-label);
+  font-weight: 560;
+  white-space: nowrap;
+}
+
+/* Asset logos: never recoloured, a hairline keeps a light plate's edge on a light surface. */
+
+.token {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.token img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.token::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px rgb(4 6 15 / 0.1);
+  pointer-events: none;
+}
+
+.token-tile {
+  border-radius: 30%;
+}
+
+.token-disc {
+  border-radius: 50%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

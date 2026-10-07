@@ -1,5 +1,5 @@
 import { getAddress, isAddress, type Address } from "viem";
-import facts from "../../../deployments/robinhood-mainnet.json" with { type: "json" };
+import facts from "../../../../deployments/robinhood-mainnet.json" with { type: "json" };
 
 export interface AppConfig {
   readonly chainId: number;

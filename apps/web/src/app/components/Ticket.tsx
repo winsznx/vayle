@@ -1,12 +1,31 @@
 import { approve, placeOrder, type Call } from "@vayle/market";
+import { formatFixed } from "@vayle/units";
 import { useId, useState } from "react";
 import { maxUint256 } from "viem";
+import { TokenIcon } from "../../ui/TokenIcon.tsx";
 import type { Run } from "../App.tsx";
 import type { AppConfig } from "../config.ts";
 import { dollars, easternTime, tokens, usdgAmount } from "../format.ts";
 import { checkTicket } from "../ticket.ts";
 import type { MarketView } from "../useMarket.ts";
 import { BID_WINDOW, type Epoch, type Rung } from "../week.ts";
+
+export function TicketEmpty() {
+  return (
+    <article className="card ticket-card ticket-empty">
+      <div className="ticket-empty-art" aria-hidden="true">
+        <span />
+        <span className="is-held" />
+        <span />
+      </div>
+      <h2 className="h3">Choose a price</h2>
+      <p className="muted">
+        Pick a rung on this week&apos;s ladder. Your order earns each week&apos;s premium, skips the
+        week, or fills at exactly that price.
+      </p>
+    </article>
+  );
+}
 
 // The order form for one rung. The side follows from the rung: above the close the holder sells,
 // below it they buy.
@@ -46,8 +65,16 @@ export function Ticket(props: {
   const batchOpens = epoch.opening + epoch.windowLength + BID_WINDOW;
   const timing =
     view.now < batchOpens
-      ? `Placed now, it joins this week's batch, which starts ${easternTime(batchOpens)}.`
-      : "Placed now, it can fill if the maker quotes it this week, or it joins next week's batch.";
+      ? `Joins this week's batch, which starts ${easternTime(batchOpens)}.`
+      : "Can fill this week if the maker quotes it, or joins next week's batch.";
+
+  // The most whole lots the wallet can cover: its NVDA for a sell, its USDG at this price for a buy.
+  const maxSize =
+    account === null
+      ? 0n
+      : selling
+        ? (account.balanceAsset / epoch.lot) * epoch.lot
+        : ((account.balanceUsdg * epoch.rawUnit) / rung.strike / epoch.lot) * epoch.lot;
 
   const place = (): void => {
     if (result === null || !result.ok || account === null) return;
@@ -73,38 +100,57 @@ export function Ticket(props: {
 
   return (
     <form
-      className="ticket"
+      className="card ticket-card"
       onSubmit={(event) => {
         event.preventDefault();
         place();
       }}
     >
-      <p className="ticket-headline">
-        <span>{selling ? `Sell ${config.assetSymbol} at` : `Buy ${config.assetSymbol} at`}</span>
-        <span className="limit-price">{dollars(rung.strike)}</span>
+      <p className="ticket-kicker">
+        {selling ? `Sell ${config.assetSymbol} at` : `Buy ${config.assetSymbol} at`}
       </p>
+      <p className="ticket-price num">{dollars(rung.strike)}</p>
       <p className="ticket-how">
         {selling
-          ? `Each week this order earns the week's bid, skips the week, or sells your ${config.assetSymbol} at ${dollars(rung.strike)}. It renews until it sells or you cancel.`
-          : `Each week this order earns the week's bid, skips the week, or buys ${config.assetSymbol} at ${dollars(rung.strike)} with your USDG. It renews until it buys or you cancel.`}
+          ? `Each week it earns the week's premium, skips the week, or sells your ${config.assetSymbol} at ${dollars(rung.strike)}. It renews until it sells or you cancel.`
+          : `Each week it earns the week's premium, skips the week, or buys ${config.assetSymbol} at ${dollars(rung.strike)} with your USDG. It renews until it buys or you cancel.`}
       </p>
-      <div className="fields">
-        <label htmlFor={`${id}-amount`}>Amount</label>
+
+      <div className="ticket-fields">
+        <label className="field-label" htmlFor={`${id}-amount`}>
+          Amount
+        </label>
         <div className="field">
+          <TokenIcon symbol="NVDA" size="sm" />
           <input
             id={`${id}-amount`}
             inputMode="decimal"
             autoComplete="off"
-            placeholder="1.00"
+            placeholder="0.00"
             value={amount}
             onChange={(event) => {
               setAmount(event.target.value);
             }}
           />
-          <span>{config.assetSymbol}</span>
+          <span className="field-unit">{config.assetSymbol}</span>
+          {maxSize > 0n && (
+            <button
+              type="button"
+              className="field-max"
+              onClick={() => {
+                setAmount(formatFixed(maxSize, config.assetDecimals));
+              }}
+            >
+              Max
+            </button>
+          )}
         </div>
-        <label htmlFor={`${id}-minimum`}>Minimum premium</label>
+
+        <label className="field-label" htmlFor={`${id}-minimum`}>
+          Least you&apos;ll take each week
+        </label>
         <div className="field">
+          <TokenIcon symbol="USDG" size="sm" />
           <input
             id={`${id}-minimum`}
             inputMode="decimal"
@@ -116,28 +162,28 @@ export function Ticket(props: {
               setMinimum(event.target.value);
             }}
           />
-          <span>USDG per {config.assetSymbol}</span>
+          <span className="field-unit">USDG per {config.assetSymbol}</span>
         </div>
-        <p id={`${id}-minimum-help`} className="help">
-          Skip any week that pays less than this.
+        <p id={`${id}-minimum-help`} className="field-help">
+          A week that bids less is skipped, and the order waits for the next.
         </p>
       </div>
+
       {opposite.length > 0 && (
-        <div className="flip">
-          <input
-            id={`${id}-flip`}
-            type="checkbox"
-            checked={flip}
-            onChange={(event) => {
-              setFlip(event.target.checked);
-            }}
-          />
-          <label htmlFor={`${id}-flip`}>
-            {selling
-              ? "When it sells, place a buy order at"
-              : "When it buys, place a sell order at"}
+        <div className="flip-row">
+          <label className="switch">
+            <input
+              type="checkbox"
+              checked={flip}
+              onChange={(event) => {
+                setFlip(event.target.checked);
+              }}
+            />
+            <span className="switch-track" aria-hidden="true" />
+            <span>{selling ? "When it sells, buy back at" : "When it buys, sell again at"}</span>
           </label>
           <select
+            className="flip-select num"
             aria-label="Price for the order that follows"
             disabled={!flip}
             value={flipTarget?.toString() ?? ""}
@@ -153,23 +199,39 @@ export function Ticket(props: {
           </select>
         </div>
       )}
-      {result !== null && result.ok && (
-        <p className="locks">
-          Locks{" "}
-          {selling
-            ? tokens(result.ticket.collateral, config.assetSymbol, config.assetDecimals)
-            : usdgAmount(result.ticket.collateral, config.usdgDecimals)}{" "}
-          until it fills or you cancel.
+
+      <dl className="ticket-summary">
+        {result !== null && result.ok && (
+          <div>
+            <dt>Locks</dt>
+            <dd className="num">
+              {selling
+                ? tokens(result.ticket.collateral, config.assetSymbol, config.assetDecimals)
+                : usdgAmount(result.ticket.collateral, config.usdgDecimals)}
+            </dd>
+          </div>
+        )}
+        <div>
+          <dt>Timing</dt>
+          <dd>{timing}</dd>
+        </div>
+      </dl>
+      {result !== null && !result.ok && (
+        <p className="ticket-problem" role="alert">
+          {result.problem}
         </p>
       )}
-      {result !== null && !result.ok && <p className="problem">{result.problem}</p>}
-      <p className="help">{timing}</p>
+
       {tradable ? (
-        <button type="submit" className="primary" disabled={busy || result === null || !result.ok}>
+        <button
+          type="submit"
+          className="btn btn-brand btn-lg ticket-submit"
+          disabled={busy || result === null || !result.ok}
+        >
           {selling ? "Place sell order" : "Place buy order"}
         </button>
       ) : (
-        <p className="quiet">{notTradableReason}</p>
+        <p className="ticket-blocked">{notTradableReason}</p>
       )}
     </form>
   );

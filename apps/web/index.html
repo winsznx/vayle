@@ -4,11 +4,37 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
+    <meta
+      name="description"
+      content="Paid limit orders for NVDA on Robinhood Chain. Name your price once; each week your order earns the week's premium, skips the week, or fills at exactly that price."
+    />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <title>Vayle</title>
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#253CEF" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Vayle: paid limit orders for NVDA" />
+    <meta
+      property="og:description"
+      content="Name your price once. Each week your order earns that week's premium, skips the week, or fills at exactly your price, settled in the actual token."
+    />
+    <meta property="og:image" content="https://vayle.xyz/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <title>Vayle: paid limit orders for NVDA</title>
+    <script>
+      try {
+        const saved = localStorage.getItem("vayle-theme");
+        if (saved === "light" || saved === "dark") document.documentElement.dataset.theme = saved;
+      } catch {
+        document.documentElement.dataset.themeSource = "system";
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="/src/landing/main.tsx"></script>
   </body>
 </html>

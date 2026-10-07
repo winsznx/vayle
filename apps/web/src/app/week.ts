@@ -26,25 +26,26 @@ const BPS = 10_000n;
 // The bid window opens when last week's exercise window has run, and lasts this long.
 export const BID_WINDOW = 2 * 3600;
 
-function band(e: Epoch): bigint {
-  return (e.referencePrice * BigInt(e.strikeRangeBps)) / BPS;
-}
-
-// The listed strikes, highest first. Same rule as the market: out of the money, on the tick,
-// within the band around the close.
-export function ladder(e: Epoch): Rung[] {
-  const width = band(e);
+// The strikes around a reference price, highest first. Same rule as the market: out of the money,
+// on the tick, within the band around the reference.
+export function ladderAround(
+  referencePrice: bigint,
+  strikeTick: bigint,
+  strikeRangeBps: number,
+): Rung[] {
+  const width = (referencePrice * BigInt(strikeRangeBps)) / BPS;
   const rungs: Rung[] = [];
-  const top = ((e.referencePrice + width) / e.strikeTick) * e.strikeTick;
-  for (
-    let strike = top;
-    strike > 0n && strike + width >= e.referencePrice;
-    strike -= e.strikeTick
-  ) {
-    if (strike > e.referencePrice) rungs.push({ strike, side: "sell" });
-    else if (strike < e.referencePrice) rungs.push({ strike, side: "buy" });
+  const top = ((referencePrice + width) / strikeTick) * strikeTick;
+  for (let strike = top; strike > 0n && strike + width >= referencePrice; strike -= strikeTick) {
+    if (strike > referencePrice) rungs.push({ strike, side: "sell" });
+    else if (strike < referencePrice) rungs.push({ strike, side: "buy" });
   }
   return rungs;
+}
+
+// The week's listed strikes, from the close the market recorded.
+export function ladder(e: Epoch): Rung[] {
+  return ladderAround(e.referencePrice, e.strikeTick, e.strikeRangeBps);
 }
 
 export type Phase = "settling" | "bidding" | "live" | "expired";

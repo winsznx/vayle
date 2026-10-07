@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { OrderState, SeriesState } from "@vayle/market";
-import { describeOrder } from "../src/orders.ts";
-import type { Epoch } from "../src/week.ts";
+import { describeOrder } from "../src/app/orders.ts";
+import type { Epoch } from "../src/app/week.ts";
 
 const OCT_02 = 1_790_971_200;
 const ONE = 10n ** 18n;
@@ -53,6 +53,36 @@ describe("describeOrder", () => {
     assert.equal(line.status, "Skipping this week: the market passed your price.");
   });
 
+  it("labels an order in this week's trade, a frozen one and one the market passed", () => {
+    // #given
+    const series: SeriesState = {
+      id: 9n,
+      side: 0,
+      strike: 245_000_000n,
+      expiry: BigInt(epoch.expiry),
+      windowEnd: BigInt(epoch.expiry + 7200),
+      settled: false,
+    };
+    // #when
+    const labels = [
+      describeOrder(
+        order({ series: 9n, committed: ONE }),
+        series,
+        epoch,
+        OCT_02 + 5 * 3600,
+        "NVDA",
+      ),
+      describeOrder(order({ frozen: true }), null, epoch, OCT_02 + 3 * 3600, "NVDA"),
+      describeOrder(order({ target: 235_000_000n }), null, epoch, OCT_02 + 60, "NVDA"),
+    ].map((line) => line.chip);
+    // #then
+    assert.deepEqual(labels, [
+      { label: "This week", tone: "brand" },
+      { label: "In the batch", tone: "brand" },
+      { label: "Skipping", tone: "plain" },
+    ]);
+  });
+
   it("says a frozen order is in the batch and can't change yet", () => {
     // #when
     const line = describeOrder(order({ frozen: true }), null, epoch, OCT_02 + 3 * 3600, "NVDA");
@@ -84,7 +114,7 @@ describe("describeOrder", () => {
     // #then
     assert.equal(
       line.status,
-      "It sells at $245.00 if NVDA is above that when the week ends on Fri, Oct 9, 4:00\u00a0PM\u00a0EDT.",
+      "If NVDA closes above $245.00 on Fri, Oct 9, 4:00\u00a0PM\u00a0EDT, the maker can buy your NVDA at that price.",
     );
   });
 
@@ -109,7 +139,7 @@ describe("describeOrder", () => {
     // #then
     assert.equal(
       line.status,
-      "0.40 NVDA of it buys at $230.00 if NVDA is below that when the week ends on Fri, Oct 9, 4:00\u00a0PM\u00a0EDT.",
+      "If NVDA closes below $230.00 on Fri, Oct 9, 4:00\u00a0PM\u00a0EDT, the maker can sell you 0.40 NVDA at that price.",
     );
   });
 

@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
 
@@ -22,8 +23,16 @@ function forkDisclosures(): Plugin {
   };
 }
 
+const page = (path: string): string => fileURLToPath(new URL(path, import.meta.url));
+
+// Two pages: the landing at / and the holder app at /app/. Only the app loads viem.
 export default defineConfig(({ mode }) => ({
   plugins: [react(), ...(mode === "fork" ? [forkDisclosures()] : [])],
-  // react-dom and viem are most of the bundle, about 170 kB gzipped. This warns if it grows.
-  build: { target: "es2022", sourcemap: true, chunkSizeWarningLimit: 600 },
+  build: {
+    target: "es2022",
+    sourcemap: true,
+    // react-dom and viem are most of the app's bundle, about 170 kB gzipped. This warns if it grows.
+    chunkSizeWarningLimit: 600,
+    rolldownOptions: { input: { landing: page("index.html"), app: page("app/index.html") } },
+  },
 }));

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { dollars, easternClock, easternTime, premium, tokens } from "../src/format.ts";
+import { dollars, easternClock, easternTime, premium, tokens } from "../src/app/format.ts";
 
 describe("format", () => {
   it("shows prices in dollars and cents, cut rather than rounded", () => {
