@@ -1,3 +1,4 @@
+import { errorText } from "@vayle/chain-facts/rpc-errors";
 import type { KeeperConfig } from "./config.ts";
 import { execute, type Clients } from "./execute.ts";
 import { plan, type Action } from "./plan.ts";
@@ -18,7 +19,7 @@ export async function runOnce(config: KeeperConfig, clients: Clients): Promise<R
       await execute(clients, config, action);
       sent.push(action);
     } catch (error) {
-      const reason = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+      const reason = errorText(error);
       console.error(`keeper: ${action.kind} failed`, reason);
       failed.push({ action, reason });
     }

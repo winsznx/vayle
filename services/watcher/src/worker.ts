@@ -1,3 +1,4 @@
+import { redacted } from "@vayle/chain-facts/rpc-errors";
 import { robinhoodChain } from "@vayle/chain-facts/chain";
 import { createPublicClient, http } from "viem";
 import { loadConfig } from "./config.ts";
@@ -24,6 +25,13 @@ export default {
       transport: http(config.rpcUrl, { retryCount: 3 }),
       batch: { multicall: { batchSize: MULTICALL_BYTES } },
     });
-    ctx.waitUntil(runOnce(config, { client, fetch: (input, init) => fetch(input, init) }));
+    // A failed run is logged by the runtime, so it carries the error's text without the RPC's URL.
+    ctx.waitUntil(
+      runOnce(config, { client, fetch: (input, init) => fetch(input, init) }).catch(
+        (error: unknown) => {
+          throw redacted(error);
+        },
+      ),
+    );
   },
 };

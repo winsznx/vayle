@@ -1,3 +1,4 @@
+import { redacted } from "@vayle/chain-facts/rpc-errors";
 import { keeperClients } from "./clients.ts";
 import { loadConfig } from "./config.ts";
 import { runOnce } from "./run.ts";
@@ -14,6 +15,11 @@ export default {
     ctx: ScheduledContext,
   ): void {
     const config = loadConfig(env);
-    ctx.waitUntil(runOnce(config, keeperClients(config)));
+    // A failed run is logged by the runtime, so it carries the error's text without the RPC's URL.
+    ctx.waitUntil(
+      runOnce(config, keeperClients(config)).catch((error: unknown) => {
+        throw redacted(error);
+      }),
+    );
   },
 };

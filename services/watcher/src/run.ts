@@ -1,3 +1,4 @@
+import { errorText } from "@vayle/chain-facts/rpc-errors";
 import type { PublicClient } from "viem";
 import { EXPLORER, type WatcherConfig } from "./config.ts";
 import { readEvents, type ChainEvent } from "./events.ts";
@@ -67,7 +68,7 @@ async function recordFailure(
   try {
     await saveState(config.store, { ...state, failures }, deps.fetch);
     if (failures === FAILURES_BEFORE_PAGE) {
-      const reason = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+      const reason = errorText(error);
       await postAlerts(
         config.webhookUrl,
         [
@@ -81,6 +82,6 @@ async function recordFailure(
       );
     }
   } catch (secondary) {
-    console.error("watcher: couldn't record the failure", secondary);
+    console.error("watcher: couldn't record the failure", errorText(secondary));
   }
 }

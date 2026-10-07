@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { errorText } from "@vayle/chain-facts/rpc-errors";
 import { handle } from "./api.ts";
 import { loadConfig } from "./config.ts";
 import { LogRangeRefused } from "./errors.ts";
@@ -28,7 +29,7 @@ async function pass(): Promise<void> {
       console.error(`indexing stopped, the API keeps serving: ${error.message}`);
       return;
     }
-    console.error("indexing pass failed, retrying next pass:", error);
+    console.error("indexing pass failed, retrying next pass:", errorText(error));
   }
   if (!stopping) timer = setTimeout(() => void pass(), PASS_EVERY_MS);
 }
@@ -40,7 +41,7 @@ async function serve(req: IncomingMessage, res: ServerResponse): Promise<void> {
     res.writeHead(response.status, Object.fromEntries(response.headers));
     res.end(await response.text());
   } catch (error) {
-    console.error("request failed:", error);
+    console.error("request failed:", errorText(error));
     res.writeHead(500, { "content-type": "application/json" });
     res.end(JSON.stringify({ error: "the indexer couldn't answer" }));
   }

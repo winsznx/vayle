@@ -1,4 +1,5 @@
 import { vayleMarketAbi } from "@vayle/abi";
+import { errorText } from "@vayle/chain-facts/rpc-errors";
 import { seriesId } from "@vayle/market";
 import {
   BaseError,
@@ -28,16 +29,6 @@ const CALL = 0;
 const PUT = 1;
 const NO_MAKER = "0x0000000000000000000000000000000000000000";
 
-function oneLine(error: unknown): string {
-  const text =
-    error instanceof BaseError
-      ? `${error.name}: ${error.shortMessage}`
-      : error instanceof Error
-        ? `${error.name}: ${error.message}`
-        : String(error);
-  return text.replace(/\s+/g, " ");
-}
-
 // Any failure of a price read is kept rather than thrown: the guard stands the maker down by name,
 // and approving, exercising and withdrawing still go ahead. Batched, a reverting read fails alone,
 // and a request that fails takes every read in it, these included.
@@ -45,7 +36,7 @@ async function reading<T>(read: () => Promise<T>): Promise<Reading<T>> {
   try {
     return { ok: true, value: await read() };
   } catch (error) {
-    return { ok: false, error: oneLine(error) };
+    return { ok: false, error: errorText(error) };
   }
 }
 

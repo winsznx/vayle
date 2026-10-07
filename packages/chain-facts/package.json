@@ -5,7 +5,8 @@
   "license": "MIT",
   "type": "module",
   "exports": {
-    "./chain": "./src/chain.ts"
+    "./chain": "./src/chain.ts",
+    "./rpc-errors": "./src/rpc-errors.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",

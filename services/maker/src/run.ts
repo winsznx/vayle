@@ -1,3 +1,4 @@
+import { errorText } from "@vayle/chain-facts/rpc-errors";
 import type { MakerConfig } from "./config.ts";
 import { execute, type Clients } from "./execute.ts";
 import { priceGuard, type PriceVerdict } from "./guard.ts";
@@ -27,7 +28,7 @@ export async function runOnce(config: MakerConfig, clients: Clients): Promise<Ru
       await execute(clients, config, action);
       sent.push(action);
     } catch (error) {
-      const reason = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+      const reason = errorText(error);
       console.error(`maker: ${action.kind} failed`, reason);
       failed.push({ action, reason });
     }
