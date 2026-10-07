@@ -31,8 +31,7 @@ abstract contract VayleMarketFork is CoreFork {
     }
 
     function _deployCore() internal override returns (CollateralVault) {
-        market =
-            new VayleMarket(calendar, registry, adapter, liveness, timelock, guardian, treasury);
+        market = _deployMarket(calendar, timelock, guardian, treasury);
         vm.startPrank(timelock);
         market.setCaps(nvda, OptionType.Call, _pilotCaps());
         market.setCaps(nvda, OptionType.Put, _pilotCaps());

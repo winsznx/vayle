@@ -24,6 +24,8 @@ import {OptionSeries} from "./OptionSeries.sol";
 /// window length, so later changes to the registry or calendar can't touch a live epoch. Creation
 /// needs evidence from the half hour before the opening: no liveness gap, and keeper observations
 /// of the asset's oracle that never saw a pause, the last one within five minutes of the close.
+/// Before the schedule's first close there's no close to open at, so each asset's first epoch can
+/// instead open at the moment it's created and run to that first close, filled by quotes only.
 abstract contract EpochBook is OptionSeries, ReentrancyGuardTransient {
     uint256 internal constant BPS = 10_000;
     uint64 public constant LIVENESS_LOOKBACK = 30 minutes;
@@ -62,6 +64,7 @@ abstract contract EpochBook is OptionSeries, ReentrancyGuardTransient {
     PriceAdapter public immutable priceAdapter;
     LivenessCheckpoint public immutable liveness;
     address public immutable usdg;
+    uint64 public immutable deployedAt;
 
     mapping(address asset => mapping(uint64 expiry => Epoch)) private _epochs;
     mapping(address asset => uint64) public latestExpiry;
@@ -80,6 +83,8 @@ abstract contract EpochBook is OptionSeries, ReentrancyGuardTransient {
 
     error CreationWindowClosed(uint64 opening, uint64 deadline);
     error EpochExists(address asset, uint64 expiry);
+    error FirstCloseHasPassed(uint64 firstClose);
+    error TooSoonAfterDeploy(uint64 earliest);
     error LivenessGapAtClose(uint64 opening, uint64 gapSeconds);
     error NotNearAClose(uint64 close);
     error OraclePausedAtClose(address asset, uint64 close);
@@ -98,6 +103,7 @@ abstract contract EpochBook is OptionSeries, ReentrancyGuardTransient {
         priceAdapter = priceAdapter_;
         liveness = liveness_;
         usdg = address(registry_.usdg());
+        deployedAt = uint64(block.timestamp);
     }
 
     /// @notice Opens the epoch that runs from the latest scheduled close to the next one.
@@ -145,6 +151,53 @@ abstract contract EpochBook is OptionSeries, ReentrancyGuardTransient {
             strikeRangeBps: config.strikeRangeBps
         });
         if (expiry > latestExpiry[asset]) latestExpiry[asset] = expiry;
+        emit EpochCreated(asset, expiry, opening, price, round, updatedAt, WINDOW_LENGTH);
+    }
+
+    /// @notice Opens the asset's first epoch now, running to the schedule's first close. It has no
+    /// renewal batch, so its orders fill only by quote. Callable until that close.
+    /// @dev The opening is now, so the oracle flag is read directly instead of from observations,
+    /// and the reference is the last round at or before the second before now. The liveness
+    /// lookback has to fall after deployment, since the record has no evidence from before it.
+    /// A batch deadline at the opening puts the bid window, which starts a window's length after
+    /// the opening, past its own deadline, so no bid, batch or freeze can happen this week.
+    /// @param roundHint The feed's latest round, or the one before it if the latest landed this
+    /// second.
+    function createFirstEpoch(address asset, uint80 roundHint)
+        external
+        nonReentrant
+        returns (uint64 expiry)
+    {
+        liveness.checkpoint();
+        _requireNotHalted();
+        StockTokenRegistry.Asset memory config = registry.asset(asset);
+        uint64 opening = uint64(block.timestamp);
+        expiry = calendar.nextCloseAfter(opening);
+        uint64 firstClose = calendar.boundaryAt(0).close;
+        if (expiry != firstClose) revert FirstCloseHasPassed(firstClose);
+        if (_epochs[asset][expiry].expiry != 0) revert EpochExists(asset, expiry);
+        uint64 earliest = deployedAt + LIVENESS_LOOKBACK;
+        if (opening < earliest) revert TooSoonAfterDeploy(earliest);
+        uint64 gap = liveness.gapOverlap(opening - LIVENESS_LOOKBACK, opening);
+        if (gap != 0) revert LivenessGapAtClose(opening, gap);
+        (uint256 price, uint80 round, uint64 updatedAt) =
+            priceAdapter.referencePrice(asset, opening - 1, roundHint, 0);
+
+        _epochs[asset][expiry] = Epoch({
+            opening: opening,
+            expiry: expiry,
+            batchDeadline: opening,
+            windowLength: WINDOW_LENGTH,
+            referenceUpdatedAt: updatedAt,
+            referenceRound: round,
+            referencePrice: price,
+            rawUnit: config.rawUnit,
+            lot: config.lot,
+            priceTick: config.priceTick,
+            strikeTick: config.strikeTick,
+            strikeRangeBps: config.strikeRangeBps
+        });
+        latestExpiry[asset] = expiry;
         emit EpochCreated(asset, expiry, opening, price, round, updatedAt, WINDOW_LENGTH);
     }
 

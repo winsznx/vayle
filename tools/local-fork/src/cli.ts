@@ -25,13 +25,8 @@ import {
 import { advanceOptions, USAGE, UsageError } from "./options.ts";
 import { advance, easternTime, latestWeek, type AdvanceOptions } from "./week.ts";
 
-const WEEKS = 10;
+const WEEKS = 26;
 const GAS = parseEther("100");
-// The delay proposed for mainnet. The deploy script refuses anything under 8 days 6 hours.
-const TIMELOCK_DELAY = String(10 * 86_400);
-// Caps for the fork only, large enough that nothing a developer tries runs into them:
-// openSize, walletSize, seriesOpenInterest, fillSize, in raw token units.
-const FORK_CAPS = Array(4).fill(parseUnits("1000", facts.nvda.decimals).toString()).join(",");
 const nvda = getAddress(facts.nvda.address);
 const usdg = getAddress(facts.usdg.address);
 
@@ -65,11 +60,7 @@ async function up(): Promise<void> {
       DEPLOYER_KEY: accounts.keys.deployer,
       MULTISIG: accounts.multisig,
       GUARDIAN: addressOf(accounts, "guardian"),
-      FEE_RECIPIENT: addressOf(accounts, "treasury"),
       TEAM_MAKER: addressOf(accounts, "maker"),
-      TIMELOCK_DELAY,
-      CALL_CAPS: FORK_CAPS,
-      PUT_CAPS: FORK_CAPS,
     });
     const holder = addressOf(accounts, "holder");
     const maker = addressOf(accounts, "maker");

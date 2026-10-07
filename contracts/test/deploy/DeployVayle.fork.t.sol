@@ -20,13 +20,12 @@ import {RunbookDeploy} from "./RunbookDeploy.sol";
 contract DeployVayleForkTest is MarketFork {
     uint256 internal constant ONE = 1e18;
     uint256 internal constant PREMIUM = 2_500_000;
-    uint256 internal constant DELAY = 10 days;
+    uint256 internal constant DELAY = 8 days + 6 hours;
 
     DeployVayle internal script;
     DeployVayle.Deployment internal d;
     address internal multisig = makeAddr("multisig");
     address internal guardian = makeAddr("guardian");
-    address internal treasury = makeAddr("treasury");
     address internal teamMaker;
     uint256 internal teamMakerKey;
 
@@ -37,21 +36,34 @@ contract DeployVayleForkTest is MarketFork {
         boundaries[2] = SessionCalendar.Boundary(OCT_02, OCT_05_OPEN);
         boundaries[3] = SessionCalendar.Boundary(OCT_09, OCT_12_OPEN);
         boundaries[4] = SessionCalendar.Boundary(OCT_16, OCT_19_OPEN);
-        MarketGuard.Caps memory caps = MarketGuard.Caps({
-            openSize: 10 * ONE, walletSize: 4 * ONE, seriesOpenInterest: 6 * ONE, fillSize: 2 * ONE
+        DeployVayle.Market[] memory markets = new DeployVayle.Market[](1);
+        markets[0] = DeployVayle.Market({
+            token: nvda,
+            uid: nvdaUid,
+            feed: nvdaFeed,
+            lot: LOT,
+            priceTick: PRICE_TICK,
+            strikeTick: STRIKE_TICK,
+            strikeRangeBps: STRIKE_RANGE_BPS,
+            sellCaps: MarketGuard.Caps({
+                openSize: 10 * ONE,
+                walletSize: 4 * ONE,
+                seriesOpenInterest: 6 * ONE,
+                fillSize: 2 * ONE
+            }),
+            buyCaps: MarketGuard.Caps({
+                openSize: 4 * ONE,
+                walletSize: 2 * ONE,
+                seriesOpenInterest: 4 * ONE,
+                fillSize: 2 * ONE
+            })
         });
         config = DeployVayle.Config({
             multisig: multisig,
             guardian: guardian,
-            feeRecipient: treasury,
             teamMaker: teamMaker,
-            timelockDelay: DELAY,
-            callCaps: caps,
-            putCaps: caps,
             boundaries: boundaries,
-            nvda: nvda,
-            nvdaUid: nvdaUid,
-            nvdaFeed: nvdaFeed,
+            markets: markets,
             usdg: usdg
         });
     }
@@ -68,9 +80,10 @@ contract DeployVayleForkTest is MarketFork {
         (calendar, registry, adapter, liveness) = (d.calendar, d.registry, d.adapter, d.liveness);
     }
 
-    function test_theTimelockEndsWithTheRealDelay() public view {
+    function test_theTimelockEndsWithExactlyEightDaysSixHours() public view {
         // #then
-        assertEq(d.timelock.getMinDelay(), DELAY);
+        assertEq(d.timelock.getMinDelay(), 712_800);
+        assertEq(script.TIMELOCK_DELAY(), DELAY);
     }
 
     function test_theMultisigHoldsEveryTimelockRole() public view {
@@ -107,17 +120,21 @@ contract DeployVayleForkTest is MarketFork {
         assertEq(d.calendar.owner(), owner);
         assertEq(d.market.guardian(), guardian);
         assertEq(d.market.feeBps(), 0);
-        assertEq(d.market.feeRecipient(), treasury);
+        assertEq(d.market.feeRecipient(), multisig);
         assertTrue(d.market.teamOperated(teamMaker));
         assertTrue(d.market.batchBidder(teamMaker));
-        assertEq(d.market.capsOf(nvda, OptionType.Put).openSize, 10 * ONE);
+        assertEq(d.market.capsOf(nvda, OptionType.Call).openSize, 10 * ONE);
+        assertEq(d.market.capsOf(nvda, OptionType.Call).fillSize, 2 * ONE);
+        assertEq(d.market.capsOf(nvda, OptionType.Put).openSize, 4 * ONE);
+        assertEq(d.market.capsOf(nvda, OptionType.Put).walletSize, 2 * ONE);
         assertEq(d.registry.asset(nvda).strikeTick, 5e6);
         assertEq(d.calendar.boundaryCount(), 5);
+        assertEq(d.calendar.boundaryAt(0).close, SEP_18);
     }
 
     function test_theMultisigCantActBeforeTheDelay() public {
         // #given
-        bytes memory call = abi.encodeCall(MarketGuard.setFee, (uint16(100), treasury));
+        bytes memory call = abi.encodeCall(MarketGuard.setFee, (uint16(100), multisig));
         // #then
         vm.expectRevert(
             abi.encodeWithSelector(TimelockController.TimelockInsufficientDelay.selector, 0, DELAY)
@@ -129,7 +146,7 @@ contract DeployVayleForkTest is MarketFork {
 
     function test_theMultisigActsAfterTheDelay() public {
         // #given
-        bytes memory call = abi.encodeCall(MarketGuard.setFee, (uint16(100), treasury));
+        bytes memory call = abi.encodeCall(MarketGuard.setFee, (uint16(100), multisig));
         vm.prank(multisig);
         d.timelock.schedule(address(d.market), 0, call, bytes32(0), bytes32(0), DELAY);
         vm.warp(vm.getBlockTimestamp() + DELAY);
@@ -152,18 +169,39 @@ contract DeployVayleForkTest is MarketFork {
         script.deploy(config, address(script));
     }
 
-    function test_aDelayShorterThanAnEpochAndItsWindowIsRefused() public {
+    function test_aConfigWithoutMarketsIsRefused() public {
         // #given
         DeployVayle.Config memory config = _config();
-        config.timelockDelay = 7 days;
+        config.markets = new DeployVayle.Market[](0);
         // #then
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                DeployVayle.DelayTooShort.selector, 7 days, script.MIN_TIMELOCK_DELAY()
-            )
-        );
+        vm.expectRevert(DeployVayle.NoMarkets.selector);
         // #when
         script.deploy(config, address(script));
+    }
+
+    function test_aDisabledSideReadsAsZeroCaps() public view {
+        // #given
+        string memory json = string.concat(
+            '{"markets":[{"token":"',
+            vm.toString(nvda),
+            '","uid":"',
+            vm.toString(nvdaUid),
+            '","feed":"',
+            vm.toString(nvdaFeed),
+            '","lot":"10000000000000000","priceTick":"100","strikeTick":"5000000",',
+            '"strikeRangeBps":1000,',
+            '"sell":{"enabled":true,"openSize":"10","walletSize":"4","seriesOpenInterest":"6",',
+            '"fillSize":"2"},',
+            '"buy":{"enabled":false,"openSize":"0","walletSize":"0","seriesOpenInterest":"0",',
+            '"fillSize":"0"}}]}'
+        );
+        // #when
+        DeployVayle.Market[] memory markets = script.readMarkets(json);
+        // #then
+        assertEq(markets.length, 1);
+        assertEq(markets[0].sellCaps.seriesOpenInterest, 6);
+        assertEq(markets[0].buyCaps.openSize, 0);
+        assertEq(markets[0].buyCaps.fillSize, 0);
     }
 
     function test_theRunbookInputsParseIntoTheConfig() public {
@@ -177,22 +215,34 @@ contract DeployVayleForkTest is MarketFork {
         );
         vm.setEnv("MULTISIG", vm.toString(multisig));
         vm.setEnv("GUARDIAN", vm.toString(guardian));
-        vm.setEnv("FEE_RECIPIENT", vm.toString(treasury));
         vm.setEnv("TEAM_MAKER", vm.toString(teamMaker));
-        vm.setEnv("TIMELOCK_DELAY", vm.toString(DELAY));
-        vm.setEnv("CALL_CAPS", "10,4,6,2");
-        vm.setEnv("PUT_CAPS", "0,0,0,0");
         // #when
         DeployVayle.Config memory config = runbook.readConfig();
         vm.removeFile(path);
-        // #then
+        // #then: the markets are the committed registry file's
         assertEq(config.boundaries.length, 2);
         assertEq(config.boundaries[1].close, OCT_16);
         assertEq(config.boundaries[1].creationDeadline, OCT_19_OPEN);
-        assertEq(config.callCaps.seriesOpenInterest, 6);
-        assertEq(config.putCaps.openSize, 0);
-        assertEq(config.nvda, nvda);
-        assertEq(config.timelockDelay, DELAY);
+        assertEq(config.multisig, multisig);
+        assertEq(config.markets[0].token, nvda);
+        assertEq(config.markets[0].uid, nvdaUid);
+        assertEq(config.markets[0].feed, nvdaFeed);
+        assertEq(config.markets[0].strikeTick, STRIKE_TICK);
+        assertEq(config.markets[0].sellCaps.openSize, 10 * ONE);
+        assertEq(config.markets[0].buyCaps.openSize, 4 * ONE);
+    }
+
+    function test_theDeployedMarketOpensItsFirstWeekBeforeTheFirstClose() public {
+        // #given: the keeper pings from deploy, and the first week opens the next afternoon
+        uint64 opening = SEP_18 - 1 days;
+        _keepAlive(vm.getBlockTimestamp() + 1 minutes, opening);
+        (uint80 round, int256 answer,) = _lastRoundAtOrBefore(opening - 1);
+        // #when
+        uint64 expiry = d.market.createFirstEpoch(nvda, round);
+        // #then
+        assertEq(expiry, SEP_18);
+        assertEq(d.market.epoch(nvda, expiry).opening, opening);
+        assertEq(d.market.epoch(nvda, expiry).referencePrice, _referencePriceFrom(answer));
     }
 
     function test_theDeployedMarketRunsAWholeWeek() public {

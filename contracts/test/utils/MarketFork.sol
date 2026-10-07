@@ -2,6 +2,7 @@
 pragma solidity 0.8.37;
 
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {VayleMarket} from "../../src/VayleMarket.sol";
 import {PriceAdapter} from "../../src/assets/PriceAdapter.sol";
 import {StockTokenRegistry} from "../../src/assets/StockTokenRegistry.sol";
 import {SessionCalendar} from "../../src/calendar/SessionCalendar.sol";
@@ -43,15 +44,13 @@ abstract contract MarketFork is ForkTest {
     function setUp() public virtual override {
         super.setUp();
         vm.warp(SEP_18 - 2 days);
-        calendar = new SessionCalendar(admin);
         SessionCalendar.Boundary[] memory boundaries = new SessionCalendar.Boundary[](5);
         boundaries[0] = SessionCalendar.Boundary(SEP_18, SEP_21_OPEN);
         boundaries[1] = SessionCalendar.Boundary(SEP_25, SEP_28_OPEN);
         boundaries[2] = SessionCalendar.Boundary(OCT_02, OCT_05_OPEN);
         boundaries[3] = SessionCalendar.Boundary(OCT_09, OCT_12_OPEN);
         boundaries[4] = SessionCalendar.Boundary(OCT_16, OCT_19_OPEN);
-        vm.prank(admin);
-        calendar.append(boundaries);
+        calendar = new SessionCalendar(admin, boundaries);
         registry = new StockTokenRegistry(admin, IERC20Metadata(usdg));
         vm.prank(admin);
         registry.list(
@@ -59,6 +58,20 @@ abstract contract MarketFork is ForkTest {
         );
         adapter = new PriceAdapter(registry);
         liveness = new LivenessCheckpoint();
+    }
+
+    /// @dev Deploys the market from its build artifact. A suite that used `new` would carry the
+    /// market's init code in its own bytecode and could outgrow the chain's code size limit.
+    function _deployMarket(
+        SessionCalendar calendar_,
+        address owner,
+        address guardian,
+        address feeRecipient
+    ) internal returns (VayleMarket) {
+        bytes memory args = abi.encode(
+            calendar_, registry, adapter, liveness, owner, guardian, feeRecipient
+        );
+        return VayleMarket(deployCode("VayleMarket.sol:VayleMarket", args));
     }
 
     /// @dev Walks back from the latest round to the last one at or before `cutoff`.

@@ -11,7 +11,8 @@ import {SessionRules} from "../libraries/SessionRules.sol";
 /// exchange's published calendar. An epoch copies its expiry when it's created, so editing the
 /// schedule can never move a live epoch. Only closes more than MIN_LEAD in the future can be added
 /// or removed, and the next close after now can't be removed at all, since it's the expiry of the
-/// live or about-to-open epoch.
+/// live or about-to-open epoch. The schedule passed at deployment only needs closes in the future,
+/// since no order exists yet that a close at short notice could surprise.
 contract SessionCalendar is Ownable2Step {
     uint256 public constant MIN_LEAD = 1 days;
     uint256 public constant MAX_SPACING = 15 days;
@@ -39,19 +40,12 @@ contract SessionCalendar is Ownable2Step {
     error NoCloseAfter(uint64 timestamp);
     error NoCloseAtOrBefore(uint64 timestamp);
 
-    constructor(address initialOwner) Ownable(initialOwner) {}
+    constructor(address initialOwner, Boundary[] memory initial) Ownable(initialOwner) {
+        _append(initial, block.timestamp);
+    }
 
     function append(Boundary[] calldata boundaries) external onlyOwner {
-        uint256 fromIndex = _boundaries.length;
-        uint256 earliest = block.timestamp + MIN_LEAD;
-        Boundary memory previous = fromIndex == 0 ? Boundary(0, 0) : _boundaries[fromIndex - 1];
-        for (uint256 i; i < boundaries.length; ++i) {
-            Boundary calldata next = boundaries[i];
-            _checkNext(previous, next, earliest);
-            _boundaries.push(next);
-            previous = next;
-        }
-        emit BoundariesAppended(fromIndex, boundaries);
+        _append(boundaries, block.timestamp + MIN_LEAD);
     }
 
     /// @notice Removes every boundary from index `keep` on. The next close after now stays, and
@@ -91,9 +85,21 @@ contract SessionCalendar is Ownable2Step {
         return _boundaries[index].close;
     }
 
+    function _append(Boundary[] memory boundaries, uint256 earliest) private {
+        uint256 fromIndex = _boundaries.length;
+        Boundary memory previous = fromIndex == 0 ? Boundary(0, 0) : _boundaries[fromIndex - 1];
+        for (uint256 i; i < boundaries.length; ++i) {
+            Boundary memory next = boundaries[i];
+            _checkNext(previous, next, earliest);
+            _boundaries.push(next);
+            previous = next;
+        }
+        emit BoundariesAppended(fromIndex, boundaries);
+    }
+
     /// @dev The spacing cap only binds while an epoch could still open at the previous boundary,
     /// so a schedule that ran out can always be restarted.
-    function _checkNext(Boundary memory previous, Boundary calldata next, uint256 earliest)
+    function _checkNext(Boundary memory previous, Boundary memory next, uint256 earliest)
         private
         view
     {

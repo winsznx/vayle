@@ -29,7 +29,7 @@ contract SessionCalendarTest is Test {
 
     function setUp() public {
         vm.warp(NOW);
-        calendar = new SessionCalendar(timelock);
+        calendar = new SessionCalendar(timelock, new SessionCalendar.Boundary[](0));
     }
 
     function _weeks() internal pure returns (SessionCalendar.Boundary[] memory boundaries) {
@@ -57,6 +57,50 @@ contract SessionCalendarTest is Test {
 
     function _closes() internal pure returns (uint64[5] memory) {
         return [OCT_09, OCT_16, OCT_23, OCT_30, NOV_06];
+    }
+
+    function test_constructorSchedulesACloseLessThanADayAway() public {
+        // #given: a deploy on the morning of the first close
+        vm.warp(OCT_09 - 9 hours);
+        SessionCalendar.Boundary[] memory boundaries = _weeks();
+        // #then
+        vm.expectEmit();
+        emit BoundariesAppended(0, boundaries);
+        // #when
+        SessionCalendar deployed = new SessionCalendar(timelock, boundaries);
+        // #then
+        assertEq(deployed.boundaryCount(), 5);
+        assertEq(deployed.boundaryAt(0).close, OCT_09);
+        assertEq(deployed.nextCloseAfter(uint64(vm.getBlockTimestamp())), OCT_09);
+    }
+
+    function test_constructorRejectsACloseThatIsntInTheFuture() public {
+        // #given
+        vm.warp(OCT_09);
+        // #then
+        vm.expectRevert(abi.encodeWithSelector(SessionCalendar.TooSoon.selector, OCT_09, OCT_09));
+        // #when
+        new SessionCalendar(timelock, _one(OCT_09, OCT_12_OPEN));
+    }
+
+    function test_constructorAppliesEveryOtherCheck() public {
+        // #given
+        SessionCalendar.Boundary[] memory outOfOrder = new SessionCalendar.Boundary[](2);
+        outOfOrder[0] = SessionCalendar.Boundary(OCT_16, OCT_19_OPEN);
+        outOfOrder[1] = SessionCalendar.Boundary(OCT_09, OCT_12_OPEN);
+        uint64 saturday = OCT_09 + 1 days;
+        uint64 aWeekLate = OCT_12_OPEN + 7 days;
+        // #when #then
+        vm.expectRevert(abi.encodeWithSelector(SessionCalendar.NotASessionClose.selector, saturday));
+        new SessionCalendar(timelock, _one(saturday, OCT_12_OPEN));
+        vm.expectRevert(
+            abi.encodeWithSelector(SessionCalendar.NotIncreasing.selector, OCT_16, OCT_09)
+        );
+        new SessionCalendar(timelock, outOfOrder);
+        vm.expectRevert(
+            abi.encodeWithSelector(SessionCalendar.BadCreationDeadline.selector, OCT_09, aWeekLate)
+        );
+        new SessionCalendar(timelock, _one(OCT_09, aWeekLate));
     }
 
     function test_appendStoresBoundariesInOrderAndEmits() public {

@@ -29,9 +29,7 @@ contract TwoWeekRenewalForkTest is MarketFork {
     function setUp() public override {
         super.setUp();
         (maker, makerKey) = makeAddrAndKey("maker");
-        market = new VayleMarket(
-            calendar, registry, adapter, liveness, admin, makeAddr("guardian"), admin
-        );
+        market = _deployMarket(calendar, admin, makeAddr("guardian"), admin);
         MarketGuard.Caps memory caps = MarketGuard.Caps({
             openSize: 10 * ONE, walletSize: 4 * ONE, seriesOpenInterest: 6 * ONE, fillSize: 2 * ONE
         });

@@ -7,6 +7,23 @@ export const sessionCalendarAbi = [
         "name": "initialOwner",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "initial",
+        "type": "tuple[]",
+        "internalType": "struct SessionCalendar.Boundary[]",
+        "components": [
+          {
+            "name": "close",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "creationDeadline",
+            "type": "uint64",
+            "internalType": "uint64"
+          }
+        ]
       }
     ],
     "stateMutability": "nonpayable"

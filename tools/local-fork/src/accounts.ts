@@ -4,7 +4,7 @@ import { generatePrivateKey, privateKeyToAddress } from "viem/accounts";
 import { ForkNotRunning } from "./errors.ts";
 import { ACCOUNTS_FILE } from "./paths.ts";
 
-export const ROLES = ["deployer", "guardian", "treasury", "keeper", "maker", "holder"] as const;
+export const ROLES = ["deployer", "guardian", "keeper", "maker", "holder"] as const;
 export type Role = (typeof ROLES)[number];
 
 // Fresh keys for every fork, worthless anywhere else, and a stand-in multisig address.
@@ -19,7 +19,6 @@ export function newAccounts(): Accounts {
     keys: {
       deployer: generatePrivateKey(),
       guardian: generatePrivateKey(),
-      treasury: generatePrivateKey(),
       keeper: generatePrivateKey(),
       maker: generatePrivateKey(),
       holder: generatePrivateKey(),
@@ -54,7 +53,6 @@ export function readAccounts(): Accounts {
     keys: {
       deployer: key(keys, "deployer"),
       guardian: key(keys, "guardian"),
-      treasury: key(keys, "treasury"),
       keeper: key(keys, "keeper"),
       maker: key(keys, "maker"),
       holder: key(keys, "holder"),

@@ -717,6 +717,43 @@ export const vayleMarketAbi = [
   },
   {
     "type": "function",
+    "name": "createFirstEpoch",
+    "inputs": [
+      {
+        "name": "asset",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "roundHint",
+        "type": "uint80",
+        "internalType": "uint80"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "expiry",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "deployedAt",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "domainSeparator",
     "inputs": [],
     "outputs": [
@@ -3935,6 +3972,17 @@ export const vayleMarketAbi = [
   },
   {
     "type": "error",
+    "name": "FirstCloseHasPassed",
+    "inputs": [
+      {
+        "name": "firstClose",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "HaltCoolingDown",
     "inputs": [
       {
@@ -4531,6 +4579,17 @@ export const vayleMarketAbi = [
         "name": "target",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "TooSoonAfterDeploy",
+    "inputs": [
+      {
+        "name": "earliest",
+        "type": "uint64",
+        "internalType": "uint64"
       }
     ]
   },
