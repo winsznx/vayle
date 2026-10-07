@@ -47,7 +47,11 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
+      - name: Lint
+        # Type-aware lint loads every package's types at once, past Node's default heap here.
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+        run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm build
       - run: pnpm test
