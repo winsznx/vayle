@@ -2,8 +2,10 @@ import { lstatSync, readFileSync, readlinkSync } from "node:fs";
 import { join } from "node:path";
 import {
   branchName,
+  branchNames,
   commitMessages,
   hasCommits,
+  historyBlobs,
   isDeletion,
   parsePushUpdates,
   pushedRevArgs,
@@ -23,6 +25,7 @@ const USAGE = `usage: repo-guard <mode>
   message <file>  scan a commit message file (commit-msg)
   push            scan branch names and outgoing commit messages from stdin (pre-push)
   tree            scan every tracked file with the local lists
+  history         scan every file version, commit message and branch name in the whole history
   ci              scan tracked files, all commit messages, the branch and PR text, with masked output`;
 
 export interface Io {
@@ -95,6 +98,31 @@ export function scanPush(
   return findings;
 }
 
+// Before a repository goes public: anything ever committed is readable from its history. Each
+// file version is scanned under its own path, so the lockfile and generated output are skipped as
+// they are in the tree, and findings name the blob.
+function scanHistory(root: string, lists: NameLists): Collected {
+  const findings: Finding[] = [];
+  const skippedBinaries: string[] = [];
+  for (const { id, path, content } of historyBlobs(root)) {
+    const location = `${path} (blob ${id.slice(0, 10)})`;
+    if (isBinary(content)) {
+      skippedBinaries.push(location);
+      continue;
+    }
+    for (const finding of scanFile(path, decoder.decode(content), { lists, scanNames: true })) {
+      findings.push({ ...finding, location: finding.location.replace(path, location) });
+    }
+  }
+  if (hasCommits(root)) {
+    for (const { sha, message } of commitMessages(root, ["--all"])) {
+      findings.push(...scanMessage(message, `commit ${sha} message`, lists));
+    }
+  }
+  for (const name of branchNames(root)) findings.push(...scanMessage(name, "branch name", lists));
+  return { findings, skippedBinaries };
+}
+
 function scanCi(root: string, io: Io, lists: NameLists): Collected {
   const { findings, skippedBinaries } = scanContents(worktreeFiles(root), lists);
   const history = hasCommits(root) ? commitMessages(root, ["HEAD"]) : [];
@@ -129,6 +157,9 @@ export function run(args: readonly string[], io: Io): number {
         break;
       case "tree":
         collected = scanContents(worktreeFiles(root), lists);
+        break;
+      case "history":
+        collected = scanHistory(root, lists);
         break;
       case "message": {
         if (arg === undefined) {

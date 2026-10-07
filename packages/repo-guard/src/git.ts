@@ -85,6 +85,55 @@ export function commitMessages(root: string, revArgs: readonly string[]): Commit
     });
 }
 
+export interface HistoryBlob {
+  readonly id: string;
+  readonly path: string;
+  readonly content: Buffer;
+}
+
+// The first path each object appears at in `git rev-list --objects` output. Commits have no path.
+export function firstPaths(revListObjects: string): Map<string, string> {
+  const paths = new Map<string, string>();
+  for (const line of revListObjects.split("\n")) {
+    const space = line.indexOf(" ");
+    if (space === -1) continue;
+    const id = line.slice(0, space);
+    if (!paths.has(id)) paths.set(id, line.slice(space + 1));
+  }
+  return paths;
+}
+
+// The blob IDs in `git cat-file --batch-check="%(objectname) %(objecttype)"` output.
+export function blobIds(batchCheck: string): string[] {
+  return batchCheck
+    .split("\n")
+    .map((line) => line.split(" "))
+    .filter(([, kind]) => kind === "blob")
+    .map(([id = ""]) => id);
+}
+
+// Every file version any commit on any ref has held, once per blob, under the first path it was
+// seen at. Commits reach blobs through trees, and submodule gitlinks aren't followed.
+export function historyBlobs(root: string): HistoryBlob[] {
+  const paths = firstPaths(gitText(["rev-list", "--all", "--objects"], root));
+  const kinds = execFileSync("git", ["cat-file", "--batch-check=%(objectname) %(objecttype)"], {
+    cwd: root,
+    input: `${[...paths.keys()].join("\n")}\n`,
+    maxBuffer: MAX_BUFFER,
+  }).toString("utf8");
+  return blobIds(kinds).map((id) => ({
+    id,
+    path: paths.get(id) ?? "",
+    content: gitBuffer(["cat-file", "blob", id], root),
+  }));
+}
+
+export function branchNames(root: string): string[] {
+  return gitText(["for-each-ref", "--format=%(refname:short)", "refs/heads", "refs/remotes"], root)
+    .split("\n")
+    .filter((name) => name !== "");
+}
+
 export interface PushUpdate {
   readonly localRef: string;
   readonly localSha: string;
