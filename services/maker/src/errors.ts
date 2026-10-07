@@ -8,3 +8,6 @@ export class MissingSetting extends MakerError {
 export class BadSetting extends MakerError {
   override readonly name = "BadSetting";
 }
+export class DigestMismatch extends MakerError {
+  override readonly name = "DigestMismatch";
+}

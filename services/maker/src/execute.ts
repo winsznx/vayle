@@ -2,6 +2,7 @@ import { vayleMarketAbi } from "@vayle/abi";
 import { withGasMargin } from "@vayle/market";
 import {
   erc20Abi,
+  hashTypedData,
   maxUint256,
   type Account,
   type Address,
@@ -14,6 +15,7 @@ import {
 } from "viem";
 import type { PrivateKeyAccount } from "viem/accounts";
 import type { MakerConfig } from "./config.ts";
+import { DigestMismatch } from "./errors.ts";
 import type { MakerAction, QuoteTerms } from "./plan.ts";
 
 export interface Clients {
@@ -55,10 +57,56 @@ async function sent(clients: Clients, request: Request): Promise<Hash> {
   return confirmed(clients, await clients.wallet.writeContract({ ...request, gas }));
 }
 
-// The maker signs the digest the market itself computes, so the signed bytes can't drift from what
-// the contract verifies.
-async function signedQuote(clients: Clients, config: MakerConfig, terms: QuoteTerms) {
-  const quote = {
+const QUOTE_TYPES = {
+  Quote: [
+    { name: "maker", type: "address" },
+    { name: "taker", type: "address" },
+    { name: "series", type: "uint256" },
+    { name: "premium", type: "uint256" },
+    { name: "maxFeeBps", type: "uint16" },
+    { name: "maxAmount", type: "uint256" },
+    { name: "minFill", type: "uint256" },
+    { name: "nonce", type: "uint256" },
+    { name: "deadline", type: "uint64" },
+  ],
+} as const;
+
+export interface Quote {
+  readonly maker: Address;
+  readonly taker: Address;
+  readonly series: bigint;
+  readonly premium: bigint;
+  readonly maxFeeBps: number;
+  readonly maxAmount: bigint;
+  readonly minFill: bigint;
+  readonly nonce: bigint;
+  readonly deadline: bigint;
+}
+
+// The quote as EIP-712 typed data, bound to this chain and this market by the domain.
+export function quoteTypedData(config: Pick<MakerConfig, "chainId" | "market">, quote: Quote) {
+  return {
+    domain: {
+      name: "Vayle",
+      version: "1",
+      chainId: config.chainId,
+      verifyingContract: config.market,
+    },
+    types: QUOTE_TYPES,
+    primaryType: "Quote",
+    message: quote,
+  } as const;
+}
+
+// The maker hashes the quote itself and signs that, so an RPC can't hand it the digest of some
+// other quote to sign. It still asks the market for its digest and refuses to sign when the two
+// differ, which catches an RPC that lies and a market whose domain isn't the one expected.
+export async function signedQuote(
+  clients: Pick<Clients, "public" | "signer">,
+  config: Pick<MakerConfig, "chainId" | "market">,
+  terms: QuoteTerms,
+): Promise<{ quote: Quote; signature: Hex }> {
+  const quote: Quote = {
     maker: clients.signer.address,
     taker: ANY_TAKER,
     series: terms.series,
@@ -69,13 +117,20 @@ async function signedQuote(clients: Clients, config: MakerConfig, terms: QuoteTe
     nonce: nextNonce(),
     deadline: BigInt(terms.deadline),
   };
-  const digest = await clients.public.readContract({
+  const typed = quoteTypedData(config, quote);
+  const digest = hashTypedData(typed);
+  const reported = await clients.public.readContract({
     address: config.market,
     abi: vayleMarketAbi,
     functionName: "quoteDigest",
     args: [quote],
   });
-  const signature: Hex = await clients.signer.sign({ hash: digest });
+  if (reported !== digest) {
+    throw new DigestMismatch(
+      `the market reports quote digest ${reported}, the maker computed ${digest}`,
+    );
+  }
+  const signature = await clients.signer.signTypedData(typed);
   return { quote, signature };
 }
 

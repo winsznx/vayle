@@ -16,6 +16,8 @@ export interface PricingConfig {
 
 export interface MakerConfig {
   readonly rpcUrl: string;
+  // The chain the maker signs quotes for, from the chain facts. Quote signatures commit to it.
+  readonly chainId: number;
   readonly key: Hex;
   readonly market: Address;
   readonly asset: Address;
@@ -51,6 +53,7 @@ export function loadConfig(env: Env): MakerConfig {
   if (rfq !== "on" && rfq !== "off") throw new BadSetting("MAKER_RFQ must be on or off");
   return {
     rpcUrl: required(env, "ROBINHOOD_RPC_URL"),
+    chainId: facts.chain.chainId,
     key: key as Hex,
     market: getAddress(required(env, "VAYLE_MARKET")),
     asset: getAddress(facts.nvda.address),
