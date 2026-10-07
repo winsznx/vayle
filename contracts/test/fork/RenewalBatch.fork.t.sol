@@ -82,6 +82,20 @@ contract RenewalBatchForkTest is VayleMarketFork {
         _assertConserved(_claimants());
     }
 
+    function test_aBatchByATeamMakerIsTaggedOnChain() public {
+        // #given
+        vm.prank(timelock);
+        market.setTeamOperated(quoter, true);
+        vm.warp(BID_OPEN);
+        _bid(PREMIUM, 10 * ONE);
+        vm.warp(BID_CLOSE);
+        // #then: alice, bob and carol's four tokens are the bucket the batch opens on
+        vm.expectEmit(address(market));
+        emit RenewalBatch.BatchOpened(callSeries, quoter, PREMIUM, 4 * ONE, true);
+        // #when
+        market.openBatch(callSeries);
+    }
+
     function test_anOrderWhoseMinimumIsAboveTheBidIsSkippedAndUntouched() public {
         // #when
         _runBatch(PREMIUM, 10 * ONE);

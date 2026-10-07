@@ -63,8 +63,14 @@ abstract contract RenewalBatch is QuoteSettlement {
         uint256 premium,
         uint256 amount
     );
+    /// @param teamOperated Whether the maker whose bid the batch fills at is operated by the team,
+    /// so every batch fill is tagged the way a quote fill is.
     event BatchOpened(
-        uint256 indexed series, address indexed maker, uint256 premium, uint256 total
+        uint256 indexed series,
+        address indexed maker,
+        uint256 premium,
+        uint256 total,
+        bool teamOperated
     );
     event OrderSkipped(
         uint256 indexed orderId, uint256 indexed series, uint256 minPremium, uint256 premium
@@ -131,7 +137,7 @@ abstract contract RenewalBatch is QuoteSettlement {
         b.maxOrderId = orderCount;
         b.total = idleSize[key.asset][key.optionType][key.strike];
         b.phase = b.total == 0 ? Phase.Done : Phase.Counting;
-        emit BatchOpened(series, bid.maker, bid.premium, b.total);
+        emit BatchOpened(series, bid.maker, bid.premium, b.total, teamOperated[bid.maker]);
     }
 
     /// @notice Counts orders of the bucket, in increasing ID. Once every idle order is counted the
