@@ -2,6 +2,7 @@
 pragma solidity 0.8.37;
 
 import {Script} from "forge-std/Script.sol";
+import {VmSafe} from "forge-std/Vm.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {VayleMarket} from "../src/VayleMarket.sol";
@@ -15,7 +16,8 @@ import {LivenessCheckpoint} from "../src/liveness/LivenessCheckpoint.sol";
 
 /// @notice Deploys Vayle owned by a timelock that starts at zero delay, configures it through that
 /// timelock, raises the delay, hands every role to the multisig and drops the deployer's.
-/// @dev run() broadcasts from DEPLOYER_KEY and writes deployments/vayle-robinhood-mainnet.json.
+/// @dev run() broadcasts from DEPLOYER_KEY and, when it broadcasts, writes
+/// deployments/vayle-robinhood-mainnet.json.
 /// deploy() holds the logic, so a fork test can rehearse it without broadcasting.
 contract DeployVayle is Script {
     // The order and strike grid: 0.01-token lots, 0.0001 USDG premium ticks, $5 strikes, strikes
@@ -63,7 +65,13 @@ contract DeployVayle is Script {
         vm.startBroadcast(key);
         d = deploy(config, vm.addr(key));
         vm.stopBroadcast();
-        _record(d);
+        // A dry run deploys nothing, so it writes no addresses for the apps to pick up.
+        if (
+            vm.isContext(VmSafe.ForgeContext.ScriptBroadcast)
+                || vm.isContext(VmSafe.ForgeContext.ScriptResume)
+        ) {
+            _record(d);
+        }
     }
 
     function readConfig() public view returns (Config memory config) {
