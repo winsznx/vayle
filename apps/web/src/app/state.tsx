@@ -1,7 +1,8 @@
+import { robinhoodChain } from "@vayle/chain-facts/chain";
 import { withGasMargin, type Call } from "@vayle/market";
 import { createContext, use, useMemo, useState, type ReactNode } from "react";
 import type { Chain, PublicClient } from "viem";
-import { chainOf, publicClientOf } from "./chain.ts";
+import { publicClientOf } from "./chain.ts";
 import { describeFailure, reverted } from "./failures.ts";
 import type { AppConfig } from "./config.ts";
 import { useDisclosures, type DisclosuresState } from "./useDisclosures.ts";
@@ -101,8 +102,7 @@ export function AppProvider({
   readonly children: ReactNode;
 }) {
   const client = useMemo(() => publicClientOf(config), [config]);
-  const chain = useMemo(() => chainOf(config), [config]);
-  const wallet = useWallet(chain);
+  const wallet = useWallet(robinhoodChain);
   const [version, setVersion] = useState(0);
   const [tx, setTx] = useState<TxState>({ status: "idle" });
   const { view, error } = useMarket(client, config, wallet.address, version);
@@ -139,7 +139,7 @@ export function AppProvider({
   const state: AppState = {
     config,
     client,
-    chain,
+    chain: robinhoodChain,
     wallet,
     onChain,
     view,

@@ -47,8 +47,21 @@ const feedAbi = parseAbi([
 const POLL_MS = 15_000;
 const NO_MAKER = "0x0000000000000000000000000000000000000000";
 
-async function readEpoch(client: PublicClient, config: AppConfig): Promise<Epoch | null> {
-  const market = { address: config.market, abi: vayleMarketAbi } as const;
+// Every read in a poll is pinned to the block the poll starts from, so the page never shows one
+// block's orders beside another block's series. Reads that don't wait on each other start together,
+// and the client sends each such group as one Multicall3 call.
+
+interface Head {
+  readonly number: bigint;
+  readonly timestamp: bigint;
+}
+
+async function readEpoch(
+  client: PublicClient,
+  config: AppConfig,
+  blockNumber: bigint,
+): Promise<Epoch | null> {
+  const market = { address: config.market, abi: vayleMarketAbi, blockNumber } as const;
   const expiry = await client.readContract({
     ...market,
     functionName: "latestExpiry",
@@ -78,6 +91,7 @@ async function readBids(
   client: PublicClient,
   config: AppConfig,
   epoch: Epoch,
+  blockNumber: bigint,
 ): Promise<Map<bigint, bigint>> {
   const bids = new Map<bigint, bigint>();
   await Promise.all(
@@ -97,6 +111,7 @@ async function readBids(
         abi: vayleMarketAbi,
         functionName: "bestBid",
         args: [series],
+        blockNumber,
       });
       if (bid.maker !== NO_MAKER) bids.set(rung.strike, bid.premium);
     }),
@@ -108,37 +123,51 @@ async function readAccount(
   client: PublicClient,
   config: AppConfig,
   owner: Address,
-  now: bigint,
+  head: Head,
 ): Promise<AccountView> {
-  const orders = await ordersOf(client, config.market, owner);
-  const ids = [...new Set(orders.filter((o) => o.series !== 0n).map((o) => o.series))];
-  const series = new Map(
-    await Promise.all(
-      ids.map(async (id) => [id, await seriesState(client, config.market, id)] as const),
-    ),
-  );
-  const due = [...series.values()].filter((s) => !s.settled && now >= s.windowEnd);
-  const heldOpen = new Map<bigint, bigint>();
-  for (const s of due) {
-    const until = await finalizeBlockedUntil(client, config.market, owner, s.id);
-    if (until !== null) heldOpen.set(s.id, until);
-  }
   const allowance = (token: Address): Promise<bigint> =>
     client.readContract({
       address: token,
       abi: erc20Abi,
       functionName: "allowance",
       args: [owner, config.market],
+      blockNumber: head.number,
     });
-  const [claimableAsset, claimableUsdg, balanceAsset, balanceUsdg, allowanceAsset, allowanceUsdg] =
-    await Promise.all([
-      claimable(client, config.market, owner, config.asset),
-      claimable(client, config.market, owner, config.usdg),
-      balanceOf(client, config.asset, owner),
-      balanceOf(client, config.usdg, owner),
-      allowance(config.asset),
-      allowance(config.usdg),
-    ]);
+  const [
+    orders,
+    claimableAsset,
+    claimableUsdg,
+    balanceAsset,
+    balanceUsdg,
+    allowanceAsset,
+    allowanceUsdg,
+  ] = await Promise.all([
+    ordersOf(client, config.market, owner, head.number),
+    claimable(client, config.market, owner, config.asset, head.number),
+    claimable(client, config.market, owner, config.usdg, head.number),
+    balanceOf(client, config.asset, owner, head.number),
+    balanceOf(client, config.usdg, owner, head.number),
+    allowance(config.asset),
+    allowance(config.usdg),
+  ]);
+  const ids = [...new Set(orders.filter((o) => o.series !== 0n).map((o) => o.series))];
+  const series = new Map(
+    await Promise.all(
+      ids.map(
+        async (id) => [id, await seriesState(client, config.market, id, head.number)] as const,
+      ),
+    ),
+  );
+  // Finalizing is simulated at the chain's head rather than the pinned block, since the question is
+  // whether it would go through if sent now.
+  const due = [...series.values()].filter((s) => !s.settled && head.timestamp >= s.windowEnd);
+  const blocked = await Promise.all(
+    due.map(
+      async (s) => [s.id, await finalizeBlockedUntil(client, config.market, owner, s.id)] as const,
+    ),
+  );
+  const heldOpen = new Map<bigint, bigint>();
+  for (const [id, until] of blocked) if (until !== null) heldOpen.set(id, until);
   return {
     orders,
     series,
@@ -157,23 +186,32 @@ async function readMarket(
   config: AppConfig,
   owner: Address | null,
 ): Promise<MarketView> {
-  const [block, epoch, round, feedDecimals] = await Promise.all([
-    client.getBlock({ blockTag: "latest" }),
-    readEpoch(client, config),
-    client.readContract({ address: config.feed, abi: feedAbi, functionName: "latestRoundData" }),
-    client.readContract({ address: config.feed, abi: feedAbi, functionName: "decimals" }),
-  ]);
-  const [bids, account] = await Promise.all([
-    epoch === null ? Promise.resolve(new Map<bigint, bigint>()) : readBids(client, config, epoch),
-    owner === null ? Promise.resolve(null) : readAccount(client, config, owner, block.timestamp),
+  const head = await client.getBlock({ blockTag: "latest" });
+  const at = { blockNumber: head.number } as const;
+  const [week, round, feedDecimals, account] = await Promise.all([
+    readEpoch(client, config, head.number).then(async (epoch) => ({
+      epoch,
+      bids:
+        epoch === null
+          ? new Map<bigint, bigint>()
+          : await readBids(client, config, epoch, head.number),
+    })),
+    client.readContract({
+      address: config.feed,
+      abi: feedAbi,
+      functionName: "latestRoundData",
+      ...at,
+    }),
+    client.readContract({ address: config.feed, abi: feedAbi, functionName: "decimals", ...at }),
+    owner === null ? Promise.resolve(null) : readAccount(client, config, owner, head),
   ]);
   return {
-    block: block.number,
-    now: Number(block.timestamp),
-    epoch,
+    block: head.number,
+    now: Number(head.timestamp),
+    epoch: week.epoch,
     feedAnswer: round[1],
     feedDecimals,
-    bids,
+    bids: week.bids,
     account,
   };
 }
@@ -183,8 +221,9 @@ export interface MarketState {
   readonly error: string | null;
 }
 
-// The chain is the external system here: read it now and every 15 seconds, and again whenever
-// `version` changes, which the app bumps after a transaction confirms.
+// The chain is the external system here: read it now, every 15 seconds while the page is in view,
+// on coming back to the page, and whenever `version` changes, which the app bumps after a
+// transaction confirms. A hidden tab doesn't poll, and only one read runs at a time.
 export function useMarket(
   client: PublicClient,
   config: AppConfig,
@@ -194,22 +233,34 @@ export function useMarket(
   const [state, setState] = useState<MarketState>({ view: null, error: null });
   useEffect(() => {
     let cancelled = false;
+    let running = false;
     const load = (): void => {
-      readMarket(client, config, owner).then(
-        (view) => {
-          if (!cancelled) setState({ view, error: null });
-        },
-        (error: unknown) => {
-          if (cancelled) return;
-          setState((previous) => ({ view: previous.view, error: shortError(error) }));
-        },
-      );
+      if (running || document.hidden) return;
+      running = true;
+      readMarket(client, config, owner)
+        .then(
+          (view) => {
+            if (!cancelled) setState({ view, error: null });
+          },
+          (error: unknown) => {
+            if (cancelled) return;
+            setState((previous) => ({ view: previous.view, error: shortError(error) }));
+          },
+        )
+        .finally(() => {
+          running = false;
+        });
+    };
+    const onVisibility = (): void => {
+      if (!document.hidden) load();
     };
     load();
     const timer = setInterval(load, POLL_MS);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       cancelled = true;
       clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [client, config, owner, version]);
   return state;

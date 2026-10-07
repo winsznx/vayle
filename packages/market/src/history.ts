@@ -57,6 +57,7 @@ const ACCOUNT_ARG: Readonly<Record<string, string>> = {
   BidSubmitted: "maker",
   BatchOpened: "maker",
   TeamOperatedSet: "maker",
+  BatchBidderSet: "maker",
   NoncesInvalidated: "maker",
   QuoteCancelled: "maker",
 };
@@ -102,28 +103,62 @@ export function toMarketEvents(
   });
 }
 
-// The market's events from `fromBlock` to `toBlock`, read `chunk` blocks at a time, oldest first.
+// The production RPC refuses eth_getLogs over more than 10,000 blocks, which on this chain is under
+// 20 minutes. A long span is read a few ranges at a time.
+export const LOG_RANGE = 10_000n;
+const RANGES_AT_ONCE = 4;
+
+// The block times a page of logs carries. This chain's nodes put each block's timestamp on its
+// logs, so only blocks whose logs arrive without one are left to look up.
+export function blockTimesInLogs(logs: readonly Log<bigint, number, false>[]): {
+  readonly times: Map<bigint, number>;
+  readonly missing: readonly bigint[];
+} {
+  const times = new Map<bigint, number>();
+  for (const log of logs) {
+    if (log.blockTimestamp !== undefined) {
+      times.set(log.blockNumber, Number(log.blockTimestamp));
+    }
+  }
+  const missing = [...new Set(logs.map((l) => l.blockNumber))].filter((n) => !times.has(n));
+  return { times, missing };
+}
+
+async function eventsIn(
+  client: PublicClient,
+  market: Address,
+  fromBlock: bigint,
+  toBlock: bigint,
+): Promise<MarketEvent[]> {
+  const logs = await client.getLogs({ address: market, fromBlock, toBlock });
+  const { times, missing } = blockTimesInLogs(logs);
+  const lookedUp = await Promise.all(
+    missing.map(async (n) => [n, (await client.getBlock({ blockNumber: n })).timestamp] as const),
+  );
+  for (const [n, timestamp] of lookedUp) times.set(n, Number(timestamp));
+  return toMarketEvents(logs, times);
+}
+
+// The market's events from `fromBlock` to `toBlock`, oldest first, read `range` blocks per request.
 export async function readMarketEvents(
   client: PublicClient,
   market: Address,
   fromBlock: bigint,
   toBlock: bigint,
-  chunk = 50_000n,
+  range = LOG_RANGE,
 ): Promise<MarketEvent[]> {
+  const starts: bigint[] = [];
+  for (let from = fromBlock; from <= toBlock; from += range) starts.push(from);
   const events: MarketEvent[] = [];
-  for (let from = fromBlock; from <= toBlock; from += chunk) {
-    const to = from + chunk - 1n < toBlock ? from + chunk - 1n : toBlock;
-    const logs = await client.getLogs({ address: market, fromBlock: from, toBlock: to });
-    const numbers = [...new Set(logs.map((l) => l.blockNumber))];
-    const times = new Map(
-      await Promise.all(
-        numbers.map(async (n) => {
-          const block = await client.getBlock({ blockNumber: n });
-          return [n, Number(block.timestamp)] as const;
-        }),
-      ),
+  for (let i = 0; i < starts.length; i += RANGES_AT_ONCE) {
+    const pages = await Promise.all(
+      starts
+        .slice(i, i + RANGES_AT_ONCE)
+        .map((from) =>
+          eventsIn(client, market, from, from + range - 1n < toBlock ? from + range - 1n : toBlock),
+        ),
     );
-    events.push(...toMarketEvents(logs, times));
+    for (const page of pages) events.push(...page);
   }
   return events;
 }

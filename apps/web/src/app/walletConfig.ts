@@ -7,7 +7,7 @@ import type { AppConfig } from "./config.ts";
 // The wallet layer: wagmi for the connection, RainbowKit for the modal. Installed browser wallets
 // announce themselves (EIP-6963) and list by name. WalletConnect, for phones and for wallets that
 // only live on a phone, joins when the build has a project ID. wagmi's only transport is the app's
-// own RPC, and wallets that add the chain get the public RPC from chainOf, never this one.
+// own RPC, and wallets that add the chain get robinhoodChain's public RPC, never this one.
 
 // localStorage throws when a browser blocks site data, and wagmi's default storage only guards
 // writes. Without storage, a wallet just doesn't reconnect on the next visit.

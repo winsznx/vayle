@@ -1,7 +1,8 @@
 import { vayleMarketAbi } from "@vayle/abi";
-import { erc20Abi, type Address, type PublicClient } from "viem";
+import { erc20Abi, type Address, type ContractFunctionReturnType, type PublicClient } from "viem";
 
 // What a holder needs to see, read straight from the market's views. No logs, so any RPC works.
+// Every read takes an optional block number, so a page of reads can't mix two states of the market.
 
 export type OrderStatus = "none" | "active" | "cancelled" | "closed";
 const STATUS: readonly OrderStatus[] = ["none", "active", "cancelled", "closed"];
@@ -31,9 +32,23 @@ export interface SeriesState {
   readonly settled: boolean;
 }
 
+type OrderView = ContractFunctionReturnType<typeof vayleMarketAbi, "view", "orderOf">;
+
+// On a client whose chain names Multicall3 and that batches reads, reads started together go out as
+// one Multicall3 call per few hundred, so they all start at once. Any other client, a wallet's
+// provider for one, gets plain eth_calls READ_BATCH at a time.
 const READ_BATCH = 20;
 
-async function inBatches<T, R>(items: readonly T[], read: (item: T) => Promise<R>): Promise<R[]> {
+function batchesReads(client: PublicClient): boolean {
+  return Boolean(client.batch?.multicall) && client.chain?.contracts?.multicall3 !== undefined;
+}
+
+async function readAll<T, R>(
+  client: PublicClient,
+  items: readonly T[],
+  read: (item: T) => Promise<R>,
+): Promise<R[]> {
+  if (batchesReads(client)) return Promise.all(items.map(read));
   const results: R[] = [];
   for (let i = 0; i < items.length; i += READ_BATCH) {
     results.push(...(await Promise.all(items.slice(i, i + READ_BATCH).map(read))));
@@ -41,25 +56,11 @@ async function inBatches<T, R>(items: readonly T[], read: (item: T) => Promise<R
   return results;
 }
 
-export async function orderState(
-  client: PublicClient,
-  market: Address,
-  id: bigint,
-): Promise<OrderState> {
-  const [o, frozen] = await Promise.all([
-    client.readContract({
-      address: market,
-      abi: vayleMarketAbi,
-      functionName: "orderOf",
-      args: [id],
-    }),
-    client.readContract({
-      address: market,
-      abi: vayleMarketAbi,
-      functionName: "frozen",
-      args: [id],
-    }),
-  ]);
+function at(blockNumber: bigint | undefined): { blockNumber?: bigint } {
+  return blockNumber === undefined ? {} : { blockNumber };
+}
+
+function toOrderState(id: bigint, o: OrderView, frozen: boolean): OrderState {
   return {
     id,
     owner: o.owner,
@@ -77,36 +78,78 @@ export async function orderState(
   };
 }
 
-// Every order an address placed, found by reading each order. Fine at pilot scale, and it needs no
-// indexer and no log history from the RPC.
+export async function orderState(
+  client: PublicClient,
+  market: Address,
+  id: bigint,
+  blockNumber?: bigint,
+): Promise<OrderState> {
+  const [o, frozen] = await Promise.all([
+    client.readContract({
+      address: market,
+      abi: vayleMarketAbi,
+      functionName: "orderOf",
+      args: [id],
+      ...at(blockNumber),
+    }),
+    client.readContract({
+      address: market,
+      abi: vayleMarketAbi,
+      functionName: "frozen",
+      args: [id],
+      ...at(blockNumber),
+    }),
+  ]);
+  return toOrderState(id, o, frozen);
+}
+
+// Every order an address placed, found by reading every order once. It needs no indexer and no
+// log history, and on a batching client a few hundred orders cost one call. The indexer answers the
+// same question without reading the whole book.
 export async function ordersOf(
   client: PublicClient,
   market: Address,
   owner: Address,
+  blockNumber?: bigint,
 ): Promise<OrderState[]> {
   const count = await client.readContract({
     address: market,
     abi: vayleMarketAbi,
     functionName: "orderCount",
+    ...at(blockNumber),
   });
   const ids = Array.from({ length: Number(count) }, (_, i) => BigInt(i + 1));
-  const owners = await inBatches(ids, async (id) => {
-    const o = await client.readContract({
+  const orders = await readAll(client, ids, async (id) => ({
+    id,
+    order: await client.readContract({
       address: market,
       abi: vayleMarketAbi,
       functionName: "orderOf",
       args: [id],
-    });
-    return { id, owner: o.owner };
-  });
-  const mine = owners.filter((o) => o.owner.toLowerCase() === owner.toLowerCase()).map((o) => o.id);
-  return inBatches(mine, (id) => orderState(client, market, id));
+      ...at(blockNumber),
+    }),
+  }));
+  const mine = orders.filter(({ order }) => order.owner.toLowerCase() === owner.toLowerCase());
+  return readAll(client, mine, async ({ id, order }) =>
+    toOrderState(
+      id,
+      order,
+      await client.readContract({
+        address: market,
+        abi: vayleMarketAbi,
+        functionName: "frozen",
+        args: [id],
+        ...at(blockNumber),
+      }),
+    ),
+  );
 }
 
 export async function seriesState(
   client: PublicClient,
   market: Address,
   id: bigint,
+  blockNumber?: bigint,
 ): Promise<SeriesState> {
   const [key, windowEnd, pool] = await Promise.all([
     client.readContract({
@@ -114,18 +157,21 @@ export async function seriesState(
       abi: vayleMarketAbi,
       functionName: "seriesKey",
       args: [id],
+      ...at(blockNumber),
     }),
     client.readContract({
       address: market,
       abi: vayleMarketAbi,
       functionName: "windowEnd",
       args: [id],
+      ...at(blockNumber),
     }),
     client.readContract({
       address: market,
       abi: vayleMarketAbi,
       functionName: "poolOf",
       args: [id],
+      ...at(blockNumber),
     }),
   ]);
   return {
@@ -143,12 +189,14 @@ export async function claimable(
   market: Address,
   owner: Address,
   token: Address,
+  blockNumber?: bigint,
 ): Promise<bigint> {
   return client.readContract({
     address: market,
     abi: vayleMarketAbi,
     functionName: "claimable",
     args: [owner, token],
+    ...at(blockNumber),
   });
 }
 
@@ -156,12 +204,14 @@ export async function balanceOf(
   client: PublicClient,
   token: Address,
   owner: Address,
+  blockNumber?: bigint,
 ): Promise<bigint> {
   return client.readContract({
     address: token,
     abi: erc20Abi,
     functionName: "balanceOf",
     args: [owner],
+    ...at(blockNumber),
   });
 }
 

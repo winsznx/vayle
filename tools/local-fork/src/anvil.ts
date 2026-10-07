@@ -1,9 +1,11 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { createWriteStream } from "node:fs";
 import { setTimeout as sleep } from "node:timers/promises";
+import { robinhoodChain } from "@vayle/chain-facts/chain";
 import {
   createTestClient,
   defineChain,
+  getAddress,
   http,
   publicActions,
   walletActions,
@@ -15,12 +17,15 @@ import { AnvilDidNotStart, ForkNotRunning } from "./errors.ts";
 const PORT = 8545;
 export const FORK_RPC = `http://127.0.0.1:${PORT}`;
 const START_TIMEOUT_MS = 30_000;
+// Fee estimates read the last ten blocks' fee history. The fork asks the forked RPC about blocks
+// from before the fork, and an RPC that keeps little old state refuses once the fork block is a few
+// minutes old. Blocks of the fork's own answer those questions locally.
+const OWN_BLOCKS = 16;
 const POLL_MS = 250;
 
 export const forkChain: Chain = defineChain({
-  id: facts.chain.chainId,
+  ...robinhoodChain,
   name: "Robinhood Chain (local fork)",
-  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
   rpcUrls: { default: { http: [FORK_RPC] } },
 });
 
@@ -75,14 +80,28 @@ export async function startAnvil(forkUrl: string, logPath: string): Promise<Chil
     }
     try {
       await requireFork(client);
-      return anvil;
     } catch (error) {
       lastError = error;
       await sleep(POLL_MS);
+      continue;
     }
+    await loadMulticall3(client, anvil);
+    await client.mine({ blocks: OWN_BLOCKS });
+    return anvil;
   }
   anvil.kill();
   throw new AnvilDidNotStart(`anvil didn't answer within 30 s; see ${logPath}`, {
     cause: lastError,
   });
+}
+
+// The fork loads an account from the forked RPC the first time something touches it, and an RPC
+// that prunes old state can't serve it once the fork block ages. The app batches its reads through
+// Multicall3, so it's loaded while the fork block is still fresh.
+async function loadMulticall3(client: ForkClient, anvil: ChildProcess): Promise<void> {
+  const code = await client.getCode({ address: getAddress(facts.multicall3.address) });
+  if (code === undefined || code === "0x") {
+    anvil.kill();
+    throw new AnvilDidNotStart(`the fork has no Multicall3 at ${facts.multicall3.address}`);
+  }
 }

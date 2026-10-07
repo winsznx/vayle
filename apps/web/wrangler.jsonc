@@ -18,5 +18,10 @@
     // market here after the deploy.
     "RPC_LOG_ADDRESSES": "",
   },
+  // Each visitor's /rpc requests, keyed by address. A poll is a few requests every 15 seconds, and
+  // waiting on a transaction adds two or three a second.
+  "ratelimits": [
+    { "name": "RPC_LIMITER", "namespace_id": "4663", "simple": { "limit": 60, "period": 10 } },
+  ],
   "observability": { "enabled": true },
 }

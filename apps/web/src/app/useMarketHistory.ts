@@ -40,6 +40,10 @@ export type MarketHistory =
   | { readonly status: "failed"; readonly source: HistorySource; readonly reason: string };
 
 const REFRESH_MS = 30_000;
+// Reading history from the chain takes one log request per 10,000 blocks, and the chain makes about
+// ten blocks a second. Past this span, about 14 hours of chain, the browser leaves history to the
+// indexer instead of making dozens of requests.
+const MAX_CHAIN_HISTORY_BLOCKS = 500_000n;
 
 class HistoryUnavailable extends Error {
   override readonly name = "HistoryUnavailable";
@@ -132,6 +136,11 @@ async function fromChain(
 ): Promise<HistoryRead> {
   const latest = await client.getBlock({ blockTag: "latest" });
   const start = cache.toBlock === 0n ? fromBlock : cache.toBlock + 1n;
+  if (latest.number - start > MAX_CHAIN_HISTORY_BLOCKS) {
+    throw new HistoryUnavailable(
+      "the market is too old to read its history from the browser, so it needs the indexer.",
+    );
+  }
   if (start <= latest.number) {
     for (const e of await readMarketEvents(client, config.market, start, latest.number)) {
       cache.byPosition.set(`${e.block_number}:${e.log_index}`, e);
@@ -162,8 +171,8 @@ interface Loaded {
   readonly problem: string | null;
 }
 
-// The chain and the indexer are the external systems: read now, every 30 seconds, and again
-// whenever `version` changes after a transaction confirms.
+// The chain and the indexer are the external systems: read now, every 30 seconds while the page is
+// in view, on coming back to it, and again whenever `version` changes after a transaction confirms.
 export function useMarketHistory(
   client: PublicClient,
   config: AppConfig,
@@ -180,7 +189,7 @@ export function useMarketHistory(
     const controller = new AbortController();
     let running = false;
     const load = (): void => {
-      if (running) return;
+      if (running || document.hidden) return;
       running = true;
       if (cache.current === null || cache.current.market !== config.market) {
         cache.current = { market: config.market, toBlock: 0n, byPosition: new Map() };
@@ -210,11 +219,16 @@ export function useMarketHistory(
           running = false;
         });
     };
+    const onVisibility = (): void => {
+      if (!document.hidden) load();
+    };
     load();
     const timer = setInterval(load, REFRESH_MS);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       controller.abort();
       clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [client, config, owner, source, version]);
 

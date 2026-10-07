@@ -17,6 +17,7 @@
     "@tanstack/react-query": "5.104.1",
     "@vayle/abi": "workspace:*",
     "@vayle/brand": "workspace:*",
+    "@vayle/chain-facts": "workspace:*",
     "@vayle/market": "workspace:*",
     "@vayle/units": "workspace:*",
     "react": "19.3.0",

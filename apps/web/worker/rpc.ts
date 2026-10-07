@@ -8,6 +8,8 @@ export interface RpcEnv {
   readonly RPC_URL?: string;
   // Addresses eth_getLogs may ask about, comma-separated.
   readonly RPC_LOG_ADDRESSES?: string;
+  // Counts each visitor's requests. Configured in wrangler.jsonc.
+  readonly RPC_LIMITER: RateLimit;
 }
 
 const READ_METHODS = new Set([
@@ -30,9 +32,12 @@ const READ_METHODS = new Set([
 
 // Large enough for a busy batch of multicalls, small enough that nobody streams megabytes through.
 const MAX_BODY_BYTES = 256 * 1024;
-const MAX_BATCH = 50;
-// The widest log query one request may make. The app reads its history in chunks under this.
-const MAX_LOG_BLOCKS = 50_000n;
+// The app sends no JSON-RPC batches: its reads already leave as Multicall3 calls. Each request in a
+// batch counts against the private RPC's per-second limit, so batches stay small.
+const MAX_BATCH = 10;
+// The private RPC refuses eth_getLogs over more than 10,000 blocks. The app reads history in ranges
+// of that size.
+const MAX_LOG_BLOCKS = 10_000n;
 
 interface RpcRequest {
   readonly jsonrpc: "2.0";
@@ -97,6 +102,10 @@ export async function proxyRpc(request: Request, env: RpcEnv): Promise<Response>
   if (env.RPC_URL === undefined || env.RPC_URL === "") {
     return json(rpcError(null, -32603, "the site's RPC isn't configured"), 503);
   }
+  // Every visitor's reads come out of the same RPC plan, so each address gets a fair share of it.
+  const visitor = request.headers.get("cf-connecting-ip") ?? "unknown";
+  const { success } = await env.RPC_LIMITER.limit({ key: visitor });
+  if (!success) return json(rpcError(null, -32005, "too many requests, try again shortly"), 429);
   const length = Number(request.headers.get("content-length") ?? "0");
   if (length > MAX_BODY_BYTES) return json(rpcError(null, -32600, "request too large"), 413);
   const text = await request.text();

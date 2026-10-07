@@ -1,9 +1,9 @@
 import "../ui/ui.css";
 import "./app.css";
+import { robinhoodChain } from "@vayle/chain-facts/chain";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router/dom";
-import { chainOf } from "./chain.ts";
 import { loadConfig } from "./config.ts";
 import { router } from "./router.tsx";
 import { WalletProviders } from "./shell/WalletProviders.tsx";
@@ -18,7 +18,7 @@ const result = loadConfig(import.meta.env);
 createRoot(root).render(
   <StrictMode>
     {result.ok ? (
-      <WalletProviders wagmiConfig={walletConfigOf(result.config, chainOf(result.config))}>
+      <WalletProviders wagmiConfig={walletConfigOf(result.config, robinhoodChain)}>
         <AppProvider config={result.config}>
           <RouterProvider router={router} />
         </AppProvider>

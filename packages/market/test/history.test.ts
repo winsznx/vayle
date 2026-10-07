@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import { vayleMarketAbi } from "@vayle/abi";
 import { encodeAbiParameters, encodeEventTopics, getAbiItem, type Hex, type Log } from "viem";
 import {
+  blockTimesInLogs,
   MissingBlockTime,
   orderSummary,
   toMarketEvents,
@@ -16,7 +17,11 @@ const NVDA = "0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC";
 const TX = "0x34f9aa77506ab96c5b8e3e5a9798ffab232533ae61759682c5b091ac4efb4a4f";
 const SERIES = 2n ** 255n + 12345n;
 
-function log(encoded: readonly (Hex | Hex[] | null)[], data: Hex, logIndex: number): Log {
+function log(
+  encoded: readonly (Hex | Hex[] | null)[],
+  data: Hex,
+  logIndex: number,
+): Log<bigint, number, false> {
   const topics = encoded.filter((t): t is Hex => typeof t === "string");
   const [signature, ...rest] = topics;
   if (signature === undefined) throw new Error("an event log needs its signature topic");
@@ -33,7 +38,7 @@ function log(encoded: readonly (Hex | Hex[] | null)[], data: Hex, logIndex: numb
   };
 }
 
-function orderPlaced(): Log {
+function orderPlaced(): Log<bigint, number, false> {
   const event = getAbiItem({ abi: vayleMarketAbi, name: "OrderPlaced" });
   const topics = encodeEventTopics({
     abi: [event],
@@ -47,7 +52,7 @@ function orderPlaced(): Log {
   return log(topics, data, 1);
 }
 
-function batchFilled(): Log {
+function batchFilled(): Log<bigint, number, false> {
   const event = getAbiItem({ abi: vayleMarketAbi, name: "BatchFilled" });
   const topics = encodeEventTopics({
     abi: [event],
@@ -89,6 +94,28 @@ describe("toMarketEvents", () => {
     const decode = (): unknown => toMarketEvents([orderPlaced()], new Map());
     // #then
     assert.throws(decode, MissingBlockTime);
+  });
+});
+
+describe("blockTimesInLogs", () => {
+  it("takes each block's time from the timestamp on its logs", () => {
+    // #given
+    const blockTimestamp = 1_790_971_200n;
+    const logs = [
+      { ...orderPlaced(), blockTimestamp },
+      { ...batchFilled(), blockTimestamp },
+    ];
+    // #when
+    const { times, missing } = blockTimesInLogs(logs);
+    // #then
+    assert.deepEqual([[...times], missing], [[[82_000_000n, 1_790_971_200]], []]);
+  });
+
+  it("leaves a block to look up once when its logs arrive without a timestamp", () => {
+    // #when
+    const { times, missing } = blockTimesInLogs([orderPlaced(), batchFilled()]);
+    // #then
+    assert.deepEqual([times.size, missing], [0, [82_000_000n]]);
   });
 });
 
