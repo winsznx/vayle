@@ -20,11 +20,15 @@
     // app reads no other contract's logs.
     "RPC_LOG_ADDRESSES": "",
     // Where the app doesn't offer new orders. Settling, stopping and withdrawing stay open
-    // everywhere, and so does the fallback page. The United States, the countries under
-    // comprehensive sanctions, and Tor exits (T1), whose location can't be known.
-    "RESTRICTED_COUNTRIES": "US,CU,IR,KP,SY,T1",
-    // Regions of a country otherwise open: Crimea, Donetsk and Luhansk.
-    "RESTRICTED_REGIONS": "UA-43,UA-14,UA-09",
+    // everywhere, and so does the fallback page. These are the places Stock Tokens themselves are
+    // restricted, as the issuer's terms read on 2026-10-07: the United States and its territories,
+    // Canada, the United Kingdom, Switzerland, the United Arab Emirates, and the countries whose
+    // investors the issuer prohibits (https://docs.robinhood.com/rhj/restricted-jurisdictions).
+    // Plus Tor exits (T1), whose location can't be known.
+    "RESTRICTED_COUNTRIES": "US,PR,GU,VI,AS,MP,UM,CA,GB,CH,AE,CU,BY,IR,KP,RU,SY,UA,SS,SD,MM,VE,T1",
+    // Regions of a country that's otherwise open, as country-region. None today: the issuer
+    // restricts all of Ukraine, so the country entry covers Crimea, Donetsk and Luhansk.
+    "RESTRICTED_REGIONS": "",
   },
   // Each visitor's /rpc requests, keyed by address. A poll is a few requests every 15 seconds, and
   // waiting on a transaction adds two or three a second.
