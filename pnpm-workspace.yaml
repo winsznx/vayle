@@ -5,6 +5,9 @@ packages:
   - tools/*
 # Install scripts run only for packages set to true here.
 allowBuilds:
+  # Cloudflare's local runtime and its bundler check their platform binaries at install.
+  esbuild: true
+  workerd: true
   # Native add-ons that wallet SDK dependencies ask to compile. The browser bundle doesn't use them,
   # and each has a JavaScript fallback.
   bufferutil: false

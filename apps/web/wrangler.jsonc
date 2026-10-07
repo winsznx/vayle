@@ -1,0 +1,22 @@
+// The site on Cloudflare Workers: the Vite build as static assets, with the Worker in front of the
+// pages and /rpc. Secrets: RPC_URL, set with `wrangler secret put RPC_URL`.
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "vayle-web",
+  "main": "./worker/index.ts",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    // The landing, every app route and /rpc go through the Worker. Everything else is a static
+    // file, which Cloudflare serves without running it.
+    "run_worker_first": ["/", "/index.html", "/app", "/app/*", "/rpc"],
+    "not_found_handling": "404-page",
+  },
+  "vars": {
+    // The market and the NVDA/USD feed, the only addresses /rpc answers eth_getLogs for. Set the
+    // market here after the deploy.
+    "RPC_LOG_ADDRESSES": "",
+  },
+  "observability": { "enabled": true },
+}

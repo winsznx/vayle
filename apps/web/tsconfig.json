@@ -10,5 +10,5 @@
     "jsx": "react-jsx",
     "resolveJsonModule": true
   },
-  "include": ["src", "test", "vite.config.ts"]
+  "include": ["src", "test", "build", "vite.config.ts"]
 }
