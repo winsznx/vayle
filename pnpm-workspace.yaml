@@ -3,3 +3,13 @@ packages:
   - services/*
   - packages/*
   - tools/*
+# Install scripts run only for packages set to true here.
+allowBuilds:
+  # Native add-ons that wallet SDK dependencies ask to compile. The browser bundle doesn't use them,
+  # and each has a JavaScript fallback.
+  bufferutil: false
+  keccak: false
+  utf-8-validate: false
+overrides:
+  # wagmi's WalletConnect connector asks for this: the logger's own pino has a vulnerable dependency.
+  "@walletconnect/logger>pino": 10.0.0

@@ -25,6 +25,17 @@ describe("loadConfig", () => {
     assert.deepEqual(values, [true, false, false, false, false]);
   });
 
+  it("reads history from the chain from a deploy block, and refuses one that isn't a number", () => {
+    // #when
+    const ok = loadConfig({ ...BASE, VITE_MARKET_DEPLOY_BLOCK: "82090864" });
+    const bad = loadConfig({ ...BASE, VITE_MARKET_DEPLOY_BLOCK: "soon" });
+    // #then
+    assert.deepEqual(
+      [ok.ok ? ok.config.deployBlock : null, bad.ok ? null : bad.missing],
+      [82_090_864n, ["VITE_MARKET_DEPLOY_BLOCK"]],
+    );
+  });
+
   it("names every setting that's missing", () => {
     // #when
     const result = loadConfig({});

@@ -1,0 +1,523 @@
+/* Overview: the holder's home page. It lays out the shared cards from app.css and adds the rows
+   and the price strip that only this page has. */
+
+/* Summary row: four cards on a wide screen, two by two below that, one column on a phone. */
+
+.ov-stats {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) repeat(2, minmax(0, 1fr)) minmax(0, 1.2fr);
+  gap: 20px;
+}
+
+/* The shared rule spans the week card across a narrow row; in this grid it keeps its own cell. */
+.ov-stats > .stat-week {
+  grid-column: auto;
+}
+
+.ov-amount {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.ov-weeks {
+  color: var(--body);
+  font-size: var(--text-label);
+}
+
+.ov-sources {
+  display: grid;
+  gap: 2px;
+}
+
+/* Before the account is read: the welcome beside the week. */
+
+.ov-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 20px;
+}
+
+.notice-card.ov-welcome {
+  align-content: center;
+  padding: 32px;
+}
+
+.ov-welcome-line {
+  max-width: 36rem;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+
+/* Links that lead on from a card: blue marks where to go next. */
+
+.ov-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--brand-text);
+  font-size: var(--text-label);
+  font-weight: 620;
+  white-space: nowrap;
+}
+
+.ov-link:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+/* Card heads: the title and what it leads to share a line when they fit, and the line under them
+   always spans the card, so a narrow card never squeezes it into a column. */
+.card-head.ov-head {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+}
+
+.ov-head-aside {
+  order: 1;
+}
+
+.ov-head > .card-sub {
+  flex-basis: 100%;
+  order: 2;
+  margin-top: 0;
+}
+
+.ov-count {
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  color: var(--muted);
+  background: var(--sunken);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+  font-size: var(--text-caption);
+  font-weight: 650;
+  text-align: center;
+}
+
+/* Rows inside a card, split by hairlines. */
+
+.ov-list {
+  padding: 0 24px 8px;
+}
+
+.ov-list > li {
+  border-top: 1px solid var(--hairline);
+}
+
+.ov-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+a.ov-name:hover .ov-name-text,
+.ov-order:hover .ov-name-text {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+/* The holder's own price, in blue wherever it shows. */
+.ov-price {
+  color: var(--brand-text);
+  font-weight: 650;
+  text-align: right;
+}
+
+/* Read errors can carry long unbroken strings. They wrap rather than widen the page. */
+.ov-state {
+  overflow-wrap: anywhere;
+}
+
+.ov-foot {
+  padding: 0 24px 22px;
+  color: var(--muted);
+  font-size: var(--text-label);
+}
+
+/* Needs you: one slim line when there's nothing, a list of settles when there is. */
+
+.ov-needs-none {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  padding: 18px 24px;
+}
+
+.ov-needs-heading {
+  color: var(--ink);
+  font-size: var(--text-body);
+  font-weight: 650;
+  letter-spacing: var(--track-tight);
+}
+
+.ov-needs-line {
+  flex: 1;
+  min-width: 12rem;
+  color: var(--muted);
+  font-size: var(--text-body-s);
+}
+
+.ov-needs {
+  container-type: inline-size;
+}
+
+.ov-need-list {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  column-gap: 20px;
+}
+
+/* Each row borrows the list's columns, so names, prices and buttons line up down the list. */
+.ov-need {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+  row-gap: 10px;
+  padding: 14px 0;
+}
+
+.ov-need-status {
+  color: var(--body);
+  font-size: var(--text-label);
+}
+
+@container (max-width: 620px) {
+  .ov-need-list {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .ov-need-status,
+  .ov-need-action {
+    grid-column: 1 / -1;
+  }
+
+  .ov-need-action {
+    justify-self: start;
+  }
+}
+
+/* Your orders and recent activity, side by side. */
+
+.ov-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.ov-panel {
+  container-type: inline-size;
+}
+
+.ov-order-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  column-gap: 16px;
+}
+
+.ov-order-list > li,
+.ov-order {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+}
+
+.ov-order {
+  align-items: center;
+  row-gap: 10px;
+  padding: 14px 0;
+}
+
+.ov-order .chip {
+  justify-self: start;
+}
+
+@container (max-width: 420px) {
+  .ov-order-list {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .ov-order .chip {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Activity reads as a ledger: what happened, when, and what moved, each in its own column. */
+.ov-event-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  column-gap: 16px;
+}
+
+.ov-event {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+  row-gap: 2px;
+  padding: 13px 0;
+}
+
+.ov-event-title {
+  color: var(--ink);
+  font-size: var(--text-body-s);
+  font-weight: 600;
+}
+
+.ov-event-time {
+  color: var(--muted);
+  font-size: var(--text-label);
+}
+
+.ov-event-time a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ov-event-amount {
+  justify-self: end;
+  color: var(--ink);
+  font-size: var(--text-body-s);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Green only for premiums paid to the holder. */
+.ov-event-earned {
+  color: var(--earned);
+}
+
+/* A narrow card gives what happened the whole line, with the time and amount under it. */
+@container (max-width: 520px) {
+  .ov-event-list {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .ov-event-title {
+    grid-column: 1 / -1;
+  }
+
+  .ov-event-time {
+    grid-row: 2;
+    grid-column: 1;
+  }
+
+  .ov-event-amount {
+    grid-row: 2;
+    grid-column: 2;
+  }
+}
+
+/* This week's prices: a slim strip of the rungs around the close, highest first. */
+
+.ov-prices {
+  container-type: inline-size;
+}
+
+.ov-rungs {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 4px;
+  padding: 0 12px 12px;
+}
+
+.ov-rung {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  justify-items: start;
+  gap: 8px;
+  height: 100%;
+  padding: 14px 12px;
+  border-radius: 14px;
+  color: var(--ink);
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.ov-rung:hover {
+  background: var(--sunken);
+}
+
+/* The shared focus ring squares corners off; a price keeps its own. */
+.ov-rung:focus-visible {
+  border-radius: 14px;
+}
+
+.ov-rung-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.ov-rung-price {
+  font-size: var(--text-body);
+  font-weight: 600;
+}
+
+.ov-rung-bid {
+  color: var(--muted);
+  font-size: var(--text-label);
+}
+
+.ov-bid {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.ov-mine {
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  color: var(--on-brand);
+  background: var(--brand);
+  font-size: var(--text-caption);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.ov-rung-mine,
+.ov-rung-mine:hover {
+  background: var(--brand-soft);
+  box-shadow: inset 0 0 0 1px var(--brand-line);
+}
+
+.ov-rung-mine .ov-rung-price {
+  color: var(--brand-text);
+}
+
+.ov-close {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 92px;
+}
+
+.ov-close::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 50%;
+  border-left: 1.5px dashed var(--faint);
+}
+
+.ov-close .close-pill {
+  position: relative;
+}
+
+/* Narrow: the strip stands up as rows, the same way the ladder reads. */
+@container (max-width: 640px) {
+  .ov-rungs {
+    grid-auto-columns: auto;
+    grid-auto-flow: row;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+    padding: 0 6px 8px;
+  }
+
+  .ov-rung {
+    grid-template-columns: 46px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "side price bid"
+      ". mine .";
+    align-items: center;
+    gap: 0 10px;
+    padding: 14px 12px;
+  }
+
+  /* As a row, the side, price and bid sit in columns, and the holder's tag under the price. */
+  .ov-rung-tags {
+    display: contents;
+  }
+
+  .ov-rung .row-side {
+    grid-area: side;
+  }
+
+  .ov-rung-price {
+    grid-area: price;
+  }
+
+  .ov-rung-bid {
+    grid-area: bid;
+  }
+
+  .ov-mine {
+    grid-area: mine;
+    justify-self: start;
+    margin-top: 6px;
+  }
+
+  .ov-close {
+    display: flex;
+    gap: 12px;
+    min-height: 0;
+    height: 36px;
+    padding: 0 12px;
+  }
+
+  .ov-close::before {
+    display: none;
+  }
+
+  .ov-close::after {
+    content: "";
+    flex: 1;
+    border-top: 1.5px dashed var(--faint);
+  }
+}
+
+@media (max-width: 1340px) {
+  .ov-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1100px) {
+  .ov-intro {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .ov-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .ov-stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Stacked, the cards take their own height instead of the row's shared minimum. */
+  .ov-stats > .stat {
+    min-height: 0;
+  }
+
+  .notice-card.ov-welcome {
+    padding: 24px 18px;
+  }
+
+  .ov-list {
+    padding: 0 18px 6px;
+  }
+
+  .ov-needs-none {
+    padding: 16px 18px;
+  }
+
+  .ov-foot {
+    padding: 0 18px 20px;
+  }
+}

@@ -1,6 +1,6 @@
 import { withdraw, type Call } from "@vayle/market";
 import { TokenIcon } from "../../ui/TokenIcon.tsx";
-import type { Run } from "../App.tsx";
+import type { Run } from "../state.tsx";
 import type { AppConfig } from "../config.ts";
 import { dollars, easternClock, easternTime, feedDollars, tokens, usdgAmount } from "../format.ts";
 import type { AccountView, MarketView } from "../useMarket.ts";

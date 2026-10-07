@@ -3,7 +3,7 @@ import { formatFixed } from "@vayle/units";
 import { useId, useState } from "react";
 import { maxUint256 } from "viem";
 import { TokenIcon } from "../../ui/TokenIcon.tsx";
-import type { Run } from "../App.tsx";
+import type { Run } from "../state.tsx";
 import type { AppConfig } from "../config.ts";
 import { dollars, easternTime, tokens, usdgAmount } from "../format.ts";
 import { checkTicket } from "../ticket.ts";

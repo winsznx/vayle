@@ -23,16 +23,49 @@ function forkDisclosures(): Plugin {
   };
 }
 
+// The app's routes live under /app/ in the browser. The dev and preview servers answer any of
+// them that isn't a file with the app's page.
+function appRoutes(): Plugin {
+  const rewrite = (url: string | undefined): string | undefined => {
+    if (url === undefined) return url;
+    const path = url.split("?")[0] ?? url;
+    const isAppRoute = path === "/app" || (path.startsWith("/app/") && !/\.[a-z0-9]+$/i.test(path));
+    return isAppRoute ? "/app/index.html" : url;
+  };
+  return {
+    name: "vayle-app-routes",
+    configureServer(server) {
+      server.middlewares.use((request, _response, next) => {
+        request.url = rewrite(request.url);
+        next();
+      });
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use((request, _response, next) => {
+        request.url = rewrite(request.url);
+        next();
+      });
+    },
+  };
+}
+
 const page = (path: string): string => fileURLToPath(new URL(path, import.meta.url));
 
-// Two pages: the landing at / and the holder app at /app/. Only the app loads viem.
-export default defineConfig(({ mode }) => ({
-  plugins: [react(), ...(mode === "fork" ? [forkDisclosures()] : [])],
-  build: {
-    target: "es2022",
-    sourcemap: true,
-    // react-dom and viem are most of the app's bundle, about 170 kB gzipped. This warns if it grows.
-    chunkSizeWarningLimit: 600,
-    rolldownOptions: { input: { landing: page("index.html"), app: page("app/index.html") } },
-  },
-}));
+// Two pages: the landing at / and the holder app at /app/. Only the app loads viem and the wallet
+// libraries.
+export default defineConfig(({ mode }) => {
+  return {
+    plugins: [react(), appRoutes(), ...(mode === "fork" ? [forkDisclosures()] : [])],
+    // The wallet libraries resolve viem with a different peer set than the workspace packages. One
+    // copy keeps the bundle smaller and viem's error classes the same everywhere.
+    resolve: { dedupe: ["viem"] },
+    build: {
+      target: "es2022",
+      sourcemap: true,
+      // react-dom, viem, wagmi and the wallet modal are most of the app's first load. This warns if
+      // the app's main chunk grows past what they take today.
+      chunkSizeWarningLimit: 900,
+      rolldownOptions: { input: { landing: page("index.html"), app: page("app/index.html") } },
+    },
+  };
+});

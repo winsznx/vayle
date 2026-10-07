@@ -1,0 +1,416 @@
+/* The market page: what the contracts report, as label and value rows on a two-column board. */
+
+.mk-notes {
+  display: grid;
+  gap: 4px;
+}
+
+.mk-read {
+  color: var(--muted);
+  font-size: var(--text-label);
+}
+
+.mk-read-problem {
+  color: var(--problem);
+  font-weight: 560;
+}
+
+.mk-stop {
+  padding: 14px 18px;
+  border-radius: 16px;
+  color: var(--problem);
+  background: var(--problem-soft);
+  font-size: var(--text-body-s);
+  font-weight: 560;
+}
+
+.mk-board {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.mk-wide {
+  grid-column: 1 / -1;
+}
+
+/* The shared week card sits in a wrapper so it fills its cell and keeps its own column rules out of
+   this grid. */
+.mk-lead {
+  display: grid;
+}
+
+.mk-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.mk-stat-title {
+  font-size: var(--text-body);
+}
+
+/* Rows */
+
+.mk-rows {
+  margin: 0;
+  padding: 0 24px;
+}
+
+.mk-row {
+  display: grid;
+  grid-template-columns: minmax(7.5rem, 2fr) minmax(0, 3fr);
+  gap: 4px 16px;
+  padding: 13px 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.mk-row dt {
+  padding-top: 1px;
+  color: var(--muted);
+  font-size: var(--text-label);
+  font-weight: 560;
+}
+
+.mk-row dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--text-body-s);
+  font-weight: 560;
+}
+
+.mk-sub {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: var(--text-label);
+  font-weight: 450;
+}
+
+.mk-quiet {
+  color: var(--muted);
+  font-size: var(--text-body-s);
+}
+
+.mk-foot {
+  margin-top: auto;
+  padding: 16px 24px 22px;
+  color: var(--muted);
+  font-size: var(--text-label);
+  line-height: 1.5;
+}
+
+.mk-section {
+  display: grid;
+  gap: 10px;
+  margin: 8px 24px 0;
+  padding: 18px 0 22px;
+  border-top: 1px solid var(--hairline);
+}
+
+.mk-subhead {
+  color: var(--ink);
+  font-size: var(--text-body);
+  font-weight: 650;
+  letter-spacing: var(--track-tight);
+}
+
+/* Price feed */
+
+.mk-facts {
+  display: grid;
+  gap: 10px;
+  margin: 4px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--hairline);
+}
+
+.mk-fact {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 16px;
+}
+
+.mk-fact dt {
+  color: var(--muted);
+  font-size: var(--text-label);
+  font-weight: 560;
+}
+
+/* Pushed right even when it wraps under its label on a narrow card. */
+.mk-fact dd {
+  margin: 0 0 0 auto;
+  color: var(--ink);
+  font-size: var(--text-label);
+  font-weight: 560;
+  text-align: right;
+}
+
+/* Who's bidding */
+
+.mk-makers {
+  display: grid;
+  gap: 12px;
+}
+
+.mk-maker-who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.mk-address {
+  min-width: 0;
+  color: var(--ink);
+  font-size: var(--text-body-s);
+  font-weight: 560;
+  overflow-wrap: anywhere;
+}
+
+.mk-address-link {
+  color: var(--brand-text);
+}
+
+.mk-address-link:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+/* Controls */
+
+.mk-halt {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+/* Weekly closes */
+
+.mk-closes {
+  padding: 0 24px;
+}
+
+.mk-close {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  min-height: 56px;
+  padding: 12px 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.mk-close-time {
+  color: var(--ink);
+  font-size: var(--text-body-s);
+  font-weight: 560;
+}
+
+.mk-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Limits */
+
+.mk-limits {
+  width: calc(100% - 48px);
+  margin: 0 24px;
+  border-collapse: collapse;
+}
+
+.mk-limits th,
+.mk-limits td {
+  padding: 12px 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.mk-limits thead th {
+  padding: 0 0 10px 16px;
+  border-top: 0;
+  color: var(--muted);
+  font-size: var(--text-label);
+  font-weight: 560;
+  text-align: right;
+}
+
+.mk-limits thead th:first-child {
+  padding-left: 0;
+}
+
+.mk-limits tbody th {
+  color: var(--muted);
+  font-size: var(--text-label);
+  font-weight: 560;
+  text-align: left;
+}
+
+.mk-limits td {
+  padding-left: 16px;
+  color: var(--ink);
+  font-size: var(--text-body-s);
+  font-weight: 560;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.mk-note {
+  padding: 12px 24px 16px;
+  color: var(--muted);
+  font-size: var(--text-label);
+  line-height: 1.5;
+}
+
+/* The fee sits at the foot of the limits card. */
+.mk-fee {
+  margin-top: auto;
+}
+
+.mk-fee-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+}
+
+.mk-fee-value {
+  color: var(--ink);
+  font-size: var(--text-body-s);
+  font-weight: 560;
+}
+
+/* Contracts */
+
+.mk-contracts {
+  padding: 0 24px;
+}
+
+/* The list follows its card's width: an address sits beside its name only where it fits whole. */
+.mk-contracts-card {
+  container-type: inline-size;
+}
+
+.mk-contract {
+  display: grid;
+  grid-template-columns: 20px 11rem minmax(0, 1fr);
+  align-items: center;
+  gap: 6px 12px;
+  padding: 13px 0;
+  border-top: 1px solid var(--hairline);
+}
+
+@container (max-width: 680px) {
+  .mk-contract {
+    grid-template-columns: 20px minmax(0, 1fr);
+  }
+
+  .mk-contract > :last-child {
+    grid-column: 2;
+  }
+}
+
+.mk-contract-icon {
+  display: flex;
+}
+
+.mk-contract-name {
+  color: var(--muted);
+  font-size: var(--text-label);
+  font-weight: 560;
+}
+
+.mk-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 4px 24px 0;
+  padding-top: 18px;
+  border-top: 1px solid var(--hairline);
+}
+
+@media (max-width: 860px) {
+  .mk-board {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .mk-rows,
+  .mk-closes,
+  .mk-contracts {
+    padding: 0 18px;
+  }
+
+  .mk-section,
+  .mk-links {
+    margin-right: 18px;
+    margin-left: 18px;
+  }
+
+  .mk-foot {
+    padding: 14px 18px 20px;
+  }
+
+  .mk-note {
+    padding-right: 18px;
+    padding-left: 18px;
+  }
+
+  .mk-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3px;
+  }
+
+  .mk-limits {
+    width: calc(100% - 36px);
+    margin: 0 18px;
+  }
+
+  /* Each limit becomes its own row, with the two sides side by side under it. */
+  .mk-limits,
+  .mk-limits tbody {
+    display: block;
+  }
+
+  .mk-limits thead {
+    display: none;
+  }
+
+  .mk-limits tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 12px;
+    padding: 12px 0;
+    border-top: 1px solid var(--hairline);
+  }
+
+  .mk-limits tbody th,
+  .mk-limits td {
+    padding: 0;
+    border-top: 0;
+  }
+
+  .mk-limits tbody th {
+    grid-column: 1 / -1;
+  }
+
+  .mk-limits td {
+    text-align: left;
+    white-space: normal;
+  }
+
+  .mk-limits td::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--muted);
+    font-size: var(--text-caption);
+    font-weight: 560;
+  }
+}

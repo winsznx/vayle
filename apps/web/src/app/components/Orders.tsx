@@ -1,18 +1,25 @@
-import { cancelOrder, finalize, settleOrder, type Call, type OrderState } from "@vayle/market";
+import {
+  cancelOrder,
+  finalize,
+  settleOrder,
+  type Call,
+  type OrderState,
+  type OrderSummary,
+} from "@vayle/market";
+import { Link } from "react-router";
 import { TokenIcon } from "../../ui/TokenIcon.tsx";
-import type { Run } from "../App.tsx";
 import type { AppConfig } from "../config.ts";
 import { usdgAmount } from "../format.ts";
 import { describeOrder, type OrderLine } from "../orders.ts";
-import type { OrderHistory } from "../useHistory.ts";
+import { useApp } from "../state.tsx";
 import type { AccountView, MarketView } from "../useMarket.ts";
 
 const MAX_TICKS = 8;
 
 // Filled weeks as solid ticks, then the current run of skipped weeks as hollow ones.
-function Ticks({ history }: { readonly history: OrderHistory }) {
-  const filled = Math.min(history.weeksFilled, MAX_TICKS);
-  const skipped = Math.min(history.skipStreak, MAX_TICKS - filled);
+export function Ticks({ summary }: { readonly summary: OrderSummary }) {
+  const filled = Math.min(summary.weeksFilled, MAX_TICKS);
+  const skipped = Math.min(summary.skipStreak, MAX_TICKS - filled);
   if (filled + skipped === 0) return null;
   return (
     <span className="ticks" aria-hidden="true">
@@ -26,27 +33,33 @@ function Ticks({ history }: { readonly history: OrderHistory }) {
   );
 }
 
-function historyText(history: OrderHistory, decimals: number): string {
-  const parts = [`Earned ${usdgAmount(history.premiumEarned, decimals)}`];
-  parts.push(history.weeksFilled === 1 ? "filled 1 week" : `filled ${history.weeksFilled} weeks`);
-  if (history.skipStreak > 0) {
+// weeksFilled counts the weeks the order was written into and paid for, not fills at its price.
+export function summaryText(summary: OrderSummary, decimals: number): string {
+  if (summary.weeksFilled === 0 && summary.skipStreak === 0) return "Nothing earned yet.";
+  const earned = usdgAmount(BigInt(summary.premiumEarned), decimals);
+  const parts = [
+    summary.weeksFilled === 1
+      ? `Earned ${earned} over 1 paid week`
+      : `Earned ${earned} over ${summary.weeksFilled} paid weeks`,
+  ];
+  if (summary.skipStreak > 0) {
     parts.push(
-      history.skipStreak === 1
+      summary.skipStreak === 1
         ? "skipped the last week"
-        : `skipped the last ${history.skipStreak} weeks in a row`,
+        : `skipped the last ${summary.skipStreak} weeks in a row`,
     );
   }
   return `${parts.join(", ")}.`;
 }
 
-interface Action {
+export interface Action {
   readonly label: string;
   readonly calls: Call[];
-  // Settling is a step the holder needs to take, so it's the strong button. Cancelling stays quiet.
+  // Settling is a step the holder needs to take, so it's the strong button. The others stay quiet.
   readonly quiet: boolean;
 }
 
-function actionFor(config: AppConfig, order: OrderState, line: OrderLine): Action | null {
+export function actionFor(config: AppConfig, order: OrderState, line: OrderLine): Action | null {
   if (line.action === "settle") {
     return { label: "Settle", calls: [settleOrder(config.market, order.id)], quiet: false };
   }
@@ -66,104 +79,93 @@ function actionFor(config: AppConfig, order: OrderState, line: OrderLine): Actio
   return null;
 }
 
-export function Orders(props: {
-  readonly config: AppConfig;
-  readonly view: MarketView;
-  readonly account: AccountView | null;
-  readonly history: ReadonlyMap<bigint, OrderHistory>;
-  readonly run: Run;
-  readonly busy: boolean;
-}) {
-  const { config, view, account, history, run, busy } = props;
-  const visible = account?.orders.filter((o) => o.status !== "closed" || o.series !== 0n) ?? [];
+// How an order reads right now, with the series it's in and the end finalize reports when the
+// chain's been quiet.
+export function lineOf(
+  config: AppConfig,
+  view: MarketView,
+  account: AccountView,
+  order: OrderState,
+): OrderLine {
+  const series = order.series === 0n ? null : (account.series.get(order.series) ?? null);
+  return describeOrder(
+    order,
+    series,
+    view.epoch,
+    view.now,
+    config.assetSymbol,
+    account.heldOpen.get(order.series) ?? null,
+  );
+}
 
+export function OrdersTable({
+  orders,
+  label,
+}: {
+  readonly orders: readonly OrderState[];
+  readonly label: string;
+}) {
+  const { config, view, history, run, busy, onChain } = useApp();
+  const account = view?.account ?? null;
+  if (view === null || account === null) return null;
+  const summaries = history.status === "ready" ? history.summaries : null;
   return (
-    <article className="card orders-card">
-      <div className="card-head">
-        <h2 id="orders-title" className="h3">
-          Your orders
-        </h2>
-        {visible.length > 0 && <span className="card-count num">{visible.length}</span>}
-      </div>
-      {account === null ? (
-        <p className="empty-state">Connect a wallet to see your orders.</p>
-      ) : visible.length === 0 ? (
-        <p className="empty-state">
-          {account.orders.length === 0
-            ? "No orders yet. Choose a price on the ladder to place one."
-            : "No open orders. Choose a price on the ladder to place another."}
-        </p>
-      ) : (
-        <table className="orders-table" aria-labelledby="orders-title">
-          <thead>
-            <tr>
-              <th scope="col">Order</th>
-              <th scope="col">Price</th>
-              <th scope="col">Status</th>
-              <th scope="col">This week</th>
-              <th scope="col">
-                <span className="visually-hidden">Action</span>
-              </th>
+    <table className="orders-table" aria-label={label}>
+      <thead>
+        <tr>
+          <th scope="col">Order</th>
+          <th scope="col">Price</th>
+          <th scope="col">Status</th>
+          <th scope="col">This week</th>
+          <th scope="col">
+            <span className="visually-hidden">Action</span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {orders.map((order) => {
+          const line = lineOf(config, view, account, order);
+          const action = actionFor(config, order, line);
+          const summary = summaries?.get(order.id.toString());
+          return (
+            <tr key={order.id.toString()}>
+              <td data-label="Order">
+                <Link className="order-name" to={`/orders/${order.id.toString()}`}>
+                  <TokenIcon symbol="NVDA" size="md" />
+                  <span>{line.title.replace(/ at$/, "")}</span>
+                </Link>
+              </td>
+              <td data-label="Price" className="order-price num">
+                {line.price}
+              </td>
+              <td data-label="Status">
+                <span className={`chip chip-${line.chip.tone}`}>{line.chip.label}</span>
+              </td>
+              <td data-label="This week" className="order-status">
+                {line.status}
+                {summary !== undefined && (
+                  <span className="order-history">
+                    <Ticks summary={summary} />
+                    {summaryText(summary, config.usdgDecimals)}
+                  </span>
+                )}
+              </td>
+              <td className="order-action">
+                {action !== null && (
+                  <button
+                    type="button"
+                    className={action.quiet ? "btn btn-outline btn-sm" : "btn btn-ink btn-sm"}
+                    disabled={busy || !onChain}
+                    onClick={() => void run(action.label, action.calls)}
+                  >
+                    {action.label}
+                  </button>
+                )}
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {visible.map((order) => {
-              const series =
-                order.series === 0n ? null : (account.series.get(order.series) ?? null);
-              const line = describeOrder(
-                order,
-                series,
-                view.epoch,
-                view.now,
-                config.assetSymbol,
-                account.heldOpen.get(order.series) ?? null,
-              );
-              const action = actionFor(config, order, line);
-              const past = history.get(order.id);
-              return (
-                <tr key={order.id.toString()}>
-                  <td data-label="Order">
-                    <span className="order-name">
-                      <TokenIcon symbol="NVDA" size="md" />
-                      <span>{line.title.replace(/ at$/, "")}</span>
-                    </span>
-                  </td>
-                  <td data-label="Price" className="order-price num">
-                    {line.price}
-                  </td>
-                  <td data-label="Status">
-                    <span className={`chip chip-${line.chip.tone}`}>{line.chip.label}</span>
-                  </td>
-                  <td data-label="This week" className="order-status">
-                    {line.status}
-                    {past !== undefined && (
-                      <span
-                        className="order-history"
-                        title={past.toBlock === null ? undefined : `As of block ${past.toBlock}`}
-                      >
-                        <Ticks history={past} />
-                        {historyText(past, config.usdgDecimals)}
-                      </span>
-                    )}
-                  </td>
-                  <td className="order-action">
-                    {action !== null && (
-                      <button
-                        type="button"
-                        className={action.quiet ? "btn btn-outline btn-sm" : "btn btn-ink btn-sm"}
-                        disabled={busy}
-                        onClick={() => void run(action.label, action.calls)}
-                      >
-                        {action.label}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      )}
-    </article>
+          );
+        })}
+      </tbody>
+    </table>
   );
 }

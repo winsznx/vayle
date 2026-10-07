@@ -1,0 +1,186 @@
+/* Activity: the holder's events by Eastern day, newest first. */
+
+.ac-note {
+  color: var(--muted);
+  font-size: var(--text-label);
+}
+
+/* A history error can carry long unbroken text, such as a request body, which mustn't widen the
+   page. */
+.ac-state,
+.ac-history {
+  overflow-wrap: anywhere;
+}
+
+/* In a notice the history note is the body text, so it matches the other notices. */
+.ac-state .history-note {
+  font-size: inherit;
+}
+
+.ac-card {
+  padding-bottom: 6px;
+}
+
+.ac-day {
+  margin: 0 24px;
+}
+
+.ac-day + .ac-day {
+  border-top: 1px solid var(--hairline);
+}
+
+.ac-day-title {
+  padding: 20px 0 6px;
+  color: var(--ink);
+  font-size: var(--text-label);
+  font-weight: 650;
+}
+
+.ac-row {
+  display: grid;
+  grid-template-columns: 6.5rem 10px minmax(0, 1fr) auto;
+  grid-template-areas:
+    "time mark title  amount"
+    ".    .    detail tx";
+  align-items: baseline;
+  gap: 2px 16px;
+  padding: 14px 0;
+}
+
+.ac-row + .ac-row {
+  border-top: 1px solid var(--hairline);
+}
+
+.ac-mark {
+  grid-area: mark;
+  align-self: start;
+  width: 10px;
+  height: 10px;
+  /* Centred on the title's first line, which is 1.55 times its font size tall. */
+  margin-top: calc((var(--text-body-s) * 1.55 - 10px) / 2);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--faint);
+}
+
+.ac-row-earned .ac-mark {
+  background: var(--earned);
+  box-shadow: none;
+}
+
+.ac-row-filled .ac-mark {
+  background: var(--brand);
+  box-shadow: none;
+}
+
+.ac-title {
+  grid-area: title;
+  color: var(--ink);
+  font-size: var(--text-body-s);
+  font-weight: 600;
+}
+
+.ac-amount {
+  grid-area: amount;
+  justify-self: end;
+  color: var(--ink);
+  font-size: var(--text-body-s);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ac-row-earned .ac-amount {
+  color: var(--earned);
+}
+
+.ac-detail {
+  grid-area: detail;
+  color: var(--muted);
+  font-size: var(--text-label);
+}
+
+.ac-time {
+  grid-area: time;
+  color: var(--muted);
+  font-size: var(--text-label);
+  white-space: nowrap;
+}
+
+.ac-tx {
+  grid-area: tx;
+  justify-self: end;
+  color: var(--muted);
+  font-size: var(--text-label);
+  white-space: nowrap;
+}
+
+/* A record of a finished step, so it stays neutral like the hash it replaces. The icon marks it as
+   a link out. */
+.ac-tx-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.ac-tx-link:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.ac-more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 24px;
+  padding: 14px 0 10px;
+  border-top: 1px solid var(--hairline);
+}
+
+.ac-count {
+  color: var(--muted);
+  font-size: var(--text-label);
+}
+
+.ac-empty {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+  padding: 26px 24px 28px;
+}
+
+@media (max-width: 640px) {
+  .ac-day,
+  .ac-more {
+    margin: 0 18px;
+  }
+
+  .ac-empty {
+    padding: 22px 18px 24px;
+  }
+
+  /* The time moves under the detail, beside the amount, so the title gets the full width. */
+  .ac-row {
+    grid-template-columns: 10px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "mark title  title"
+      ".    detail detail"
+      ".    time   amount"
+      ".    .      tx";
+    column-gap: 12px;
+  }
+
+  .ac-row-quiet {
+    grid-template-areas:
+      "mark title  title"
+      ".    detail detail"
+      ".    time   tx";
+  }
+
+  .ac-time {
+    margin-top: 4px;
+  }
+}

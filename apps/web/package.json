@@ -13,13 +13,17 @@
   },
   "dependencies": {
     "@fontsource-variable/plus-jakarta-sans": "5.3.0",
+    "@rainbow-me/rainbowkit": "2.2.10",
+    "@tanstack/react-query": "5.104.1",
     "@vayle/abi": "workspace:*",
     "@vayle/brand": "workspace:*",
     "@vayle/market": "workspace:*",
     "@vayle/units": "workspace:*",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "viem": "2.57.3"
+    "react-router": "8.4.0",
+    "viem": "2.57.3",
+    "wagmi": "2.19.5"
   },
   "devDependencies": {
     "@types/react": "19.3.0",

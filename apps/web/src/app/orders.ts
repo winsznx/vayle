@@ -107,7 +107,8 @@ export function describeOrder(
 ): OrderLine {
   const side = order.side === 0 ? "sell" : "buy";
   const verb = side === "sell" ? "Sell" : "Buy";
-  const title = `${verb} ${tokens(order.size, symbol)} at`;
+  const title =
+    order.size === 0n ? `${verb} ${symbol} at` : `${verb} ${tokens(order.size, symbol)} at`;
   const step = nextStep(order, series, BigInt(now));
   const action = step === "finalize-then-settle" && heldUntil !== null ? "wait" : step;
   let status: string;

@@ -12,6 +12,7 @@ import {
 import { useEffect, useState } from "react";
 import { erc20Abi, parseAbi, type Address, type PublicClient } from "viem";
 import type { AppConfig } from "./config.ts";
+import { shortError } from "./failures.ts";
 import { ladder, type Epoch } from "./week.ts";
 
 export interface AccountView {
@@ -200,8 +201,7 @@ export function useMarket(
         },
         (error: unknown) => {
           if (cancelled) return;
-          const message = error instanceof Error ? error.message : String(error);
-          setState((previous) => ({ view: previous.view, error: message }));
+          setState((previous) => ({ view: previous.view, error: shortError(error) }));
         },
       );
     };

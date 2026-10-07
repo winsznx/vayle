@@ -89,7 +89,7 @@ async function up(): Promise<void> {
     );
     writeFileSync(
       WEB_ENV_FILE,
-      `VITE_RPC_URL=${FORK_RPC}\nVITE_MARKET=${deployment.market}\nVITE_PLACEMENT=open\n`,
+      `VITE_RPC_URL=${FORK_RPC}\nVITE_MARKET=${deployment.market}\nVITE_MARKET_DEPLOY_BLOCK=${deployment.block.toString()}\nVITE_PLACEMENT=open\n`,
     );
 
     const week = await latestWeek(client, deployment.market);

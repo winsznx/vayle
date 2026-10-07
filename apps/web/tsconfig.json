@@ -1,6 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    // Vite bundles this app, so modules resolve the way a bundler resolves them. Some
+    // dependencies' type declarations only resolve this way.
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "types": ["vite/client", "node"],
     "jsx": "react-jsx",

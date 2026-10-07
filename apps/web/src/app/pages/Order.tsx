@@ -1,0 +1,401 @@
+import "./order.css";
+import type { MarketEvent, OrderState, OrderSummary } from "@vayle/market";
+import { useId, type ReactNode } from "react";
+import { Link, useParams } from "react-router";
+import { TokenIcon } from "../../ui/TokenIcon.tsx";
+import { HistoryNote } from "../components/HistoryNote.tsx";
+import { actionFor, lineOf, Ticks } from "../components/Orders.tsx";
+import type { AppConfig } from "../config.ts";
+import { describeEvent, sidesOf, txUrl, type EventLine } from "../events.ts";
+import { dollars, easternTime, premium, tokens, usdgAmount } from "../format.ts";
+import type { OrderLine } from "../orders.ts";
+import { EXTERNAL_ICON, NavIcon } from "../shell/nav.tsx";
+import { useApp } from "../state.tsx";
+import type { MarketHistory } from "../useMarketHistory.ts";
+
+// One order: the price it holds, its terms, what it has earned, and everything that happened to it.
+
+const BACK_ICON = "M11 4.5 6.5 9l4.5 4.5";
+
+type Waiting = Exclude<MarketHistory["status"], "ready">;
+
+const EARNINGS_WAIT: Readonly<Record<Waiting, string>> = {
+  idle: "Connect a wallet to see what this order has earned.",
+  off: "This build doesn't read history, so earnings aren't shown.",
+  loading: "Earnings show once the history is read.",
+  failed: "Earnings can't be shown while history is unavailable.",
+};
+
+const HISTORY_WAIT: Readonly<Record<Waiting, string>> = {
+  idle: "Connect a wallet to see this order's history.",
+  off: "This build doesn't read history.",
+  loading: "Reading this order's history.",
+  failed: "History is unavailable right now.",
+};
+
+const WHOLE_NUMBER = /^\d+$/;
+
+// The order number in the URL, when it's a whole number.
+function idOf(param: string | undefined): bigint | null {
+  return param !== undefined && WHOLE_NUMBER.test(param) ? BigInt(param) : null;
+}
+
+function shortHash(hash: string): string {
+  return `${hash.slice(0, 6)}…${hash.slice(-4)}`;
+}
+
+function Term(props: {
+  readonly label: string;
+  readonly className?: string;
+  readonly children: ReactNode;
+}) {
+  return (
+    <div>
+      <dt>{props.label}</dt>
+      <dd className={props.className}>{props.children}</dd>
+    </div>
+  );
+}
+
+function OrderHead({ order, line }: { readonly order: OrderState; readonly line: OrderLine }) {
+  const { config, run, busy, onChain } = useApp();
+  const noteId = useId();
+  const action = actionFor(config, order, line);
+  return (
+    <section className="card od-head">
+      <div className="od-head-top">
+        <div className="od-ident">
+          <TokenIcon symbol="NVDA" size="xl" />
+          <h2 className="od-title">
+            <span className="od-title-lead">{line.title}</span>{" "}
+            <span className="od-title-price num">{line.price}</span>
+          </h2>
+        </div>
+        <span className={`chip chip-${line.chip.tone}`}>{line.chip.label}</span>
+      </div>
+      <div className="od-head-foot">
+        <p className="od-status">{line.status}</p>
+        {action !== null && (
+          <button
+            type="button"
+            className={action.quiet ? "btn btn-outline" : "btn btn-ink"}
+            disabled={busy || !onChain}
+            aria-describedby={onChain ? undefined : noteId}
+            onClick={() => void run(action.label, action.calls)}
+          >
+            {action.label}
+          </button>
+        )}
+        {action !== null && !onChain && (
+          <p id={noteId} className="od-act-note">
+            Switch your wallet to Robinhood Chain first.
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function placedSizeOf(history: MarketHistory, id: string): bigint | null {
+  if (history.status !== "ready") return null;
+  const placed = history.events.find((e) => e.name === "OrderPlaced" && e.order_id === id);
+  const size = placed?.args["size"];
+  return typeof size === "string" && /^\d+$/.test(size) ? BigInt(size) : null;
+}
+
+function OrderTerms(props: {
+  readonly config: AppConfig;
+  readonly order: OrderState;
+  readonly line: OrderLine;
+  // The size from the order's placement, for an order that has none left.
+  readonly placedSize: bigint | null;
+}) {
+  const { config, order, line, placedSize } = props;
+  const symbol = config.assetSymbol;
+  const nvda = (raw: bigint): string => tokens(raw, symbol, config.assetDecimals);
+  const price = (units: bigint): string => dollars(units, config.usdgDecimals);
+  const selling = line.side === "sell";
+  let afterFill = "It stops";
+  if (order.flip) {
+    afterFill = selling
+      ? `Buys back at ${price(order.flipTarget)}`
+      : `Sells again at ${price(order.flipTarget)}`;
+  }
+  return (
+    <section className="card od-terms">
+      <div className="card-head">
+        <h2 className="h3">Terms</h2>
+      </div>
+      <dl className="od-dl">
+        <Term label="Side">{selling ? `Sell ${symbol}` : `Buy ${symbol}`}</Term>
+        <Term label="Price" className="od-price num">
+          {price(order.target)}
+        </Term>
+        <Term label="Size" className="num">
+          {order.size > 0n
+            ? nvda(order.size)
+            : placedSize === null
+              ? "Nothing left"
+              : `${nvda(placedSize)} when placed`}
+        </Term>
+        <Term label="In this week's trade" className="num">
+          {order.committed > 0n
+            ? nvda(order.committed)
+            : order.status === "active"
+              ? "Nothing yet"
+              : "Nothing"}
+        </Term>
+        <Term label="Least per week">
+          <span className="num">
+            {premium(order.minPremium, config.usdgDecimals)} per {symbol}
+          </span>
+          <span className="od-help">Weeks when the team-operated maker bids less are skipped.</span>
+        </Term>
+        <Term label={selling ? "When it sells" : "When it buys"}>{afterFill}</Term>
+        <Term label="Order number" className="num">
+          {order.id.toString()}
+        </Term>
+      </dl>
+    </section>
+  );
+}
+
+function EarningsBody({
+  config,
+  summary,
+}: {
+  readonly config: AppConfig;
+  readonly summary: OrderSummary;
+}) {
+  const earned = BigInt(summary.premiumEarned);
+  return (
+    <dl className="od-tallies">
+      <Term label="Premium earned" className={earned > 0n ? "od-tally od-tally-paid" : "od-tally"}>
+        <TokenIcon symbol="USDG" size="md" />
+        <span className="num">{usdgAmount(earned, config.usdgDecimals)}</span>
+      </Term>
+      <Term label="Weeks paid" className="od-tally">
+        <span className="num">{summary.weeksFilled}</span>
+        <Ticks summary={{ ...summary, skipStreak: 0 }} />
+      </Term>
+      <Term label="Skipped in a row" className="od-tally">
+        <span className="num">{summary.skipStreak}</span>
+        <Ticks summary={{ ...summary, weeksFilled: 0 }} />
+      </Term>
+    </dl>
+  );
+}
+
+function OrderEarnings(props: {
+  readonly config: AppConfig;
+  readonly history: MarketHistory;
+  readonly id: string;
+}) {
+  const { config, history, id } = props;
+  let body: ReactNode;
+  if (history.status !== "ready") {
+    body = <p className="empty-state">{EARNINGS_WAIT[history.status]}</p>;
+  } else {
+    const summary = history.summaries.get(id);
+    body =
+      summary === undefined ? (
+        <p className="empty-state">This order isn&apos;t in the history yet.</p>
+      ) : (
+        <EarningsBody config={config} summary={summary} />
+      );
+  }
+  return (
+    <section className="card od-earnings">
+      <div className="card-head">
+        <div>
+          <h2 className="h3">Earnings</h2>
+          <p className="card-sub">Premiums the team-operated maker has paid this order.</p>
+        </div>
+      </div>
+      {body}
+    </section>
+  );
+}
+
+function EventItem(props: {
+  readonly config: AppConfig;
+  readonly event: MarketEvent;
+  readonly line: EventLine;
+  readonly id: string;
+}) {
+  const { config, event, line, id } = props;
+  const seconds = Date.parse(event.block_time) / 1000;
+  const url = txUrl(config, event.tx_hash);
+  // A flip joins two orders, so its entry links to the one this page isn't showing.
+  const toId = event.args["toId"];
+  const other =
+    event.name !== "OrderFlipped"
+      ? null
+      : event.order_id === id
+        ? typeof toId === "string"
+          ? toId
+          : null
+        : event.order_id;
+  // What happened comes first for anyone reading in order. The layout puts when and which
+  // transaction in a column of their own.
+  return (
+    <li className="od-event">
+      <div className="od-event-main">
+        <p className="od-event-title">{line.title}</p>
+        {line.detail !== null && <p className="od-event-detail">{line.detail}</p>}
+        {other !== null && (
+          <Link className="od-event-link" to={`/orders/${other}`}>
+            See order {other}
+          </Link>
+        )}
+      </div>
+      {line.amount !== null && (
+        <p
+          className={
+            line.kind === "earned" ? "od-event-amount od-amount-paid num" : "od-event-amount num"
+          }
+        >
+          {line.amount}
+        </p>
+      )}
+      <div className="od-event-meta">
+        <time className="od-event-time" dateTime={event.block_time}>
+          {Number.isFinite(seconds) ? easternTime(seconds) : event.block_time}
+        </time>
+        {url === null ? (
+          <p className="od-event-tx num" title={event.tx_hash}>
+            <span className="visually-hidden">Transaction </span>
+            {shortHash(event.tx_hash)}
+          </p>
+        ) : (
+          <a
+            className="od-event-tx od-event-tx-link num"
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <span className="visually-hidden">Transaction </span>
+            {shortHash(event.tx_hash)}
+            <span className="visually-hidden"> (opens in a new tab)</span>
+            <NavIcon d={EXTERNAL_ICON} />
+          </a>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function OrderHistory(props: {
+  readonly config: AppConfig;
+  readonly history: MarketHistory;
+  readonly id: string;
+}) {
+  const { config, history, id } = props;
+  const items: { readonly event: MarketEvent; readonly line: EventLine }[] = [];
+  if (history.status === "ready") {
+    const sideOf = sidesOf(history.events);
+    const own = history.events.filter(
+      (e) => e.order_id === id || (e.name === "OrderFlipped" && e.args["toId"] === id),
+    );
+    for (const event of own.reverse()) {
+      const line = describeEvent(event, config, sideOf);
+      if (line !== null) items.push({ event, line });
+    }
+  }
+  return (
+    <section className="card od-history">
+      <div className="card-head">
+        <div>
+          <h2 className="h3">History</h2>
+          <p className="card-sub">Newest first. Premiums come from the team-operated maker.</p>
+        </div>
+        {items.length > 0 && (
+          <span className="card-count num">
+            {items.length}
+            <span className="visually-hidden"> events</span>
+          </span>
+        )}
+      </div>
+      {history.status !== "ready" ? (
+        <p className="empty-state">{HISTORY_WAIT[history.status]}</p>
+      ) : items.length === 0 ? (
+        <p className="empty-state">Nothing has happened to this order yet.</p>
+      ) : (
+        <ol className="od-events">
+          {items.map(({ event, line }) => (
+            <EventItem
+              key={`${event.block_number}:${event.log_index}`}
+              config={config}
+              event={event}
+              line={line}
+              id={id}
+            />
+          ))}
+        </ol>
+      )}
+    </section>
+  );
+}
+
+export function OrderPage(): ReactNode {
+  const { id: param } = useParams();
+  const { config, view, wallet, history } = useApp();
+  if (view === null) return null;
+  const id = idOf(param);
+  const account = view.account;
+  const order =
+    account === null || id === null ? undefined : account.orders.find((o) => o.id === id);
+
+  let body: ReactNode;
+  if (account === null) {
+    body =
+      wallet.address === null ? (
+        <section className="card notice-card">
+          <h2 className="h3">Wallet not connected</h2>
+          <p className="muted">Connect the wallet that placed this order to see it.</p>
+        </section>
+      ) : (
+        <p className="muted" role="status">
+          Reading this wallet&apos;s orders.
+        </p>
+      );
+  } else if (order === undefined) {
+    body = (
+      <section className="card notice-card">
+        <h2 className="h3">Order not found</h2>
+        <p className="muted">This order isn&apos;t one of this wallet&apos;s.</p>
+      </section>
+    );
+  } else {
+    const line = lineOf(config, view, account, order);
+    const key = order.id.toString();
+    body = (
+      <>
+        <OrderHead order={order} line={line} />
+        <div className="od-body">
+          <div className="od-layout">
+            <OrderEarnings config={config} history={history} id={key} />
+            <OrderTerms
+              config={config}
+              order={order}
+              line={line}
+              placedSize={placedSizeOf(history, key)}
+            />
+            <OrderHistory config={config} history={history} id={key} />
+          </div>
+        </div>
+        <HistoryNote />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Link className="od-back" to="/orders">
+        <NavIcon d={BACK_ICON} />
+        All orders
+      </Link>
+      {body}
+    </>
+  );
+}

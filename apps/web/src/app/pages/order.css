@@ -1,0 +1,402 @@
+/* One order: the price it holds, its terms, what it has earned, and everything that happened to it. */
+
+.od-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: start;
+  height: 36px;
+  padding: 0 14px 0 8px;
+  border-radius: var(--radius-pill);
+  color: var(--muted);
+  font-size: var(--text-body-s);
+  font-weight: 560;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.od-back:hover {
+  color: var(--ink);
+  background: var(--sunken);
+}
+
+/* The order's own price leads, set the way the ticket set it. */
+
+.od-head {
+  display: grid;
+  gap: 22px;
+  padding: 26px 28px 24px;
+}
+
+.od-head-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px 20px;
+}
+
+.od-ident {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.od-title {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  color: var(--ink);
+  font-size: var(--text-body);
+  font-weight: 600;
+}
+
+.od-title-lead {
+  color: var(--muted);
+  font-size: var(--text-body-s);
+  font-weight: 600;
+}
+
+.od-title-price {
+  color: var(--brand-text);
+  font-size: clamp(2.5rem, 2rem + 1.6vw, 3.25rem);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+}
+
+.od-head-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--hairline);
+}
+
+.od-status {
+  flex: 1 1 22rem;
+  max-width: 44rem;
+  color: var(--body);
+  font-size: var(--text-body-s);
+}
+
+/* Its own line under the button, so the status stays level with the button. */
+.od-act-note {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: var(--text-caption);
+  text-align: right;
+}
+
+/* Earnings above the history, with the terms in a rail beside both once the page is wide enough.
+   The page measures itself, so the rail follows the room the board has, sidebar or not. */
+
+.od-body {
+  container: od-page / inline-size;
+}
+
+.od-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "earnings"
+    "terms"
+    "history";
+  gap: 20px;
+}
+
+@container od-page (min-width: 56rem) {
+  .od-layout {
+    grid-template-columns: minmax(0, 1fr) 24rem;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "earnings terms"
+      "history terms";
+    align-items: start;
+  }
+
+  /* Stays in view beside a long history, under the sticky top bar, as the ticket does, when the
+     window is tall enough to show all of it. */
+  @media (min-height: 44rem) {
+    .od-layout > .od-terms {
+      position: sticky;
+      top: 110px;
+    }
+  }
+}
+
+.od-earnings {
+  grid-area: earnings;
+  container: od-earnings / inline-size;
+}
+
+.od-terms {
+  grid-area: terms;
+}
+
+.od-history {
+  grid-area: history;
+  container: od-history / inline-size;
+}
+
+/* Terms */
+
+.od-dl {
+  margin: 0;
+  padding: 0 24px 10px;
+}
+
+.od-dl > div {
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr);
+  align-items: baseline;
+  gap: 4px 16px;
+  padding: 13px 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.od-dl dt {
+  color: var(--muted);
+  font-size: var(--text-label);
+}
+
+.od-dl dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--text-body-s);
+  font-weight: 560;
+}
+
+.od-dl .od-price {
+  color: var(--brand-text);
+  font-weight: 650;
+}
+
+.od-help {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: var(--text-caption);
+  font-weight: 450;
+}
+
+/* Earnings: what's been paid, how many weeks paid, and the run of skipped weeks right now */
+
+.od-tallies {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr));
+  gap: 18px 24px;
+  margin: 0;
+  padding: 2px 24px 24px;
+}
+
+.od-tallies > div {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.od-tallies dt {
+  color: var(--muted);
+  font-size: var(--text-label);
+}
+
+.od-tallies dd {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.5rem;
+  font-weight: 560;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.od-tallies .od-tally-paid {
+  color: var(--earned);
+}
+
+.od-tally .ticks {
+  gap: 4px;
+}
+
+.od-tally .tick {
+  width: 8px;
+  height: 18px;
+}
+
+@container od-earnings (max-width: 30rem) {
+  .od-tallies {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .od-tallies > div:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+/* History: one row per event, newest first. When and which transaction on the left, what happened
+   in the middle, and what moved on the right. */
+
+.od-events {
+  border-top: 1px solid var(--hairline);
+}
+
+.od-event {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr) auto;
+  grid-template-areas: "meta main amount";
+  align-items: start;
+  gap: 6px 24px;
+  padding: 16px 24px;
+}
+
+.od-event + .od-event {
+  border-top: 1px solid var(--hairline);
+}
+
+.od-event-meta {
+  display: grid;
+  justify-items: start;
+  gap: 3px;
+  grid-area: meta;
+  padding-top: 1px;
+}
+
+.od-event-time {
+  color: var(--muted);
+  font-size: var(--text-label);
+}
+
+.od-event-main {
+  display: grid;
+  justify-items: start;
+  align-content: start;
+  gap: 2px;
+  grid-area: main;
+  min-width: 0;
+}
+
+.od-event-title {
+  color: var(--ink);
+  font-size: var(--text-body-s);
+  font-weight: 600;
+}
+
+.od-event-detail {
+  color: var(--muted);
+  font-size: var(--text-label);
+}
+
+.od-event-link {
+  margin-top: 4px;
+  color: var(--brand-text);
+  font-size: var(--text-label);
+  font-weight: 600;
+}
+
+.od-event-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.od-event-amount {
+  grid-area: amount;
+  justify-self: end;
+  color: var(--ink);
+  font-size: var(--text-body-s);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.od-amount-paid {
+  color: var(--earned);
+}
+
+.od-event-tx {
+  color: var(--muted);
+  font-size: var(--text-label);
+  white-space: nowrap;
+}
+
+.od-event-tx-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.od-event-tx-link:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+/* Narrow: what happened and the amount on top, when and which transaction on one line below. */
+@container od-history (max-width: 34rem) {
+  .od-event {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "main amount"
+      "meta meta";
+    gap: 8px 16px;
+  }
+
+  .od-event-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 2px 12px;
+    padding-top: 0;
+  }
+}
+
+/* Too narrow for the time and the hash side by side: stack them, the same way on every row. */
+@container od-history (max-width: 18rem) {
+  .od-event-meta {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 640px) {
+  .od-head {
+    gap: 18px;
+    padding: 20px 18px;
+  }
+
+  .od-head-foot {
+    gap: 12px 24px;
+    padding-top: 16px;
+  }
+
+  .od-act-note {
+    text-align: left;
+  }
+
+  .od-dl {
+    padding: 0 18px 8px;
+  }
+
+  .od-tallies {
+    padding: 2px 18px 20px;
+  }
+
+  .od-event {
+    padding: 14px 18px;
+  }
+}
+
+@media (max-width: 360px) {
+  .od-dl > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+}
