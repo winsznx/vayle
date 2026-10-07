@@ -75,11 +75,57 @@ async function order(id: string, deps: ApiDeps): Promise<Response> {
   });
 }
 
+// A place in the public record. Without a log index it's the end of the whole block, which is what
+// `after=<block>` has always meant.
+interface Cursor {
+  readonly block: bigint;
+  readonly logIndex: bigint | null;
+}
+
+const CURSOR = /^([0-9]{1,78})(?::([0-9]{1,78}))?$/;
+// block_number is a Postgres bigint and log_index an integer. PostgREST answers a value past them
+// with an error, not an empty page.
+const MAX_BLOCK = 2n ** 63n - 1n;
+const MAX_LOG_INDEX = 2n ** 31n - 1n;
+
+function readCursor(after: string): Cursor | { readonly error: string } {
+  const [, blockDigits, logIndexDigits] = CURSOR.exec(after) ?? [];
+  if (blockDigits === undefined) return { error: "after must be <block> or <block>:<logIndex>" };
+  const block = BigInt(blockDigits);
+  if (block > MAX_BLOCK) return { error: "after's block number is too large" };
+  if (logIndexDigits === undefined) return { block, logIndex: null };
+  const logIndex = BigInt(logIndexDigits);
+  if (logIndex > MAX_LOG_INDEX) return { error: "after's log index is too large" };
+  return { block, logIndex };
+}
+
+function cursorText(cursor: Cursor): string {
+  const block = cursor.block.toString();
+  return cursor.logIndex === null ? block : `${block}:${cursor.logIndex.toString()}`;
+}
+
+// PostgREST has no row comparison, so (block_number, log_index) > (block, logIndex) is spelled out.
+// The plain block_number >= block beside it lets Postgres start its primary key scan at that block
+// instead of at the first event.
+function afterFilter(cursor: Cursor): string {
+  const block = cursor.block.toString();
+  if (cursor.logIndex === null) return `block_number=gt.${block}`;
+  const restOfBlock = `and(block_number.eq.${block},log_index.gt.${cursor.logIndex.toString()})`;
+  return `block_number=gte.${block}&or=(block_number.gt.${block},${restOfBlock})`;
+}
+
 async function run(params: URLSearchParams, deps: ApiDeps): Promise<Response> {
-  const after = params.get("after") ?? "0";
-  if (!DECIMAL.test(after)) return json({ error: "after must be a block number" }, 400);
-  const events = await deps.select(`block_number=gt.${after}&limit=${RUN_PAGE}`);
-  return json({ events, source: await deps.source() });
+  const cursor = readCursor(params.get("after") ?? "0");
+  if ("error" in cursor) return json({ error: cursor.error }, 400);
+  // The indexer saves its cursor only after the rows up to it, so with the tip read first, every
+  // event up to source.toBlock is already in the table this page comes from.
+  const source = await deps.source();
+  const events = await deps.select(`${afterFilter(cursor)}&limit=${RUN_PAGE}`);
+  // Taken from the rows that came back, never from the page size, so a store that returns fewer
+  // can't make a client skip any.
+  const last = events.at(-1);
+  const next = last === undefined ? cursorText(cursor) : `${last.block_number}:${last.log_index}`;
+  return json({ events, next, source });
 }
 
 export async function handle(request: Request, deps: ApiDeps): Promise<Response> {

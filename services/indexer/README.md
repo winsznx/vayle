@@ -9,9 +9,11 @@ All responses are JSON, with a `source` block naming the chain, the market and t
 - `GET /v1/owners/:address/orders`: the IDs of the orders an address placed.
 - `GET /v1/owners/:address/events`: everything filed under the address (placements, credits, withdrawals) and every event of the orders it placed, oldest first.
 - `GET /v1/orders/:id`: the order's events, plus premium earned in USDG base units, weeks filled and the current skip streak.
-- `GET /v1/run?after=<block>`: every market event after a block, 500 at a time, oldest first. This is the public record of the market.
+- `GET /v1/run?after=<cursor>`: every market event after a cursor, 500 at a time, oldest first, with a `next` cursor for the page after. This is the public record of the market.
 
 A week counts toward the skip streak once its renewal batch deadline has passed, and only if the order existed before that week's batch opened.
+
+To read the whole record, start without `after` and pass each response's `next` back as `after`, unchanged. A cursor is `<block>:<logIndex>`, the position of the last event you have, and the next page starts right after it, so a page that ends partway through a block carries on with the rest of that block. The old form, a plain `<block>`, still works and means everything after that whole block. A page with fewer than 500 events means you've caught up, and you have every event through `source.toBlock`. Ask again later with the same `next` for newer ones. An empty page returns the cursor you sent as `next`. A cursor in any other form, or with a number too large for a block or a log index, gets a 400 with the reason.
 
 ## Configuration
 
