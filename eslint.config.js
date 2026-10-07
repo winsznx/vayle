@@ -1,4 +1,5 @@
 import js from "@eslint/js";
+import reactHooks from "eslint-plugin-react-hooks";
 import { defineConfig, globalIgnores } from "eslint/config";
 import tseslint from "typescript-eslint";
 
@@ -27,6 +28,13 @@ export default defineConfig(
   {
     files: ["**/*.js"],
     extends: [tseslint.configs.disableTypeChecked],
+  },
+  {
+    files: ["apps/**/*.{ts,tsx}"],
+    extends: [reactHooks.configs.flat["recommended-latest"]],
+    rules: {
+      "react-hooks/exhaustive-deps": "error",
+    },
   },
   {
     // node:test's describe and it return promises that the runner itself tracks.

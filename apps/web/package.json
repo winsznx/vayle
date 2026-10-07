@@ -1,0 +1,27 @@
+{
+  "name": "@vayle/web",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node --test \"test/*.test.ts\""
+  },
+  "dependencies": {
+    "@fontsource-variable/archivo": "5.3.0",
+    "@vayle/abi": "workspace:*",
+    "@vayle/market": "workspace:*",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "viem": "2.57.3"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "vite": "8.3.2"
+  }
+}
