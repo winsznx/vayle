@@ -14,6 +14,10 @@ const feedAbi = parseAbi([
   "function latestRoundData() view returns (uint80, int256, uint256, uint256, uint80)",
 ]);
 
+// Boundaries read per Multicall3 call, newest first. The deploy schedules ten weeks and the
+// timelock tops the calendar up, so one call covers more than a year ahead.
+export const BOUNDARY_WINDOW = 64;
+
 export interface IssuerSnapshot {
   readonly nvdaPaused: boolean;
   readonly accessRegistryPaused: boolean;
@@ -50,6 +54,44 @@ export interface Snapshot {
   readonly market: MarketSnapshot | null;
 }
 
+export interface CalendarPosition {
+  readonly latestBoundary: Boundary | null;
+  readonly nextClose: number | null;
+  readonly boundariesAhead: number;
+}
+
+// Where `now` falls in a calendar of `count` boundaries, walking back from the last one a window at
+// a time: the latest boundary at or before now, the first close after it, and how many closes lie
+// ahead. The calendar only ever holds a few weeks ahead, so the walk is short. `read` answers the
+// boundaries at the indexes asked, in the same order.
+export async function walkBoundaries(
+  count: bigint,
+  now: number,
+  read: (indexes: readonly bigint[]) => Promise<readonly Boundary[]>,
+): Promise<CalendarPosition> {
+  let boundariesAhead = 0;
+  let nextClose: number | null = null;
+  const window = BigInt(BOUNDARY_WINDOW);
+  let top = count;
+  while (top > 0n) {
+    const bottom = top > window ? top - window : 0n;
+    const indexes: bigint[] = [];
+    for (let index = top - 1n; index >= bottom; index--) indexes.push(index);
+    for (const boundary of await read(indexes)) {
+      if (boundary.close > now) {
+        boundariesAhead++;
+        nextClose = boundary.close;
+        continue;
+      }
+      return { latestBoundary: boundary, nextClose, boundariesAhead };
+    }
+    top = bottom;
+  }
+  return { latestBoundary: null, nextClose, boundariesAhead };
+}
+
+// Every read is pinned to the latest block, and the issuer's and the market's reads start together,
+// so the client sends them as one Multicall3 call.
 export async function readSnapshot(client: PublicClient, config: WatcherConfig): Promise<Snapshot> {
   const block = await client.getBlock({ blockTag: "latest" });
   const blockNumber = block.number;
@@ -64,6 +106,7 @@ export async function readSnapshot(client: PublicClient, config: WatcherConfig):
     accessRegistryPaused,
     usdgPaused,
     round,
+    market,
   ] = await Promise.all([
     client.readContract({ ...nvda, functionName: "paused" }),
     client.readContract({ ...nvda, functionName: "oraclePaused" }),
@@ -88,6 +131,9 @@ export async function readSnapshot(client: PublicClient, config: WatcherConfig):
       functionName: "latestRoundData",
       blockNumber,
     }),
+    config.market === null
+      ? null
+      : readMarket(client, config.market, config.nvda, blockNumber, now),
   ]);
   return {
     block: blockNumber,
@@ -102,10 +148,7 @@ export async function readSnapshot(client: PublicClient, config: WatcherConfig):
       effectiveAt: Number(effectiveAt),
     },
     feedUpdatedAt: Number(round[3]),
-    market:
-      config.market === null
-        ? null
-        : await readMarket(client, config.market, config.nvda, blockNumber, now),
+    market,
   };
 }
 
@@ -131,25 +174,21 @@ async function readMarket(
     client.readContract({ ...market, functionName: "latestExpiry", args: [asset] }),
     client.readContract({ ...calendar, functionName: "boundaryCount" }),
   ]);
-  // Walk back from the last boundary: the calendar only ever holds a few weeks ahead.
-  let boundariesAhead = 0;
-  let nextClose: number | null = null;
-  let latestBoundary: Boundary | null = null;
-  for (let index = count; index > 0n; index--) {
-    const b = await client.readContract({
-      ...calendar,
-      functionName: "boundaryAt",
-      args: [index - 1n],
-    });
-    const boundary = { close: Number(b.close), creationDeadline: Number(b.creationDeadline) };
-    if (boundary.close > now) {
-      boundariesAhead++;
-      nextClose = boundary.close;
-      continue;
-    }
-    latestBoundary = boundary;
-    break;
-  }
+  const { latestBoundary, nextClose, boundariesAhead } = await walkBoundaries(
+    count,
+    now,
+    (indexes) =>
+      Promise.all(
+        indexes.map(async (index) => {
+          const b = await client.readContract({
+            ...calendar,
+            functionName: "boundaryAt",
+            args: [index],
+          });
+          return { close: Number(b.close), creationDeadline: Number(b.creationDeadline) };
+        }),
+      ),
+  );
   return {
     lastSeen: Number(lastSeen),
     paused,

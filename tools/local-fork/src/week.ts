@@ -1,6 +1,7 @@
 import { appendFileSync } from "node:fs";
 import { vayleMarketAbi } from "@vayle/abi";
 import {
+  keeperClients,
   loadConfig as keeperConfig,
   runOnce as runKeeper,
   type Clients as KeeperClients,
@@ -8,15 +9,15 @@ import {
 } from "@vayle/keeper";
 import {
   loadConfig as makerConfig,
+  makerClients,
   runOnce as runMaker,
   type Clients as MakerClients,
   type MakerConfig,
 } from "@vayle/maker";
-import { createPublicClient, createWalletClient, getAddress, http } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
+import { getAddress } from "viem";
 import facts from "../../../deployments/robinhood-mainnet.json" with { type: "json" };
 import type { Accounts } from "./accounts.ts";
-import { FORK_RPC, forkChain, type ForkClient } from "./anvil.ts";
+import { FORK_RPC, type ForkClient } from "./anvil.ts";
 import { advanceTarget, FEED_LEAD, minutesTarget, nextTick, type Week } from "./clock.ts";
 import type { Deployment } from "./deploy.ts";
 import { writeCarriedForwardRound } from "./feed.ts";
@@ -54,12 +55,9 @@ interface Services {
   readonly maker: { readonly config: MakerConfig; readonly clients: MakerClients };
 }
 
-// The production keeper and maker, configured the way their Workers are, pointed at the fork.
+// The production keeper and maker, configured the way their Workers are and with their Workers'
+// own clients, pointed at the fork.
 function services(deployment: Deployment, accounts: Accounts): Services {
-  const transport = http(FORK_RPC);
-  const publicClient = createPublicClient({ chain: forkChain, transport });
-  const keeperAccount = privateKeyToAccount(accounts.keys.keeper);
-  const makerSigner = privateKeyToAccount(accounts.keys.maker);
   return {
     keeper: {
       config: keeperConfig({
@@ -69,10 +67,7 @@ function services(deployment: Deployment, accounts: Accounts): Services {
         VAYLE_LIVENESS: deployment.liveness,
         VAYLE_CALENDAR: deployment.calendar,
       }),
-      clients: {
-        public: publicClient,
-        wallet: createWalletClient({ account: keeperAccount, chain: forkChain, transport }),
-      },
+      clients: keeperClients({ rpcUrl: FORK_RPC, key: accounts.keys.keeper }),
     },
     maker: {
       config: makerConfig({
@@ -81,11 +76,7 @@ function services(deployment: Deployment, accounts: Accounts): Services {
         VAYLE_MARKET: deployment.market,
         ...FORK_MAKER_PRICING,
       }),
-      clients: {
-        public: publicClient,
-        wallet: createWalletClient({ account: makerSigner, chain: forkChain, transport }),
-        signer: makerSigner,
-      },
+      clients: makerClients({ rpcUrl: FORK_RPC, key: accounts.keys.maker }),
     },
   };
 }

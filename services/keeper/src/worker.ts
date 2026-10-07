@@ -1,6 +1,4 @@
-import { createPublicClient, createWalletClient, defineChain, http } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import facts from "../../../deployments/robinhood-mainnet.json" with { type: "json" };
+import { keeperClients } from "./clients.ts";
 import { loadConfig } from "./config.ts";
 import { runOnce } from "./run.ts";
 
@@ -16,17 +14,6 @@ export default {
     ctx: ScheduledContext,
   ): void {
     const config = loadConfig(env);
-    const chain = defineChain({
-      id: facts.chain.chainId,
-      name: "Robinhood Chain",
-      nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-      rpcUrls: { default: { http: [config.rpcUrl] } },
-    });
-    const transport = http(config.rpcUrl, { retryCount: 3 });
-    const clients = {
-      public: createPublicClient({ chain, transport }),
-      wallet: createWalletClient({ account: privateKeyToAccount(config.key), chain, transport }),
-    };
-    ctx.waitUntil(runOnce(config, clients));
+    ctx.waitUntil(runOnce(config, keeperClients(config)));
   },
 };

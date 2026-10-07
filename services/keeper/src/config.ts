@@ -10,6 +10,10 @@ export interface KeeperConfig {
   readonly calendar: Address;
   readonly asset: Address;
   readonly feed: Address;
+  // With the asset, the terms the market hashes into a series ID that don't come from an order or
+  // an epoch: its chain, and the token puts are collateralized in.
+  readonly chainId: number;
+  readonly usdg: Address;
 }
 
 type Env = Readonly<Record<string, string | undefined>>;
@@ -31,5 +35,7 @@ export function loadConfig(env: Env): KeeperConfig {
     calendar: getAddress(required(env, "VAYLE_CALENDAR")),
     asset: getAddress(facts.nvda.address),
     feed: getAddress(facts.nvdaUsdFeed.proxy),
+    chainId: facts.chain.chainId,
+    usdg: getAddress(facts.usdg.address),
   };
 }

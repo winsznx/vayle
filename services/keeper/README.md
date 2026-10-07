@@ -17,5 +17,5 @@ Secrets, set with `wrangler secret put`: `ROBINHOOD_RPC_URL` and `KEEPER_KEY`. V
 
 ```sh
 pnpm --filter @vayle/keeper test         # the planner, without a network
-pnpm --filter @vayle/keeper test:chain   # the round search against the real NVDA feed; needs ROBINHOOD_RPC_URL
+pnpm --filter @vayle/keeper test:chain   # the round search against the real NVDA feed, through Multicall3 as the Worker reads it; needs ROBINHOOD_RPC_URL
 ```
