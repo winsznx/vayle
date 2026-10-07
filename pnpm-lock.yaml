@@ -41,6 +41,9 @@ importers:
       '@vayle/market':
         specifier: workspace:*
         version: link:../../packages/market
+      '@vayle/units':
+        specifier: workspace:*
+        version: link:../../packages/units
       react:
         specifier: 19.3.0
         version: 19.3.0

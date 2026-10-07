@@ -1,3 +1,4 @@
+import { parseFixed } from "@vayle/units";
 import type { Epoch, Side } from "./week.ts";
 
 // What the holder typed, checked before anything is signed. Problems are said in plain words.
@@ -26,17 +27,6 @@ export type TicketResult =
   | { readonly ok: true; readonly ticket: CheckedTicket }
   | { readonly ok: false; readonly problem: string };
 
-const NUMBER = /^\d+(\.\d+)?$/;
-
-// Parses "1.25" into base units, refusing more decimal places than the unit allows.
-export function parseUnits(text: string, decimals: number): bigint | null {
-  const trimmed = text.trim();
-  if (!NUMBER.test(trimmed)) return null;
-  const [whole = "0", fraction = ""] = trimmed.split(".");
-  if (fraction.length > decimals) return null;
-  return BigInt(whole) * 10n ** BigInt(decimals) + BigInt(fraction.padEnd(decimals, "0"));
-}
-
 export function checkTicket(
   input: TicketInput,
   e: Epoch,
@@ -44,11 +34,11 @@ export function checkTicket(
   usdgDecimals: number,
   assetDecimals: number,
 ): TicketResult {
-  const size = parseUnits(input.amount, assetDecimals);
+  const size = parseFixed(input.amount, assetDecimals);
   if (size === null || size === 0n)
     return { ok: false, problem: "Enter how much NVDA, like 0.50." };
   if (size % e.lot !== 0n) return { ok: false, problem: "Amounts go in steps of 0.01 NVDA." };
-  const minPremium = parseUnits(input.minPremium === "" ? "0" : input.minPremium, usdgDecimals);
+  const minPremium = parseFixed(input.minPremium === "" ? "0" : input.minPremium, usdgDecimals);
   if (minPremium === null)
     return { ok: false, problem: "Enter the minimum premium in dollars, like 0.50." };
   if (minPremium % e.priceTick !== 0n) {

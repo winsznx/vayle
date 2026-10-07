@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { checkTicket, parseUnits } from "../src/ticket.ts";
+import { checkTicket } from "../src/ticket.ts";
 import type { Epoch } from "../src/week.ts";
 
 const epoch: Epoch = {
@@ -17,16 +17,6 @@ const epoch: Epoch = {
 };
 const ONE = 10n ** 18n;
 const balances = { asset: 2n * ONE, usdg: 300_000_000n };
-
-describe("parseUnits", () => {
-  it("parses decimals exactly and refuses too many places", () => {
-    // #then
-    assert.deepEqual(
-      [parseUnits("1.25", 18), parseUnits("0.0000001", 6), parseUnits("abc", 6)],
-      [1_250_000_000_000_000_000n, null, null],
-    );
-  });
-});
 
 describe("checkTicket", () => {
   it("accepts a sell order the wallet can cover and locks the NVDA", () => {

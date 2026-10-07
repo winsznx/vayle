@@ -86,3 +86,19 @@ export function formatFixed(amount: bigint, decimals: number): string {
   const fraction = digits.slice(digits.length - decimals).replace(/0+$/, "");
   return `${negative ? "-" : ""}${whole}${fraction === "" ? "" : `.${fraction}`}`;
 }
+
+const DECIMAL = /^\d+(\.\d+)?$/;
+
+// The inverse of formatFixed for text a person typed: parseFixed("1.25", 6) === 1_250_000n. Null for
+// anything that isn't a plain non-negative decimal, or that has more places than the unit holds,
+// so nothing typed is ever rounded.
+export function parseFixed(text: string, decimals: number): bigint | null {
+  if (!Number.isInteger(decimals) || decimals < 0) {
+    throw new RangeError(`decimals must be a whole number, got ${decimals}`);
+  }
+  const trimmed = text.trim();
+  if (!DECIMAL.test(trimmed)) return null;
+  const [whole = "0", fraction = ""] = trimmed.split(".");
+  if (fraction.length > decimals) return null;
+  return BigInt(whole) * 10n ** BigInt(decimals) + BigInt(fraction.padEnd(decimals, "0"));
+}

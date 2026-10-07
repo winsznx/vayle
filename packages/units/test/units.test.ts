@@ -9,6 +9,7 @@ import {
   InexactValue,
   isOnTick,
   isWholeLots,
+  parseFixed,
   pricePerShare,
   toShares,
   value,
@@ -150,5 +151,26 @@ describe("display conversion", () => {
     ];
     // #then
     assert.deepEqual(results, ["239.43", "0.000005", "0", "-1.5"]);
+  });
+
+  it("parses what it formats back to the same amount", () => {
+    // #given
+    const amounts = fc.bigInt({ min: 0n, max: 10n ** 30n });
+    // #when / #then
+    fc.assert(fc.property(amounts, (amount) => parseFixed(formatFixed(amount, 18), 18) === amount));
+  });
+
+  it("refuses typed amounts it would have to round or guess at", () => {
+    // #when
+    const results = [
+      parseFixed("0.0000001", 6),
+      parseFixed("1,000", 6),
+      parseFixed("-1", 6),
+      parseFixed(".5", 6),
+      parseFixed("1e3", 6),
+      parseFixed("", 6),
+    ];
+    // #then
+    assert.deepEqual(results, [null, null, null, null, null, null]);
   });
 });
