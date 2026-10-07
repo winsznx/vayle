@@ -115,8 +115,8 @@ contract DeployVayle is Script {
     /// @dev One batch through the timelock at zero delay. The last call raises the delay, so the
     /// timelock is never usable at zero delay after this.
     function _configure(Deployment memory d, Config memory config) internal {
-        address[] memory targets = new address[](6);
-        bytes[] memory calls = new bytes[](6);
+        address[] memory targets = new address[](7);
+        bytes[] memory calls = new bytes[](7);
         (targets[0], calls[0]) =
         (
             address(d.registry),
@@ -148,11 +148,13 @@ contract DeployVayle is Script {
         (targets[4], calls[4]) =
         (address(d.market), abi.encodeCall(MarketGuard.setTeamOperated, (config.teamMaker, true)));
         (targets[5], calls[5]) =
+        (address(d.market), abi.encodeCall(MarketGuard.setBatchBidder, (config.teamMaker, true)));
+        (targets[6], calls[6]) =
         (
             address(d.timelock),
             abi.encodeCall(TimelockController.updateDelay, (config.timelockDelay))
         );
-        uint256[] memory values = new uint256[](6);
+        uint256[] memory values = new uint256[](7);
         d.timelock.scheduleBatch(targets, values, calls, bytes32(0), bytes32(0), 0);
         d.timelock.executeBatch(targets, values, calls, bytes32(0), bytes32(0));
     }

@@ -54,6 +54,10 @@ abstract contract RenewalBatch is QuoteSettlement {
     }
 
     mapping(uint256 series => Bid) private _bestBids;
+    /// @notice Makers whose bids a batch can take. A batch prices at its best bid and pulls that
+    /// maker's escrow when it seals, so a bid from a maker who can't or won't pay would stall the
+    /// week for every order in the bucket. The owner keeps the list, as it keeps teamOperated.
+    mapping(address maker => bool) public batchBidder;
     mapping(uint256 series => Batch) private _batches;
 
     event BidSubmitted(
@@ -63,6 +67,8 @@ abstract contract RenewalBatch is QuoteSettlement {
         uint256 premium,
         uint256 amount
     );
+    /// @notice Whether the owner lets a maker bid into renewal batches.
+    event BatchBidderSet(address indexed maker, bool allowed);
     /// @param teamOperated Whether the maker whose bid the batch fills at is operated by the team,
     /// so every batch fill is tagged the way a quote fill is.
     event BatchOpened(
@@ -85,6 +91,7 @@ abstract contract RenewalBatch is QuoteSettlement {
     error OutsideBidWindow(uint256 series, uint64 opens, uint64 closes);
     error BatchAlreadyOpened(uint256 series);
     error NoBid(uint256 series);
+    error NotABatchBidder(address maker);
     error BucketStillAttached(uint256 series, uint256 attached);
     error WrongPhase(uint256 series, Phase phase);
     error OrdersOutOfOrder(uint256 id, uint256 cursor);
@@ -104,6 +111,7 @@ abstract contract RenewalBatch is QuoteSettlement {
         }
         if (_batches[quote.series].phase != Phase.None) revert BatchAlreadyOpened(quote.series);
         if (quote.taker != address(0)) revert TakerMismatch(quote.taker, address(0));
+        if (!batchBidder[quote.maker]) revert NotABatchBidder(quote.maker);
         bytes32 digest = _authorizeQuote(quote, signature, key);
         uint256 used = quoteFilled[digest];
         if (used != 0) revert QuoteOverfilled(digest, used, quote.maxAmount, quote.maxAmount);
@@ -115,6 +123,11 @@ abstract contract RenewalBatch is QuoteSettlement {
             (best.maker, best.premium, best.amount, best.maxFeeBps) =
             (quote.maker, quote.premium, quote.maxAmount, quote.maxFeeBps);
         }
+    }
+
+    function _setBatchBidder(address maker, bool allowed) internal {
+        batchBidder[maker] = allowed;
+        emit BatchBidderSet(maker, allowed);
     }
 
     /// @notice Starts the series' batch with the best bid once the bid window has run. Every order

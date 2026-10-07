@@ -82,6 +82,28 @@ contract RenewalBatchForkTest is VayleMarketFork {
         _assertConserved(_claimants());
     }
 
+    function test_aBidFromAMakerTheOwnerHasntApprovedIsRefused() public {
+        // #given: a funded stranger signs the highest bid of the week
+        (address stranger, uint256 strangerKey) = makeAddrAndKey("stranger");
+        QuoteSettlement.Quote memory q = QuoteSettlement.Quote({
+            maker: stranger,
+            taker: address(0),
+            series: callSeries,
+            premium: 10 * PREMIUM,
+            maxFeeBps: market.feeBps(),
+            maxAmount: ONE,
+            minFill: LOT,
+            nonce: 1,
+            deadline: OCT_09
+        });
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(strangerKey, market.quoteDigest(q));
+        vm.warp(BID_OPEN);
+        // #then
+        vm.expectRevert(abi.encodeWithSelector(RenewalBatch.NotABatchBidder.selector, stranger));
+        // #when
+        market.submitBid(q, abi.encodePacked(r, s, v));
+    }
+
     function test_aBatchByATeamMakerIsTaggedOnChain() public {
         // #given
         vm.prank(timelock);

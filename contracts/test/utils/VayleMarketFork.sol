@@ -36,6 +36,7 @@ abstract contract VayleMarketFork is CoreFork {
         vm.startPrank(timelock);
         market.setCaps(nvda, OptionType.Call, _pilotCaps());
         market.setCaps(nvda, OptionType.Put, _pilotCaps());
+        market.setBatchBidder(makeAddr("quoter"), true);
         vm.stopPrank();
         return market;
     }

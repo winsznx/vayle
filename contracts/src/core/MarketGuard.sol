@@ -82,6 +82,10 @@ abstract contract MarketGuard is RenewalBatch, Ownable2Step {
         _setTeamOperated(maker, flag);
     }
 
+    function setBatchBidder(address maker, bool allowed) external onlyOwner {
+        _setBatchBidder(maker, allowed);
+    }
+
     function setCaps(address asset, OptionType side, Caps calldata caps) external onlyOwner {
         _caps[asset][side] = caps;
         emit CapsSet(asset, side, caps);

@@ -109,6 +109,7 @@ contract DeployVayleForkTest is MarketFork {
         assertEq(d.market.feeBps(), 0);
         assertEq(d.market.feeRecipient(), treasury);
         assertTrue(d.market.teamOperated(teamMaker));
+        assertTrue(d.market.batchBidder(teamMaker));
         assertEq(d.market.capsOf(nvda, OptionType.Put).openSize, 10 * ONE);
         assertEq(d.registry.asset(nvda).strikeTick, 5e6);
         assertEq(d.calendar.boundaryCount(), 5);

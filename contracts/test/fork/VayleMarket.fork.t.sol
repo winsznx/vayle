@@ -6,6 +6,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {VayleMarket} from "../../src/VayleMarket.sol";
 import {CollateralVault} from "../../src/core/CollateralVault.sol";
 import {MarketGuard} from "../../src/core/MarketGuard.sol";
+import {RenewalBatch} from "../../src/core/RenewalBatch.sol";
 import {QuoteSettlement} from "../../src/core/QuoteSettlement.sol";
 import {OptionType} from "../../src/libraries/SeriesId.sol";
 import {ChainActors, IOracleAdmin} from "../utils/ChainActors.sol";
@@ -32,6 +33,30 @@ contract VayleMarketForkTest is VayleMarketFork {
         // #when
         vm.prank(quoter);
         market.setTeamOperated(quoter, false);
+    }
+
+    function test_aMakerCantApproveItselfToBid() public {
+        // #given
+        address stranger = makeAddr("stranger");
+        // #then
+        vm.expectRevert(
+            abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, stranger)
+        );
+        // #when
+        vm.prank(stranger);
+        market.setBatchBidder(stranger, true);
+    }
+
+    function test_theOwnerApprovesBatchBidders() public {
+        // #given
+        address newMaker = makeAddr("newMaker");
+        // #then
+        vm.expectEmit(address(market));
+        emit RenewalBatch.BatchBidderSet(newMaker, true);
+        // #when
+        vm.prank(timelock);
+        market.setBatchBidder(newMaker, true);
+        assertTrue(market.batchBidder(newMaker));
     }
 
     function test_theOwnerCantPauseOrHalt() public {

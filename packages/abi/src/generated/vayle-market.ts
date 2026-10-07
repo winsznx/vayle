@@ -289,6 +289,25 @@ export const vayleMarketAbi = [
   },
   {
     "type": "function",
+    "name": "batchBidder",
+    "inputs": [
+      {
+        "name": "maker",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "batchOf",
     "inputs": [
       {
@@ -1904,6 +1923,24 @@ export const vayleMarketAbi = [
   },
   {
     "type": "function",
+    "name": "setBatchBidder",
+    "inputs": [
+      {
+        "name": "maker",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "allowed",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "setCaps",
     "inputs": [
       {
@@ -2333,6 +2370,25 @@ export const vayleMarketAbi = [
       },
       {
         "name": "paused",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "BatchBidderSet",
+    "inputs": [
+      {
+        "name": "maker",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "allowed",
         "type": "bool",
         "indexed": false,
         "internalType": "bool"
@@ -3930,6 +3986,17 @@ export const vayleMarketAbi = [
         "name": "requested",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "NotABatchBidder",
+    "inputs": [
+      {
+        "name": "maker",
+        "type": "address",
+        "internalType": "address"
       }
     ]
   },

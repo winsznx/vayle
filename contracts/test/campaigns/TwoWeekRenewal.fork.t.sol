@@ -38,6 +38,7 @@ contract TwoWeekRenewalForkTest is MarketFork {
         vm.startPrank(admin);
         market.setCaps(nvda, OptionType.Call, caps);
         market.setCaps(nvda, OptionType.Put, caps);
+        market.setBatchBidder(maker, true);
         vm.stopPrank();
         address[3] memory wallets = [alice, bob, maker];
         for (uint256 i; i < wallets.length; ++i) {
