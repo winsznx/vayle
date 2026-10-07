@@ -1,5 +1,6 @@
 // Black-Scholes for the weekly options the maker buys, on the raw token, in floating point. Only
-// the final bid becomes an integer, floored to the price tick, so rounding always favors holders.
+// the final bid becomes an integer, floored to the price tick, so the maker never bids above its
+// own price.
 
 export type Side = "call" | "put";
 

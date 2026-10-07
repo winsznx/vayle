@@ -34,3 +34,5 @@ deployments/runbook-test-boundaries.json
 # OS and editor files
 .DS_Store
 *.log
+# The Supabase CLI's working files.
+supabase/.temp/

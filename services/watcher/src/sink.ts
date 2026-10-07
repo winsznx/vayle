@@ -5,8 +5,8 @@ import type { Fetch } from "./store.ts";
 const ORDER: Readonly<Record<Severity, number>> = { page: 0, warn: 1, info: 2 };
 const LABEL: Readonly<Record<Severity, string>> = { page: "PAGE", warn: "WARN", info: "info" };
 
-// Slack-compatible: the text field carries the message, and the alerts ride along for any
-// receiver that wants structure.
+// The text field carries the message, which is what chat webhooks read, and the alerts ride along
+// for any receiver that wants structure.
 export function alertPayload(alerts: readonly Alert[]): { text: string; alerts: Alert[] } {
   const sorted = [...alerts].sort((a, b) => ORDER[a.severity] - ORDER[b.severity]);
   return {

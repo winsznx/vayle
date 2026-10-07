@@ -16,8 +16,8 @@
     "not_found_handling": "404-page",
   },
   "vars": {
-    // The market and the NVDA/USD feed, the only addresses /rpc answers eth_getLogs for. Set the
-    // market here after the deploy.
+    // The only addresses /rpc answers eth_getLogs for: the market, set here after the deploy. The
+    // app reads no other contract's logs.
     "RPC_LOG_ADDRESSES": "",
     // Where the app doesn't offer new orders. Settling, stopping and withdrawing stay open
     // everywhere, and so does the fallback page. The United States, the countries under
