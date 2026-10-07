@@ -5,6 +5,8 @@
   "name": "vayle-web",
   "main": "./worker/index.ts",
   "compatibility_date": "2026-10-01",
+  // The site's own domain, a zone on the same Cloudflare account.
+  "routes": [{ "pattern": "vayle.xyz", "custom_domain": true }],
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
