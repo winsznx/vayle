@@ -78,31 +78,6 @@ function toOrderState(id: bigint, o: OrderView, frozen: boolean): OrderState {
   };
 }
 
-export async function orderState(
-  client: PublicClient,
-  market: Address,
-  id: bigint,
-  blockNumber?: bigint,
-): Promise<OrderState> {
-  const [o, frozen] = await Promise.all([
-    client.readContract({
-      address: market,
-      abi: vayleMarketAbi,
-      functionName: "orderOf",
-      args: [id],
-      ...at(blockNumber),
-    }),
-    client.readContract({
-      address: market,
-      abi: vayleMarketAbi,
-      functionName: "frozen",
-      args: [id],
-      ...at(blockNumber),
-    }),
-  ]);
-  return toOrderState(id, o, frozen);
-}
-
 // Every order an address placed, found by reading every order once. It needs no indexer and no
 // log history, and on a batching client a few hundred orders cost one call. The indexer answers the
 // same question without reading the whole book.
