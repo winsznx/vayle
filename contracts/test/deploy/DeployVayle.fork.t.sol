@@ -13,6 +13,7 @@ import {QuoteSettlement} from "../../src/core/QuoteSettlement.sol";
 import {OptionType} from "../../src/libraries/SeriesId.sol";
 import {ChainActors} from "../utils/ChainActors.sol";
 import {MarketFork} from "../utils/MarketFork.sol";
+import {RunbookDeploy} from "./RunbookDeploy.sol";
 
 /// @notice Rehearses the deploy script on a fork, back before the Sep 18 close so the fixed
 /// boundaries are ahead and the real feed's rounds exist, then checks the end state and runs a week.
@@ -165,9 +166,10 @@ contract DeployVayleForkTest is MarketFork {
     }
 
     function test_theRunbookInputsParseIntoTheConfig() public {
-        // #given: the env vars and the boundaries file the runbook prepares
+        // #given: the env vars, and a boundaries file shaped like the one the runbook prepares
+        RunbookDeploy runbook = RunbookDeploy(vm.deployCode("RunbookDeploy.sol:RunbookDeploy"));
         string memory path =
-            string.concat(vm.projectRoot(), "/../deployments/calendar-boundaries.json");
+            string.concat(vm.projectRoot(), "/../deployments/runbook-test-boundaries.json");
         vm.writeFile(
             path,
             '[{"close":1791576000,"creationDeadline":1791811800},{"close":1792180800,"creationDeadline":1792416600}]'
@@ -180,7 +182,7 @@ contract DeployVayleForkTest is MarketFork {
         vm.setEnv("CALL_CAPS", "10,4,6,2");
         vm.setEnv("PUT_CAPS", "0,0,0,0");
         // #when
-        DeployVayle.Config memory config = script.readConfig();
+        DeployVayle.Config memory config = runbook.readConfig();
         vm.removeFile(path);
         // #then
         assertEq(config.boundaries.length, 2);
