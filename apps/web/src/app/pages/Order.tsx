@@ -63,7 +63,33 @@ function Term(props: {
   );
 }
 
-function OrderHead({ order, line }: { readonly order: OrderState; readonly line: OrderLine }) {
+// How a closed order ended, from its history: the fill that closed it, with when, or null when
+// it ended some other way or the history isn't read.
+function filledLine(history: MarketHistory, id: string, line: OrderLine): string | null {
+  if (history.status !== "ready") return null;
+  const fill = history.events.findLast(
+    (e) =>
+      e.name === "OrderSettled" &&
+      e.order_id === id &&
+      typeof e.args["proceeds"] === "string" &&
+      e.args["proceeds"] !== "0",
+  );
+  if (fill === undefined) return null;
+  const when = easternTime(Math.floor(Date.parse(fill.block_time) / 1000));
+  return line.side === "sell"
+    ? `Sold at your price on ${when}.`
+    : `Bought at your price on ${when}.`;
+}
+
+function OrderHead({
+  order,
+  line,
+  ended,
+}: {
+  readonly order: OrderState;
+  readonly line: OrderLine;
+  readonly ended: string | null;
+}) {
   const { config, run, busy, onChain } = useApp();
   const noteId = useId();
   const action = actionFor(config, order, line);
@@ -80,7 +106,9 @@ function OrderHead({ order, line }: { readonly order: OrderState; readonly line:
         <span className={`chip chip-${line.chip.tone}`}>{line.chip.label}</span>
       </div>
       <div className="od-head-foot">
-        <p className="od-status">{line.status}</p>
+        <p className="od-status">
+          {order.status === "closed" && ended !== null ? ended : line.status}
+        </p>
         {action !== null && (
           <button
             type="button"
@@ -382,7 +410,7 @@ export function OrderPage(): ReactNode {
     const key = order.id.toString();
     body = (
       <>
-        <OrderHead order={order} line={line} />
+        <OrderHead order={order} line={line} ended={filledLine(history, key, line)} />
         <div className="od-body">
           <div className="od-layout">
             <OrderEarnings config={config} history={history} id={key} />
