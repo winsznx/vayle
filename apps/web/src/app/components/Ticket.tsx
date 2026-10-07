@@ -215,6 +215,10 @@ export function Ticket(props: {
           <dt>Timing</dt>
           <dd>{timing}</dd>
         </div>
+        <div>
+          <dt>Buyer</dt>
+          <dd>The maker the Vayle team operates</dd>
+        </div>
       </dl>
       {result !== null && !result.ok && (
         <p className="ticket-problem" role="alert">

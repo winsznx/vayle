@@ -39,7 +39,7 @@ export function Ladder(props: {
           <h2 className="h3">This week&apos;s prices</h2>
           <p className="card-sub">Above the close you sell, below it you buy.</p>
         </div>
-        <span className="legend">Bid this week, per NVDA</span>
+        <span className="legend">Team-operated maker&apos;s bid, per NVDA</span>
       </div>
       <ol className="ladder-list" aria-label="This week's prices">
         {rungs.map((rung, i) => {

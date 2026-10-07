@@ -149,7 +149,7 @@ const STAGES = [
   {
     when: "Two hours later",
     title: "The maker bids",
-    body: "A bid arrives for each price that has orders. Your minimum decides whether you take it.",
+    body: "The team-operated maker bids on each price that has orders. Your minimum decides whether you take it.",
   },
   {
     when: "Four hours later",
@@ -234,6 +234,8 @@ export function TheWeek() {
   );
 }
 
+// Generic categories only, each row true as written, including the one where Vayle gives
+// something up: it fills after the weekly close, not the moment the price is touched.
 const ROWS: readonly {
   label: string;
   plain: boolean | "varies";
@@ -244,7 +246,8 @@ const ROWS: readonly {
   { label: "No options knowledge needed", plain: true, options: false, vayle: true },
   { label: "Settles in the actual token", plain: true, options: "varies", vayle: true },
   { label: "Fully collateralized, no margin calls", plain: true, options: "varies", vayle: true },
-  { label: "Exit without the venue's website", plain: false, options: false, vayle: true },
+  { label: "Exit without the venue's website", plain: "varies", options: "varies", vayle: true },
+  { label: "Fills the moment the price is reached", plain: true, options: "varies", vayle: false },
 ];
 
 function Mark({ value }: { readonly value: boolean | "varies" }) {

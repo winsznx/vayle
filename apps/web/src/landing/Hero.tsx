@@ -194,7 +194,7 @@ export function Hero() {
         <Outcome
           className="outcome-a"
           title="Earned"
-          detail="This week's premium, paid at the batch"
+          detail="This week's premium from the team-operated maker"
           icon={<TokenIcon symbol="USDG" size="lg" />}
         />
         <Outcome
