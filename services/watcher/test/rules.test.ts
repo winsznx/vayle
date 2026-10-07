@@ -246,6 +246,23 @@ describe("eventAlerts", () => {
     ]);
   });
 
+  it("warn when the owner changes which makers may bid into batches", () => {
+    // #given
+    const events = [
+      event("BatchBidderSet", {
+        maker: "0x00000000000000000000000000000000000000bb",
+        allowed: true,
+      }),
+    ];
+    // #when
+    const alerts = eventAlerts(events, "https://explorer.example");
+    // #then
+    assert.deepEqual(
+      alerts.map((a) => a.severity),
+      ["warn"],
+    );
+  });
+
   it("skip routine logs and fills by the team's maker", () => {
     // #given
     const events = [

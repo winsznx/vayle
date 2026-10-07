@@ -197,6 +197,7 @@ const EVENT_SEVERITY: Readonly<Record<string, Severity>> = {
   CapsSet: "warn",
   FeeSet: "warn",
   TeamOperatedSet: "warn",
+  BatchBidderSet: "warn",
   OwnershipTransferStarted: "warn",
   OwnershipTransferred: "warn",
   BoundariesAppended: "info",
