@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { handle, type ApiDeps } from "../src/api.ts";
-import type { StoredEvent } from "../src/summary.ts";
+import type { MarketEvent } from "@vayle/market";
 
 const OWNER = "0x00000000000000000000000000000000000000bb";
 
-function stored(name: string, order: string | null): StoredEvent {
+function stored(name: string, order: string | null): MarketEvent {
   return {
     block_number: 10,
     log_index: 0,
@@ -19,7 +19,7 @@ function stored(name: string, order: string | null): StoredEvent {
   };
 }
 
-function deps(rows: readonly StoredEvent[], seen: string[] = []): ApiDeps {
+function deps(rows: readonly MarketEvent[], seen: string[] = []): ApiDeps {
   return {
     select: (filter) => {
       seen.push(filter);

@@ -11,6 +11,3 @@ export class StoreRequestFailed extends IndexerError {
 export class StoreRowMalformed extends IndexerError {
   override readonly name = "StoreRowMalformed";
 }
-export class MissingBlockTime extends IndexerError {
-  override readonly name = "MissingBlockTime";
-}

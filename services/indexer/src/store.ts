@@ -1,7 +1,6 @@
+import type { MarketEvent } from "@vayle/market";
 import type { StoreConfig } from "./config.ts";
 import { StoreRequestFailed, StoreRowMalformed } from "./errors.ts";
-import type { EventRow } from "./rows.ts";
-import type { StoredEvent } from "./summary.ts";
 
 export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -29,7 +28,7 @@ async function send(fetchFn: Fetch, url: string, init: RequestInit): Promise<Res
 // Inserting a row that's already there is a no-op, so replaying a block range is safe.
 export function insertRequest(
   store: StoreConfig,
-  rows: readonly EventRow[],
+  rows: readonly MarketEvent[],
 ): { url: string; init: RequestInit } {
   return {
     url: `${store.url}/rest/v1/market_events?on_conflict=block_number,log_index`,
@@ -43,7 +42,7 @@ export function insertRequest(
 
 export async function insertEvents(
   store: StoreConfig,
-  rows: readonly EventRow[],
+  rows: readonly MarketEvent[],
   fetchFn: Fetch,
 ): Promise<void> {
   if (rows.length === 0) return;
@@ -83,7 +82,7 @@ export async function saveCursor(
   });
 }
 
-function isStoredEvent(value: unknown): value is StoredEvent {
+function isMarketEvent(value: unknown): value is MarketEvent {
   if (typeof value !== "object" || value === null) return false;
   const v = value as Record<string, unknown>;
   return (
@@ -99,14 +98,14 @@ export async function selectEvents(
   store: StoreConfig,
   filter: string,
   fetchFn: Fetch,
-): Promise<StoredEvent[]> {
+): Promise<MarketEvent[]> {
   const query = `${filter}${filter === "" ? "" : "&"}order=block_number.asc,log_index.asc`;
   const response = await send(fetchFn, `${store.url}/rest/v1/market_events?${query}`, {
     method: "GET",
     headers: headers(store),
   });
   const rows: unknown = await response.json();
-  if (!Array.isArray(rows) || !rows.every(isStoredEvent)) {
+  if (!Array.isArray(rows) || !rows.every(isMarketEvent)) {
     throw new StoreRowMalformed("market_events rows are malformed");
   }
   return rows;

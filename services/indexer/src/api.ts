@@ -1,5 +1,5 @@
+import { orderSummary, seriesExpiries, weeksOf, type MarketEvent } from "@vayle/market";
 import { isAddress } from "viem";
-import { orderSummary, seriesExpiries, weeksOf, type StoredEvent } from "./summary.ts";
 
 export interface Source {
   readonly chainId: number;
@@ -9,7 +9,7 @@ export interface Source {
 }
 
 export interface ApiDeps {
-  readonly select: (filter: string) => Promise<StoredEvent[]>;
+  readonly select: (filter: string) => Promise<MarketEvent[]>;
   readonly source: () => Promise<Source>;
   readonly now: () => number;
 }

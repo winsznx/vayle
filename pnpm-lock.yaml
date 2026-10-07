@@ -131,6 +131,9 @@ importers:
       '@vayle/abi':
         specifier: workspace:*
         version: link:../../packages/abi
+      '@vayle/market':
+        specifier: workspace:*
+        version: link:../../packages/market
       viem:
         specifier: 2.57.3
         version: 2.57.3(typescript@6.0.3)(zod@4.6.5)

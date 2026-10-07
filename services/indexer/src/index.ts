@@ -1,7 +1,7 @@
+import { toMarketEvents } from "@vayle/market";
 import { createPublicClient, http, type PublicClient } from "viem";
 import { handle } from "./api.ts";
 import { loadConfig, type IndexerConfig } from "./config.ts";
-import { toRows } from "./rows.ts";
 import { insertEvents, loadCursor, saveCursor, selectEvents, type Fetch } from "./store.ts";
 
 // Logs are read in chunks of this many blocks, at most this many chunks a run.
@@ -32,7 +32,7 @@ async function indexOnce(config: IndexerConfig, client: PublicClient): Promise<b
       const block = await client.getBlock({ blockNumber: number });
       times.set(number, Number(block.timestamp));
     }
-    await insertEvents(config.store, toRows(logs, times), fetchFn);
+    await insertEvents(config.store, toMarketEvents(logs, times), fetchFn);
     cursor = to;
     await saveCursor(config.store, cursor, fetchFn);
   }
