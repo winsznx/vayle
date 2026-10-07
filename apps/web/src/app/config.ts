@@ -7,6 +7,10 @@ export interface AppConfig {
   readonly market: Address;
   // Without it the app works and order history is hidden.
   readonly indexerUrl: string | null;
+  // Whether this build takes new orders. Off unless the build sets VITE_PLACEMENT=open, so a hosted
+  // build stays read-only for placement even after the disclosures are published. Settling,
+  // stopping and withdrawing never depend on it.
+  readonly placement: boolean;
   readonly asset: Address;
   readonly assetSymbol: string;
   readonly assetDecimals: number;
@@ -23,6 +27,7 @@ export interface Env {
   readonly VITE_RPC_URL?: string;
   readonly VITE_MARKET?: string;
   readonly VITE_INDEXER_URL?: string;
+  readonly VITE_PLACEMENT?: string;
 }
 
 export function loadConfig(env: Env): ConfigResult {
@@ -40,6 +45,7 @@ export function loadConfig(env: Env): ConfigResult {
       rpcUrl,
       market: getAddress(market),
       indexerUrl: indexerUrl === "" ? null : indexerUrl.replace(/\/$/, ""),
+      placement: env.VITE_PLACEMENT === "open",
       asset: getAddress(facts.nvda.address),
       assetSymbol: facts.nvda.symbol,
       assetDecimals: facts.nvda.decimals,

@@ -14,8 +14,9 @@ Build-time variables, read by Vite from this directory's env files:
 - `VITE_RPC_URL`: a Robinhood Chain RPC. Both pages use it.
 - `VITE_MARKET`: the market's address.
 - `VITE_INDEXER_URL`: the indexer's base URL. Optional. Without it, order history is hidden.
+- `VITE_PLACEMENT`: set to `open` for a build that takes new orders. Anything else, or nothing, leaves placement off.
 
-Until `/disclosures.json` is published, the app is read-only: it shows the ladder and orders but doesn't offer to place an order.
+The app takes new orders only when the build sets `VITE_PLACEMENT=open` and `/disclosures.json` is published. Otherwise it shows the ladder and orders but doesn't offer to place one. Settling, stopping an order from renewing, cancelling and withdrawing work either way.
 
 ## Development
 

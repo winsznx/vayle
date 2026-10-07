@@ -75,9 +75,10 @@ export function App({ config }: { readonly config: AppConfig }) {
   const busy = tx.status === "pending";
   const rungs = view?.epoch == null ? [] : ladder(view.epoch);
   const rung = rungs.find((r) => r.strike === chosen) ?? null;
-  const tradable = disclosures.status === "approved" && onChain;
-  const notTradableReason =
-    disclosures.status !== "approved"
+  const tradable = config.placement && disclosures.status === "approved" && onChain;
+  const notTradableReason = !config.placement
+    ? "New orders aren't open yet. Existing orders can still be settled, stopped and withdrawn."
+    : disclosures.status !== "approved"
       ? "Trading opens once the disclosures are final."
       : connection === null
         ? "Connect a wallet to place an order."

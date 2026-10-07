@@ -31,7 +31,7 @@ To use the app, add a network to your wallet with RPC URL `http://127.0.0.1:8545
 - Keys are generated for each fork and are worthless anywhere else. The multisig is a stand-in address with placeholder code, because the deploy requires a contract there.
 - The NVDA/USD feed doesn't update on a fork, so before each close the tool writes one round into the aggregator's storage that repeats the latest real answer. Every write is printed and logged to `deployments/fork/feed-writes.jsonl`, and the tool stops if the aggregator's storage doesn't match the layout it expects.
 - The maker's pricing inputs are illustrative. The real ones are the maker Worker's settings.
-- In fork mode, the app's dev server serves placeholder disclosures so the order ticket works. Builds never include them.
+- In fork mode, the app's dev server serves placeholder disclosures and the fork's env file sets `VITE_PLACEMENT=open`, so the order ticket works. Builds never include the placeholder disclosures.
 
 ## Limits
 

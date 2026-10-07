@@ -87,7 +87,10 @@ async function up(): Promise<void> {
       accounts,
       boundaries.map((b) => b.close),
     );
-    writeFileSync(WEB_ENV_FILE, `VITE_RPC_URL=${FORK_RPC}\nVITE_MARKET=${deployment.market}\n`);
+    writeFileSync(
+      WEB_ENV_FILE,
+      `VITE_RPC_URL=${FORK_RPC}\nVITE_MARKET=${deployment.market}\nVITE_PLACEMENT=open\n`,
+    );
 
     const week = await latestWeek(client, deployment.market);
     console.log(
