@@ -88,13 +88,36 @@ export async function roundHint(
   close: number,
   blockNumber: bigint,
 ): Promise<bigint | null> {
-  const [latest] = await client.readContract({
+  const { roundId } = await latestRound(client, feed, blockNumber);
+  return searchRounds(roundId, BigInt(close), (ids) =>
+    Promise.all(ids.map((id) => updatedAt(client, feed, id, blockNumber))),
+  );
+}
+
+export interface LatestRound {
+  readonly roundId: bigint;
+  readonly updatedAt: bigint;
+}
+
+export async function latestRound(
+  client: PublicClient,
+  feed: Address,
+  blockNumber: bigint,
+): Promise<LatestRound> {
+  const [roundId, , , updatedAt] = await client.readContract({
     address: feed,
     abi: feedAbi,
     functionName: "latestRoundData",
     blockNumber,
   });
-  return searchRounds(latest, BigInt(close), (ids) =>
-    Promise.all(ids.map((id) => updatedAt(client, feed, id, blockNumber))),
-  );
+  return { roundId, updatedAt };
+}
+
+// The round createFirstEpoch takes for a week opening at `now`. The price adapter wants the last
+// round at or before the second before the opening, so a round that landed in this second is too
+// new and the one before it in its phase is the hint. A phase's first round has none before it to
+// name, so that market waits a run for a later second.
+export function firstEpochHint(latest: LatestRound, now: number): bigint | null {
+  if (latest.updatedAt < BigInt(now)) return latest.roundId;
+  return (latest.roundId & AGGREGATOR_ROUND_MASK) > 1n ? latest.roundId - 1n : null;
 }

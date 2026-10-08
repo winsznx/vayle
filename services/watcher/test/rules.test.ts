@@ -10,7 +10,20 @@ import {
   transitions,
   type Alert,
 } from "../src/rules.ts";
-import { market, NOW, OCT_02, OCT_05_OPEN, OCT_09, snapshot } from "./fixtures.ts";
+import {
+  ACCESS_REGISTRY,
+  listed,
+  market,
+  NOW,
+  nvda,
+  OCT_02,
+  OCT_05_OPEN,
+  OCT_09,
+  other,
+  snapshot,
+  token,
+  watch,
+} from "./fixtures.ts";
 
 function keys(alerts: readonly Alert[]): string[] {
   return alerts.map((a) => a.key);
@@ -27,12 +40,10 @@ describe("conditions", () => {
   it("page for every issuer pause and the oracle flag", () => {
     // #given
     const s = snapshot({
-      issuer: {
-        nvdaPaused: true,
-        accessRegistryPaused: true,
-        usdgPaused: true,
-        oraclePaused: true,
-      },
+      usdgPaused: true,
+      markets: [
+        watch({ token: token({ paused: true, accessRegistryPaused: true, oraclePaused: true }) }),
+      ],
     });
     // #when
     const found = conditions(s);
@@ -40,36 +51,96 @@ describe("conditions", () => {
     assert.deepEqual(
       found.map((a) => [a.key, a.severity]),
       [
-        ["issuer-paused:nvda", "page"],
-        ["issuer-paused:access-registry", "page"],
         ["issuer-paused:usdg", "page"],
+        [`issuer-paused:access-registry:${ACCESS_REGISTRY.toLowerCase()}`, "page"],
+        ["issuer-paused:nvda", "page"],
         ["oracle-paused:nvda", "page"],
       ],
     );
   });
 
+  it("alert once for an access registry that every market's token names", () => {
+    // #given
+    const paused = token({ accessRegistryPaused: true });
+    const s = snapshot({
+      markets: [
+        watch({ token: paused }),
+        watch({ market: other(), token: paused, listed: listed(other()) }),
+      ],
+    });
+    // #when
+    const found = conditions(s);
+    // #then
+    assert.deepEqual(
+      found.map((a) => a.text),
+      [
+        `The access registry ${ACCESS_REGISTRY} is paused. NVDA, TWO transfers fail until it resumes.`,
+      ],
+    );
+  });
+
+  it("alert each market's own oracle pause", () => {
+    // #given: the second market's oracle is paused, NVDA's isn't
+    const s = snapshot({
+      markets: [
+        watch(),
+        watch({ market: other(), token: token({ oraclePaused: true }), listed: listed(other()) }),
+      ],
+    });
+    // #when
+    const found = conditions(s);
+    // #then
+    assert.deepEqual(keys(found), ["oracle-paused:two"]);
+  });
+
   it("warn about a multiplier change that hasn't taken effect", () => {
     // #given
-    const s = snapshot({ issuer: { newUIMultiplier: 4n * 10n ** 18n, effectiveAt: NOW + 3600 } });
+    const s = snapshot({
+      markets: [
+        watch({ token: token({ newUIMultiplier: 4n * 10n ** 18n, effectiveAt: NOW + 3600 }) }),
+      ],
+    });
     // #when
     const found = conditions(s);
     // #then
     assert.deepEqual(keys(found), ["multiplier-pending:nvda"]);
   });
 
-  it("warn about a feed silent for over 25 hours in the trading week", () => {
-    // #given
-    const s = snapshot({ feedUpdatedAt: NOW - 25 * 3600 - 1 });
+  it("warn about a feed silent for over its heartbeat and an hour in the trading week", () => {
+    // #given: NVDA's feed has a 24-hour heartbeat
+    const s = snapshot({
+      markets: [watch({ token: token({ feedUpdatedAt: NOW - 25 * 3600 - 1 }) })],
+    });
     // #when
     const found = conditions(s);
     // #then
     assert.deepEqual(keys(found), ["feed-stale:nvda"]);
   });
 
+  it("judge each feed's age against its own heartbeat", () => {
+    // #given: both feeds last updated two hours ago, the second market's heartbeat is an hour
+    const quiet = token({ feedUpdatedAt: NOW - 2 * 3600 - 1 });
+    const hourly = other({ heartbeatSeconds: 3600 });
+    const s = snapshot({
+      markets: [
+        watch({ token: quiet }),
+        watch({ market: hourly, token: quiet, listed: listed(hourly) }),
+      ],
+    });
+    // #when
+    const found = conditions(s);
+    // #then
+    assert.deepEqual(keys(found), ["feed-stale:two"]);
+  });
+
   it("ignore the feed's weekend silence", () => {
     // #given: Sat 2026-10-10 12:00 UTC, the feed last updated Friday afternoon
     const saturday = 1_791_633_600;
-    const s = snapshot({ now: saturday, feedUpdatedAt: saturday - 40 * 3600, market: null });
+    const s = snapshot({
+      now: saturday,
+      markets: [watch({ token: token({ feedUpdatedAt: saturday - 40 * 3600 }), listed: null })],
+      market: null,
+    });
     // #when
     const found = conditions(s);
     // #then
@@ -79,7 +150,11 @@ describe("conditions", () => {
   it("page when the keeper goes quiet in the lead-up to a close", () => {
     // #given
     const now = OCT_09 - KEEPER_LEAD + 600;
-    const s = snapshot({ now, feedUpdatedAt: now, market: market({ lastSeen: now - 240 }) });
+    const s = snapshot({
+      now,
+      markets: [watch({ token: token({ feedUpdatedAt: now }) })],
+      market: market({ lastSeen: now - 240 }),
+    });
     // #when
     const found = conditions(s);
     // #then
@@ -96,13 +171,15 @@ describe("conditions", () => {
   });
 
   it("warn about a missing epoch, then page six hours before its deadline", () => {
-    // #given
-    const missing = market({ epochOpenedAtLatest: false });
-    const early = snapshot({ now: OCT_02 + 3600, feedUpdatedAt: OCT_02, market: missing });
+    // #given: the latest epoch still expires at the Oct 2 close
+    const missing = [watch({ listed: listed(nvda(), { latestExpiry: OCT_02 }) })];
+    const early = snapshot({
+      now: OCT_02 + 3600,
+      markets: missing.map((w) => ({ ...w, token: token({ feedUpdatedAt: OCT_02 }) })),
+    });
     const late = snapshot({
       now: OCT_05_OPEN - 3600,
-      feedUpdatedAt: OCT_05_OPEN - 3600,
-      market: missing,
+      markets: missing.map((w) => ({ ...w, token: token({ feedUpdatedAt: OCT_05_OPEN - 3600 }) })),
     });
     // #when
     const severities = [conditions(early), conditions(late)].map((found) =>
@@ -110,6 +187,26 @@ describe("conditions", () => {
     );
     // #then
     assert.deepEqual(severities, [["warn"], ["page"]]);
+  });
+
+  it("alert a missing epoch only for the market missing it", () => {
+    // #given: NVDA's week opened at the Oct 2 close, the second market's didn't
+    const now = OCT_02 + 3600;
+    const s = snapshot({
+      now,
+      markets: [
+        watch({ token: token({ feedUpdatedAt: now }) }),
+        watch({
+          market: other(),
+          token: token({ feedUpdatedAt: now }),
+          listed: listed(other(), { latestExpiry: OCT_02 }),
+        }),
+      ],
+    });
+    // #when
+    const found = conditions(s);
+    // #then
+    assert.deepEqual(keys(found), ["epoch-missing:two"]);
   });
 
   it("warn when fewer than five boundaries are scheduled ahead", () => {
@@ -134,6 +231,147 @@ describe("conditions", () => {
         ["market-paused", "warn"],
       ],
     );
+  });
+
+  it("warn while one market's new positions are paused", () => {
+    // #given
+    const s = snapshot({ markets: [watch({ listed: listed(nvda(), { assetPaused: true }) })] });
+    // #when
+    const found = conditions(s);
+    // #then
+    assert.deepEqual(
+      found.map((a) => [a.key, a.text]),
+      [["market-paused:nvda", "New NVDA positions are paused."]],
+    );
+  });
+
+  it("warn when a market's caps on the market aren't the markets file's", () => {
+    // #given: a sell fill cap of 1 NVDA where the file sets 2
+    const caps = { ...nvda().sell.caps, fillSize: 10n ** 18n };
+    const s = snapshot({
+      markets: [watch({ listed: listed(nvda(), { caps: { sell: caps, buy: nvda().buy.caps } }) })],
+    });
+    // #when
+    const found = conditions(s);
+    // #then
+    assert.deepEqual(
+      found.map((a) => [a.key, a.severity, a.text]),
+      [
+        [
+          "caps-differ:nvda",
+          "warn",
+          "NVDA's caps on the market aren't the markets file's: sell fillSize is 1000000000000000000 on the market and 2000000000000000000 in the markets file.",
+        ],
+      ],
+    );
+  });
+
+  it("page a market whose listing isn't the markets file's, and check nothing else about it", () => {
+    // #given: a paused oracle on a market listed with another strike tick
+    const s = snapshot({
+      markets: [
+        watch({
+          listing: "strikeTick is 10000000 in the registry and 5000000 in the markets file",
+          token: token({ oraclePaused: true }),
+        }),
+      ],
+    });
+    // #when
+    const found = conditions(s);
+    // #then
+    assert.deepEqual(
+      found.map((a) => [a.key, a.severity]),
+      [["listing-differs:nvda", "page"]],
+    );
+  });
+
+  it("page a market that couldn't be read, and keep watching the others", () => {
+    // #given: the second market's token refused its reads, and NVDA's oracle is paused
+    const s = snapshot({
+      markets: [
+        watch({ token: token({ oraclePaused: true }) }),
+        watch({
+          market: other(),
+          unreadable: "ContractFunctionExecutionError: execution reverted",
+          token: null,
+          listed: null,
+        }),
+      ],
+    });
+    // #when
+    const found = conditions(s);
+    // #then
+    assert.deepEqual(keys(found), ["oracle-paused:nvda", "market-unreadable:two"]);
+  });
+});
+
+describe("conditions before the first close", () => {
+  // The market deployed Thursday Oct 8 at 10:00 ET, before the schedule's first close on Oct 9.
+  const DEPLOYED = OCT_09 - 30 * 3600;
+  const FIRST = market({ latestBoundary: null, nextClose: OCT_09, deployedAt: DEPLOYED });
+
+  function waiting(now: number, latestExpiry: number) {
+    return snapshot({
+      now,
+      markets: [
+        watch({ token: token({ feedUpdatedAt: now }), listed: listed(nvda(), { latestExpiry }) }),
+      ],
+      market: FIRST,
+    });
+  }
+
+  it("page when a first week hasn't opened an hour after it could", () => {
+    // #given: an hour and a half after the deploy, so an hour after the lookback
+    const s = waiting(DEPLOYED + 1800 + 3600, 0);
+    // #when
+    const found = conditions(s);
+    // #then
+    assert.deepEqual(
+      found.map((a) => [a.key, a.severity]),
+      [["first-epoch-missing:nvda", "page"]],
+    );
+  });
+
+  it("wait out the hour after a first week could open", () => {
+    // #given
+    const s = waiting(DEPLOYED + 1800 + 3599, 0);
+    // #when
+    const found = conditions(s);
+    // #then
+    assert.deepEqual(found, []);
+  });
+
+  it("are quiet once the first week is open", () => {
+    // #given
+    const s = waiting(DEPLOYED + 3 * 3600, OCT_09);
+    // #when
+    const found = conditions(s);
+    // #then
+    assert.deepEqual(found, []);
+  });
+
+  it("leave a week missing after the first close to the epoch alert", () => {
+    // #given: an hour after the Oct 9 close, with no week ever opened
+    const now = OCT_09 + 3600;
+    const s = snapshot({
+      now,
+      markets: [
+        watch({
+          token: token({ feedUpdatedAt: now }),
+          listed: listed(nvda(), { latestExpiry: 0 }),
+        }),
+      ],
+      market: market({
+        latestBoundary: { close: OCT_09, creationDeadline: OCT_09 + 3 * 86_400 },
+        nextClose: OCT_09 + 7 * 86_400,
+        deployedAt: DEPLOYED,
+        lastSeen: now - 60,
+      }),
+    });
+    // #when
+    const found = conditions(s);
+    // #then
+    assert.deepEqual(keys(found), ["epoch-missing:nvda"]);
   });
 });
 

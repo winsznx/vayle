@@ -1,16 +1,15 @@
+import { markets as listed, type Market } from "@vayle/markets";
 import { getAddress, type Address, type Hex } from "viem";
 import facts from "../../../deployments/robinhood-mainnet.json" with { type: "json" };
 import { BadSetting, MissingSetting } from "./errors.ts";
 
+// The pricing inputs every market shares. Each market's volatility comes from the markets file.
 export interface PricingConfig {
-  // Annualized, as fractions: 0.45 is 45%.
-  readonly vol: number;
+  // Annualized, as fractions: 0.04 is 4%.
   readonly grossDividendYield: number;
   readonly rate: number;
   // How far under fair value the maker bids, in basis points.
   readonly edgeBps: number;
-  // The most the maker buys in one series, in raw units.
-  readonly maxPerSeries: bigint;
   readonly rfq: boolean;
 }
 
@@ -20,13 +19,14 @@ export interface MakerConfig {
   readonly chainId: number;
   readonly key: Hex;
   readonly market: Address;
-  readonly asset: Address;
-  readonly feed: Address;
-  // The feed's decimals and heartbeat in seconds, as the chain facts record them.
-  readonly feedDecimals: number;
-  readonly feedHeartbeat: number;
+  // The token registry the market lists its assets in. Each run checks every market's listing there
+  // against the markets file.
+  readonly registry: Address;
   readonly usdg: Address;
   readonly usdgDecimals: number;
+  // Every market in deployments/markets.json: its token, feed and grid, the sides it trades, the
+  // caps it sizes against and the volatility it prices with.
+  readonly markets: readonly Market[];
   readonly pricing: PricingConfig;
 }
 
@@ -47,11 +47,9 @@ function bps(env: Env, name: string, max: number): number {
 }
 
 // Every pricing input is required. A maker with a missing number stays out instead of guessing.
-export function loadConfig(env: Env): MakerConfig {
+export function loadConfig(env: Env, markets: readonly Market[] = listed): MakerConfig {
   const key = required(env, "MAKER_KEY");
   if (!/^0x[0-9a-fA-F]{64}$/.test(key)) throw new BadSetting("MAKER_KEY isn't a private key");
-  const vol = bps(env, "MAKER_VOL_BPS", 50_000);
-  if (vol === 0) throw new BadSetting("MAKER_VOL_BPS must be above zero");
   const rfq = required(env, "MAKER_RFQ");
   if (rfq !== "on" && rfq !== "off") throw new BadSetting("MAKER_RFQ must be on or off");
   return {
@@ -59,18 +57,14 @@ export function loadConfig(env: Env): MakerConfig {
     chainId: facts.chain.chainId,
     key: key as Hex,
     market: getAddress(required(env, "VAYLE_MARKET")),
-    asset: getAddress(facts.nvda.address),
-    feed: getAddress(facts.nvdaUsdFeed.proxy),
-    feedDecimals: facts.nvdaUsdFeed.decimals,
-    feedHeartbeat: facts.nvdaUsdFeed.heartbeatSeconds,
+    registry: getAddress(required(env, "VAYLE_REGISTRY")),
     usdg: getAddress(facts.usdg.address),
     usdgDecimals: facts.usdg.decimals,
+    markets,
     pricing: {
-      vol: vol / 10_000,
       grossDividendYield: bps(env, "MAKER_DIVIDEND_YIELD_BPS", 10_000) / 10_000,
       rate: bps(env, "MAKER_RATE_BPS", 10_000) / 10_000,
       edgeBps: bps(env, "MAKER_EDGE_BPS", 9_999),
-      maxPerSeries: BigInt(required(env, "MAKER_MAX_PER_SERIES")),
       rfq: rfq === "on",
     },
   };

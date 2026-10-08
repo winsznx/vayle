@@ -1,10 +1,10 @@
-import { formatUnits } from "viem";
-import type { MakerConfig } from "./config.ts";
+import type { Market } from "@vayle/markets";
+import { formatUnits, type Address } from "viem";
 import { CalendarNotCovered } from "./errors.ts";
 import type { FeedSessions, SessionsAround } from "./sessions.ts";
 
-// Whether the feed's latest round is fit to price a bid or a quote on. The market reads no price
-// when it takes either, so nothing else stands between a bad round and a premium.
+// Whether a market's feed's latest round is fit to price a bid or a quote on. The market reads no
+// price when it takes either, so nothing else stands between a bad round and a premium.
 
 const MINUTE = 60;
 const HOUR = 3600;
@@ -53,6 +53,7 @@ export interface UsablePrice {
   // The round's answer in USDG per whole raw token.
   readonly spot: number;
   readonly roundId: bigint;
+  readonly updatedAt: number;
 }
 
 export interface StandDown {
@@ -63,7 +64,13 @@ export interface StandDown {
 
 export type PriceVerdict = UsablePrice | StandDown;
 
-type FeedFacts = Pick<MakerConfig, "feedDecimals" | "feedHeartbeat" | "usdgDecimals">;
+// What the markets file says about a market's feed, and USDG's decimals from the chain facts.
+export interface FeedFacts {
+  readonly feedDecimals: number;
+  // The feed's heartbeat in seconds.
+  readonly feedHeartbeat: number;
+  readonly usdgDecimals: number;
+}
 
 function standDown(reason: StandDownReason, detail: string): StandDown {
   return { usable: false, reason, detail };
@@ -112,7 +119,7 @@ export function priceGuard(
   if (feedDecimals.value !== feed.feedDecimals) {
     return standDown(
       "FeedDecimalsChanged",
-      `the feed reports ${feedDecimals.value} decimals, the chain facts ${feed.feedDecimals}`,
+      `the feed reports ${feedDecimals.value} decimals, the markets file ${feed.feedDecimals}`,
     );
   }
   if (!round.ok) return standDown("FeedUnreadable", `latestRoundData() failed: ${round.error}`);
@@ -148,12 +155,29 @@ export function priceGuard(
       `${name} answered ${formatUnits(answer, feed.feedDecimals)}, outside half to one and a half times this week's reference of ${formatUnits(reference, feed.usdgDecimals)}`,
     );
   }
-  return { usable: true, spot: Number(answer) / 10 ** feedDecimals.value, roundId };
+  return { usable: true, spot: Number(answer) / 10 ** feedDecimals.value, roundId, updatedAt };
 }
 
-// The latest answer in USDG per whole raw token when it's positive, whatever the guard makes of it.
-// Exercise judges which longs are in the money on it.
-export function latestAnswer({ round, feedDecimals }: PriceReading): number | null {
-  if (!round.ok || !feedDecimals.ok || round.value.answer <= 0n) return null;
-  return Number(round.value.answer) / 10 ** feedDecimals.value;
+// Every market's verdict on its own feed, by token, judged against the feed the markets file names.
+export function marketPrices(
+  markets: readonly { readonly market: Market; readonly price: PriceReading }[],
+  usdgDecimals: number,
+  sessions: FeedSessions,
+  now: number,
+): Map<Address, PriceVerdict> {
+  return new Map(
+    markets.map(({ market, price }) => [
+      market.token,
+      priceGuard(
+        price,
+        {
+          feedDecimals: market.feedDecimals,
+          feedHeartbeat: market.heartbeatSeconds,
+          usdgDecimals,
+        },
+        sessions,
+        now,
+      ),
+    ]),
+  );
 }

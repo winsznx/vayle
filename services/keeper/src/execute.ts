@@ -67,6 +67,14 @@ export async function execute(
       });
       return sent(clients, request);
     }
+    case "createFirstEpoch": {
+      const { request } = await sim.simulateContract({
+        ...market,
+        functionName: "createFirstEpoch",
+        args: [action.asset, action.roundHint],
+      });
+      return sent(clients, request);
+    }
     case "createEpoch": {
       const { request } = await sim.simulateContract({
         ...market,

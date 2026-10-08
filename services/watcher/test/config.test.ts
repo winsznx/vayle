@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { markets } from "@vayle/markets";
+import facts from "../../../deployments/robinhood-mainnet.json" with { type: "json" };
 import { loadConfig } from "../src/config.ts";
 import { MarketConfigIncomplete, MissingSetting } from "../src/errors.ts";
 
@@ -33,10 +35,20 @@ describe("loadConfig", () => {
     assert.throws(load, MarketConfigIncomplete);
   });
 
-  it("reads the dependency addresses from the chain facts", () => {
+  it("reads USDG from the chain facts", () => {
     // #when
     const config = loadConfig(base);
     // #then
-    assert.equal(config.nvda, "0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC");
+    assert.equal(config.usdg, facts.usdg.address);
+  });
+
+  it("watches every market in the markets file", () => {
+    // #when
+    const config = loadConfig(base);
+    // #then
+    assert.deepEqual(
+      config.markets.map((m) => m.token),
+      markets.map((m) => m.token),
+    );
   });
 });

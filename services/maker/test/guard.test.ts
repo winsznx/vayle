@@ -92,7 +92,12 @@ describe("priceGuard on a weekday mid-session", () => {
     // #when
     const verdict = judge(r, WEDNESDAY_NOON);
     // #then
-    assert.deepEqual(verdict, { usable: true, spot: 237.19372047, roundId: ROUND_1188.roundId });
+    assert.deepEqual(verdict, {
+      usable: true,
+      spot: 237.19372047,
+      roundId: ROUND_1188.roundId,
+      updatedAt: ROUND_1188.updatedAt,
+    });
   });
 
   it("stands down when the oracle flag can't be read", () => {

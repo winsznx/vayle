@@ -4,11 +4,13 @@ import { describe, it } from "node:test";
 import facts from "../../../deployments/robinhood-mainnet.json" with { type: "json" };
 import {
   BadMarkets,
+  listingDifferences,
   marketOf,
   markets,
   parseMarkets,
   problemsOf,
   strikeStepFor,
+  type Listing,
   type Market,
 } from "../src/index.ts";
 
@@ -50,7 +52,14 @@ describe("the committed markets file", () => {
     if (others.length === 0) return;
     assert.ok(existsSync(CHECK_FILE), "a market beyond NVDA needs deployments/market-check.json");
     const check = JSON.parse(readFileSync(CHECK_FILE, "utf8")) as {
-      tokens: { symbol: string; address: string; uid: string; decimals: number; passed: boolean; checks: { feed: { proxy: string | null } } }[];
+      tokens: {
+        symbol: string;
+        address: string;
+        uid: string;
+        decimals: number;
+        passed: boolean;
+        checks: { feed: { proxy: string | null } };
+      }[];
     };
     // #then
     for (const market of others) {
@@ -188,5 +197,52 @@ describe("problemsOf", () => {
     const off: Market = { ...market, maker: { ...market.maker, volBps: market.maker.volBps + 1 } };
     // #when / #then
     assert.ok(problemsOf(off).includes("maker vol isn't realized vol plus the margin"));
+  });
+});
+
+describe("listingDifferences", () => {
+  // The listing the registry holds after the deploy listed the market from the file.
+  function listingOf(m: Market, overrides: Partial<Listing> = {}): Listing {
+    return {
+      uid: m.uid,
+      feed: m.feed,
+      decimals: m.decimals,
+      feedDecimals: m.feedDecimals,
+      rawUnit: m.rawUnit,
+      lot: m.lot,
+      priceTick: m.priceTick,
+      strikeTick: m.strikeTick,
+      strikeRangeBps: m.strikeRangeBps,
+      listed: true,
+      ...overrides,
+    };
+  }
+
+  it("finds nothing when the registry lists the market as the file states it", () => {
+    // #when
+    const differences = listingDifferences(nvda(), listingOf(nvda()));
+    // #then
+    assert.deepEqual(differences, []);
+  });
+
+  it("names each field the registry lists differently, with both values", () => {
+    // #given: a listing whose strike tick and band aren't the file's
+    const listing = listingOf(nvda(), { strikeTick: 10_000_000n, strikeRangeBps: 500 });
+    // #when
+    const differences = listingDifferences(nvda(), listing);
+    // #then
+    assert.deepEqual(differences, [
+      "strikeTick is 10000000 in the registry and 5000000 in the markets file",
+      "strikeRangeBps is 500 in the registry and 1000 in the markets file",
+    ]);
+  });
+
+  it("compares the feed whatever the letter case it comes back in", () => {
+    // #given
+    const listing = listingOf(nvda(), { feed: nvda().feed.toLowerCase() as `0x${string}` });
+    // #when
+    const differences = listingDifferences(nvda(), listing);
+    // #then
+    assert.deepEqual(differences, []);
   });
 });

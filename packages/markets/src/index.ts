@@ -86,7 +86,8 @@ export function problemsOf(market: Market): string[] {
     ["sell", market.sell],
     ["buy", market.buy],
   ] as const) {
-    const caps = Object.values(side.caps);
+    const { openSize, walletSize, seriesOpenInterest, fillSize } = side.caps;
+    const caps = [openSize, walletSize, seriesOpenInterest, fillSize];
     if (side.enabled && caps.some((cap) => cap === 0n)) {
       problems.push(`${name} is enabled with a zero cap`);
     }
@@ -96,7 +97,6 @@ export function problemsOf(market: Market): string[] {
     if (caps.some((cap) => !isWholeLots(cap, lot) && cap !== 0n)) {
       problems.push(`${name} has a cap that isn't whole lots`);
     }
-    const { openSize, walletSize, seriesOpenInterest, fillSize } = side.caps;
     if (walletSize > openSize || seriesOpenInterest > openSize || fillSize > seriesOpenInterest) {
       problems.push(`${name} caps don't nest: fill <= series <= open, wallet <= open`);
     }
@@ -215,6 +215,43 @@ export function parseMarkets(value: unknown): readonly Market[] {
 }
 
 export const markets: readonly Market[] = parseMarkets(file);
+
+// A market's listing as the token registry's asset() returns it.
+export interface Listing {
+  readonly uid: Hex;
+  readonly feed: Address;
+  readonly decimals: number;
+  readonly feedDecimals: number;
+  readonly rawUnit: bigint;
+  readonly lot: bigint;
+  readonly priceTick: bigint;
+  readonly strikeTick: bigint;
+  readonly strikeRangeBps: number;
+  readonly listed: boolean;
+}
+
+// How a market's listing in the token registry differs from this file, one line per field both
+// state. Empty when they agree. A service leaves a market alone while its listing differs, since the
+// feed or grid in the file may not be the one the market uses.
+export function listingDifferences(market: Market, listing: Listing): string[] {
+  const fields: readonly (readonly [string, string | number | bigint, string | number | bigint])[] =
+    [
+      ["uid", listing.uid.toLowerCase(), market.uid.toLowerCase()],
+      ["feed", getAddress(listing.feed), market.feed],
+      ["decimals", listing.decimals, market.decimals],
+      ["feedDecimals", listing.feedDecimals, market.feedDecimals],
+      ["lot", listing.lot, market.lot],
+      ["priceTick", listing.priceTick, market.priceTick],
+      ["strikeTick", listing.strikeTick, market.strikeTick],
+      ["strikeRangeBps", listing.strikeRangeBps, market.strikeRangeBps],
+    ];
+  return fields
+    .filter(([, registry, file]) => registry !== file)
+    .map(
+      ([field, registry, file]) =>
+        `${field} is ${registry.toString()} in the registry and ${file.toString()} in the markets file`,
+    );
+}
 
 export function marketOf(token: Address): Market | undefined {
   const wanted = getAddress(token);

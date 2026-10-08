@@ -39,6 +39,10 @@ async function watch(
   state: WatcherState,
 ): Promise<RunResult> {
   const snapshot = await readSnapshot(deps.client, config);
+  for (const { market, unreadable, listing } of snapshot.markets) {
+    const reason = unreadable ?? listing;
+    if (reason !== null) console.warn(`watcher: ${market.symbol} skipped this run: ${reason}`);
+  }
   const events: ChainEvent[] = [];
   let cursor = snapshot.block;
   if (config.market !== null) {

@@ -4,4 +4,6 @@ export { loadConfig, type MakerConfig } from "./config.ts";
 export type { Clients } from "./execute.ts";
 export type { PriceVerdict, StandDownReason } from "./guard.ts";
 export type { MakerAction } from "./plan.ts";
-export { runOnce, type RunResult } from "./run.ts";
+export { runOnce, type MarketPrice, type RunResult } from "./run.ts";
+export type { BidSheet } from "./sheet.ts";
+export type { MarketNote } from "./snapshot.ts";

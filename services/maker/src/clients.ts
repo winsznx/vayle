@@ -1,5 +1,5 @@
 import { robinhoodChain } from "@vayle/chain-facts/chain";
-import { createPublicClient, createWalletClient, http } from "viem";
+import { createPublicClient, createWalletClient, http, type HttpTransportConfig } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import type { MakerConfig } from "./config.ts";
 import type { Clients } from "./execute.ts";
@@ -13,9 +13,12 @@ export const MULTICALL_BYTES = 16_384;
 const RETRIES = 3;
 
 // Reads batch through Multicall3 at the address in the chain facts. Transactions go out through
-// the same RPC, signed by the maker's key.
-export function makerClients(config: Pick<MakerConfig, "rpcUrl" | "key">): Clients {
-  const transport = http(config.rpcUrl, { retryCount: RETRIES });
+// the same RPC, signed by the maker's key. Tests pass their own fetch.
+export function makerClients(
+  config: Pick<MakerConfig, "rpcUrl" | "key">,
+  rpcFetch?: HttpTransportConfig["fetchFn"],
+): Clients {
+  const transport = http(config.rpcUrl, { retryCount: RETRIES, fetchFn: rpcFetch });
   const signer = privateKeyToAccount(config.key);
   return {
     public: createPublicClient({

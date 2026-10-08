@@ -174,7 +174,7 @@ export async function execute(
       const { request } = await sim.simulateContract({
         ...market,
         functionName: "seriesFor",
-        args: [config.asset, BigInt(action.expiry), action.side, action.strike],
+        args: [action.asset, BigInt(action.expiry), action.side, action.strike],
       });
       return sent(clients, request);
     }

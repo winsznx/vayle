@@ -6,7 +6,7 @@ import {
 } from "@vayle/calendar";
 import { CalendarNotCovered } from "./errors.ts";
 
-// When the NVDA/USD feed publishes. Its 24/5 session for each trading day runs from 20:00 ET the
+// When a Stock Token's feed publishes. Its 24/5 session for each trading day runs from 20:00 ET the
 // evening before to 20:00 ET on the day, so it's quiet over weekends and exchange holidays. Trading
 // days, early closes and DST come from the exchange calendar.
 

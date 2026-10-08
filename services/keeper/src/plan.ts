@@ -7,6 +7,7 @@ export type Action =
   | { readonly kind: "checkpoint" }
   | { readonly kind: "observeClose"; readonly asset: Address }
   | { readonly kind: "observePauses"; readonly asset: Address }
+  | { readonly kind: "createFirstEpoch"; readonly asset: Address; readonly roundHint: bigint }
   | { readonly kind: "createEpoch"; readonly asset: Address; readonly roundHint: bigint }
   | { readonly kind: "finalize"; readonly series: bigint }
   | { readonly kind: "settleOrder"; readonly id: bigint }
@@ -39,6 +40,7 @@ export type OrderStatus = "active" | "cancelled" | "closed";
 
 export interface OrderView {
   readonly id: bigint;
+  readonly asset: Address;
   readonly side: number;
   readonly target: bigint;
   readonly status: OrderStatus;
@@ -48,7 +50,7 @@ export interface OrderView {
 
 export type BatchPhase = "none" | "counting" | "filling" | "done";
 
-// A bucket of the current epoch: its series, the best bid on it and its batch.
+// A bucket of a market's current epoch: its series, the best bid on it and its batch.
 export interface BucketView {
   readonly series: bigint;
   readonly side: number;
@@ -60,21 +62,33 @@ export interface BucketView {
   readonly attached: bigint;
 }
 
+// One market from the markets file whose listing in the token registry matches the file.
+export interface MarketView {
+  readonly asset: Address;
+  // The market's latest epoch, or null before its first.
+  readonly epoch: EpochView | null;
+  // Whether that epoch opened at the latest boundary.
+  readonly epochAtLatest: boolean;
+  // The feed's last round at or before the latest boundary's close, read only while an epoch is due.
+  readonly roundHint: bigint | null;
+  // The round createFirstEpoch takes, read only while the market waits for its first week and the
+  // market is old enough to open it.
+  readonly firstHint: bigint | null;
+  readonly buckets: readonly BucketView[];
+}
+
 export interface Snapshot {
   readonly now: number;
-  readonly asset: Address;
   readonly lookback: number;
   readonly bidWindow: number;
+  // When the market was deployed. Its liveness record covers a whole lookback from then on.
+  readonly deployedAt: number;
   readonly latestBoundary: Boundary | null;
   readonly nextClose: number | null;
-  readonly epoch: EpochView | null;
-  // Whether the asset has an epoch opened at the latest boundary.
-  readonly epochAtLatest: boolean;
-  readonly roundHint: bigint | null;
+  readonly markets: readonly MarketView[];
   readonly series: readonly SeriesView[];
   // Null outside the days after a close, when the keeper doesn't read orders.
   readonly orders: readonly OrderView[] | null;
-  readonly buckets: readonly BucketView[];
 }
 
 const MINUTE = 60;
@@ -85,28 +99,57 @@ export const KEEPER_LEAD = 45 * MINUTE;
 export const AFTER_CLOSE = 150 * MINUTE;
 export const CHUNK = 100;
 
+// The markets still waiting for their first week. Before the schedule's first close there's no close
+// to open a week at, so each market's first week opens at the moment createFirstEpoch lands and runs
+// to that close. No boundary at or before now, with a close ahead, means the first close is ahead.
+function awaitingFirstWeek(s: Snapshot): readonly MarketView[] {
+  const firstCloseAhead = s.latestBoundary === null && s.nextClose !== null;
+  return firstCloseAhead ? s.markets.filter((m) => m.epoch === null) : [];
+}
+
+// A first week opens only on a liveness record with no gap through the lookback before its opening,
+// so while any market waits for one the keeper checkpoints every run, well inside the 5-minute gap
+// threshold.
 function pings(s: Snapshot): Action[] {
-  const actions: Action[] = [];
+  let checkpoint = awaitingFirstWeek(s).length > 0;
+  const observations: Action[] = [];
   if (s.nextClose !== null && s.now >= s.nextClose - KEEPER_LEAD) {
-    actions.push(
-      s.now >= s.nextClose - s.lookback
-        ? { kind: "observeClose", asset: s.asset }
-        : { kind: "checkpoint" },
-    );
+    if (s.now >= s.nextClose - s.lookback && s.markets.length > 0) {
+      // Each observation checkpoints too.
+      observations.push(
+        ...s.markets.map((m): Action => ({ kind: "observeClose", asset: m.asset })),
+      );
+    } else {
+      checkpoint = true;
+    }
   }
   const afterClose = s.latestBoundary !== null && s.now <= s.latestBoundary.close + AFTER_CLOSE;
   const windowOpen = s.series.some((w) => s.now >= w.expiry && s.now < w.windowEnd);
   if (afterClose || windowOpen) {
-    actions.push({ kind: "checkpoint" }, { kind: "observePauses", asset: s.asset });
+    checkpoint = true;
+    observations.push(...s.markets.map((m): Action => ({ kind: "observePauses", asset: m.asset })));
   }
-  return actions;
+  return checkpoint ? [{ kind: "checkpoint" }, ...observations] : observations;
+}
+
+// Once the market's liveness record covers the lookback, each waiting market's first week opens.
+function firstEpochs(s: Snapshot): Action[] {
+  if (s.now < s.deployedAt + s.lookback) return [];
+  return awaitingFirstWeek(s).flatMap((m): Action[] =>
+    m.firstHint === null
+      ? []
+      : [{ kind: "createFirstEpoch", asset: m.asset, roundHint: m.firstHint }],
+  );
 }
 
 function epochCreation(s: Snapshot): Action[] {
   const b = s.latestBoundary;
-  if (b === null || s.epochAtLatest || s.roundHint === null) return [];
-  if (s.now <= b.close || s.now >= b.creationDeadline) return [];
-  return [{ kind: "createEpoch", asset: s.asset, roundHint: s.roundHint }];
+  if (b === null || s.now <= b.close || s.now >= b.creationDeadline) return [];
+  return s.markets.flatMap((m): Action[] =>
+    m.epochAtLatest || m.roundHint === null
+      ? []
+      : [{ kind: "createEpoch", asset: m.asset, roundHint: m.roundHint }],
+  );
 }
 
 function finalizations(s: Snapshot): Action[] {
@@ -129,14 +172,18 @@ function nextIds(ids: readonly bigint[], after: bigint, upTo: bigint): bigint[] 
     .slice(0, CHUNK);
 }
 
-function batches(s: Snapshot, orders: readonly OrderView[]): Action[] {
-  const e = s.epoch;
-  if (e === null) return [];
+function marketBatches(
+  s: Snapshot,
+  m: MarketView,
+  e: EpochView,
+  orders: readonly OrderView[],
+): Action[] {
   const actions: Action[] = [];
-  for (const bucket of s.buckets) {
+  for (const bucket of m.buckets) {
     if (bucket.bidPremium === null) continue;
     const idle = orders.filter(
       (o) =>
+        o.asset === m.asset &&
         o.status === "active" &&
         o.series === 0n &&
         o.side === bucket.side &&
@@ -168,8 +215,12 @@ function batches(s: Snapshot, orders: readonly OrderView[]): Action[] {
   return actions;
 }
 
+function batches(s: Snapshot, orders: readonly OrderView[]): Action[] {
+  return s.markets.flatMap((m) => (m.epoch === null ? [] : marketBatches(s, m, m.epoch, orders)));
+}
+
 export function plan(s: Snapshot): Action[] {
-  const actions = [...pings(s), ...epochCreation(s), ...finalizations(s)];
+  const actions = [...pings(s), ...firstEpochs(s), ...epochCreation(s), ...finalizations(s)];
   if (s.orders !== null) actions.push(...settlements(s, s.orders), ...batches(s, s.orders));
   return actions;
 }

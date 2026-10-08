@@ -16,6 +16,7 @@
     "@vayle/calendar": "workspace:*",
     "@vayle/chain-facts": "workspace:*",
     "@vayle/market": "workspace:*",
+    "@vayle/markets": "workspace:*",
     "viem": "2.57.3"
   },
   "devDependencies": {

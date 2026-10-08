@@ -1,3 +1,4 @@
+import { markets as listed, type Market } from "@vayle/markets";
 import { getAddress, type Address } from "viem";
 import facts from "../../../deployments/robinhood-mainnet.json" with { type: "json" };
 import { MarketConfigIncomplete, MissingSetting } from "./errors.ts";
@@ -23,10 +24,11 @@ export interface WatcherConfig {
   readonly rpcUrl: string;
   readonly webhookUrl: string;
   readonly store: StoreConfig;
-  readonly nvda: Address;
-  readonly nvdaAccessRegistry: Address;
+  // USDG, from the chain facts. Each token names its own access registry.
   readonly usdg: Address;
-  readonly nvdaFeed: Address;
+  // Every market in deployments/markets.json: its token, its feed with the feed's heartbeat, and the
+  // caps the deploy set from the file.
+  readonly markets: readonly Market[];
   // Unset until the contracts are deployed. The watcher then covers dependencies only.
   readonly market: MarketAddresses | null;
 }
@@ -65,7 +67,7 @@ function marketAddresses(env: Env): MarketAddresses | null {
   };
 }
 
-export function loadConfig(env: Env): WatcherConfig {
+export function loadConfig(env: Env, markets: readonly Market[] = listed): WatcherConfig {
   return {
     rpcUrl: required(env, "ROBINHOOD_RPC_URL"),
     webhookUrl: required(env, "WATCHER_WEBHOOK_URL"),
@@ -73,10 +75,8 @@ export function loadConfig(env: Env): WatcherConfig {
       url: required(env, "SUPABASE_URL"),
       serviceKey: required(env, "SUPABASE_SERVICE_ROLE_KEY"),
     },
-    nvda: getAddress(facts.nvda.address),
-    nvdaAccessRegistry: getAddress(facts.nvda.accessRegistry),
     usdg: getAddress(facts.usdg.address),
-    nvdaFeed: getAddress(facts.nvdaUsdFeed.proxy),
+    markets,
     market: marketAddresses(env),
   };
 }

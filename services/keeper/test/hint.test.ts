@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { MAX_ROUNDS_BACK, ROUND_WINDOW, searchRounds, type ProbeRounds } from "../src/hint.ts";
+import {
+  firstEpochHint,
+  MAX_ROUNDS_BACK,
+  ROUND_WINDOW,
+  searchRounds,
+  type ProbeRounds,
+} from "../src/hint.ts";
 
 // Phase 1's round r has ID (1 << 64) | r, the shape the NVDA feed's IDs have.
 const PHASE_1 = 1n << 64n;
@@ -126,5 +132,36 @@ describe("searchRounds", () => {
       [hint, probed.length, probed.at(-1)],
       [null, MAX_ROUNDS_BACK, latest - BigInt(MAX_ROUNDS_BACK - 1)],
     );
+  });
+});
+
+describe("firstEpochHint", () => {
+  // Wed Oct 7 at 11:01:06 ET, when round 1188 landed.
+  const LANDED = 1_791_385_266;
+
+  it("is the latest round when it landed before this second", () => {
+    // #when
+    const hint = firstEpochHint(
+      { roundId: PHASE_1 + 1188n, updatedAt: BigInt(LANDED) },
+      LANDED + 1,
+    );
+    // #then
+    assert.equal(hint, PHASE_1 + 1188n);
+  });
+
+  it("is the round before when the latest landed this second", () => {
+    // #when
+    const hint = firstEpochHint({ roundId: PHASE_1 + 1188n, updatedAt: BigInt(LANDED) }, LANDED);
+    // #then
+    assert.equal(hint, PHASE_1 + 1187n);
+  });
+
+  it("waits when the latest is its phase's first round and landed this second", () => {
+    // #given: the first round of phase 2
+    const roundId = (2n << 64n) + 1n;
+    // #when
+    const hint = firstEpochHint({ roundId, updatedAt: BigInt(LANDED) }, LANDED);
+    // #then
+    assert.equal(hint, null);
   });
 });
