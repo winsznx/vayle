@@ -30,7 +30,9 @@ function forgeEnv(env: Readonly<Record<string, string>>): Record<string, string>
 // Broadcasts the production deploy script to the fork. DeployFork only moves its input and output
 // files to deployments/fork/. forge script checks sizes against Ethereum's 24,576-byte limit
 // whatever code_size_limit says, and asks before going on, so --non-interactive answers it. Anvil
-// still enforces the chain's own limit on every deploy.
+// still enforces the chain's own limit on every deploy. --slow sends each transaction once the one
+// before it confirmed, as the mainnet broadcast does: sent all at once, a fork once mined the first
+// four and never the rest, while forge still reported success.
 export function deployToFork(env: Readonly<Record<string, string>>): Deployment {
   const result = spawnSync(
     "forge",
@@ -40,6 +42,7 @@ export function deployToFork(env: Readonly<Record<string, string>>): Deployment 
       "--rpc-url",
       FORK_RPC,
       "--broadcast",
+      "--slow",
       "--non-interactive",
     ],
     { cwd: CONTRACTS_DIR, env: forgeEnv(env), encoding: "utf8" },

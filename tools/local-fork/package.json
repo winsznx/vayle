@@ -14,6 +14,7 @@
     "@vayle/chain-facts": "workspace:*",
     "@vayle/keeper": "workspace:*",
     "@vayle/maker": "workspace:*",
+    "@vayle/markets": "workspace:*",
     "viem": "2.57.3"
   }
 }

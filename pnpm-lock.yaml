@@ -270,6 +270,9 @@ importers:
       '@vayle/maker':
         specifier: workspace:*
         version: link:../../services/maker
+      '@vayle/markets':
+        specifier: workspace:*
+        version: link:../../packages/markets
       viem:
         specifier: 2.57.3
         version: 2.57.3(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.6.5)

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   advanceTarget,
+  AFTER_FIRST_WEEK,
   DENSE_BEFORE_CLOSE,
   DENSE_STEP,
   FEED_LEAD,
@@ -15,7 +16,12 @@ import {
 const CLOSE = 1_791_576_000;
 const NEXT_CLOSE = CLOSE + 7 * 86_400;
 const HOUR = 3600;
-const WEEK: Week = { opening: CLOSE, expiry: NEXT_CLOSE, windowLength: 2 * HOUR };
+const WEEK: Week = {
+  opening: CLOSE,
+  expiry: NEXT_CLOSE,
+  windowLength: 2 * HOUR,
+  batchDeadline: CLOSE + 2 * 86_400 + 4 * HOUR,
+};
 const BID_WINDOW = 2 * HOUR;
 
 function ticks(from: number, to: number, closes: readonly number[]): number[] {
@@ -71,6 +77,20 @@ describe("nextTick", () => {
     assert.ok(widest < 5 * 60, `widest gap ${widest} s`);
   });
 
+  it("keeps ticks dense until the deploy's liveness record covers the lookback", () => {
+    // #given: a deploy two days before the first close
+    const deployedAt = CLOSE - 2 * 86_400;
+    const denseUntil = deployedAt + 45 * 60;
+    // #when
+    const next = nextTick(deployedAt + 10 * 60, [CLOSE], denseUntil);
+    const after = nextTick(denseUntil, [CLOSE], denseUntil);
+    // #then
+    assert.deepEqual(
+      [next - (deployedAt + 10 * 60), after - denseUntil],
+      [DENSE_STEP, SPARSE_STEP],
+    );
+  });
+
   it("ticks in the last 5 minutes before a close, where the close is observed", () => {
     // #given
     const all = ticks(CLOSE - 86_400, CLOSE + HOUR, [CLOSE]);
@@ -82,6 +102,26 @@ describe("nextTick", () => {
 });
 
 describe("advanceTarget", () => {
+  it("opens the first week once the deploy's liveness record covers the lookback", () => {
+    // #given
+    const deployedAt = CLOSE - 2 * 86_400;
+    const firstWeekAt = deployedAt + 30 * 60;
+    // #when
+    const target = advanceTarget(deployedAt + 60, null, CLOSE, BID_WINDOW, firstWeekAt);
+    // #then
+    assert.deepEqual(target, { at: firstWeekAt + AFTER_FIRST_WEEK, what: "the first week opens" });
+  });
+
+  it("runs a first week, which has no batch, straight to its close and window", () => {
+    // #given: a first week opened mid-week, its batch deadline at its opening
+    const opening = CLOSE - 2 * 86_400;
+    const first: Week = { opening, expiry: CLOSE, windowLength: 2 * HOUR, batchDeadline: opening };
+    // #when
+    const target = advanceTarget(opening + HOUR, first, CLOSE, BID_WINDOW);
+    // #then
+    assert.equal(target.at, CLOSE + 2 * HOUR + 20 * 60);
+  });
+
   it("opens the first week at the next close when there's none", () => {
     // #given
     const now = CLOSE - 2 * 86_400;
