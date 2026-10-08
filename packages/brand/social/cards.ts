@@ -2,11 +2,13 @@ import { readFileSync } from "node:fs";
 import { Resvg } from "@resvg/resvg-js";
 import type { CSSProperties, ReactElement, ReactNode } from "react";
 import satori from "satori";
+import markets from "../../../deployments/markets.json" with { type: "json" };
+import logos from "../logos/manifest.json" with { type: "json" };
 
 // Vayle's link previews, drawn from data and rendered at build time: the same card for every page,
 // with that page's two-line headline and sentence. Satori lays it out and turns text into paths,
 // resvg rasterizes it at 1200 by 630. No live numbers go in: platforms keep previews for days. Tokens
-// appear as ticker badges, never as artwork.
+// appear as their logos, from the pinned files in logos/.
 
 export const CARD_WIDTH = 1200;
 export const CARD_HEIGHT = 630;
@@ -141,25 +143,20 @@ function rung(held: boolean): ReactElement {
   );
 }
 
-// A token named by its ticker, as the web app draws it: USDG in an outlined pill.
-function tickerBadge(symbol: string): ReactElement {
-  return h(
-    "div",
-    {
-      display: "flex",
-      alignItems: "center",
-      height: 30,
-      padding: "0 12px",
-      borderRadius: 999,
-      color: INK,
-      background: SHEET,
-      boxShadow: `inset 0 0 0 1px ${CONTROL}`,
-      fontSize: 14,
-      fontWeight: 600,
-      letterSpacing: 0.3,
-    },
-    symbol,
-  );
+// An asset's pinned logo, as the web app draws it: USDG in a disc, a Stock Token in a rounded tile,
+// each on its plate.
+function logo(symbol: string, size: number): ReactElement {
+  const entry = logos.logos[symbol as keyof typeof logos.logos];
+  const data = file(`logos/${entry.file}`).toString("base64");
+  const disc = symbol === "USDG";
+  return img(`data:${entry.contentType};base64,${data}`, {
+    width: size,
+    height: size,
+    borderRadius: disc ? size / 2 : Math.round(size * 0.28),
+    background: entry.plate === "dark" ? "#0b0e18" : "#ffffff",
+    padding: entry.art === "inset" ? Math.round(size * 0.14) : 0,
+    boxShadow: `inset 0 0 0 1px ${CONTROL}`,
+  });
 }
 
 function ladder(): ReactElement {
@@ -272,10 +269,15 @@ function card(c: Card): ReactElement {
         h(
           "div",
           { display: "flex", alignItems: "center", gap: 10 },
-          tickerBadge("USDG"),
+          logo("USDG", 30),
           "Paid in USDG",
         ),
-        h("div", { display: "flex", alignItems: "center" }, "Stock Tokens on Robinhood Chain"),
+        h(
+          "div",
+          { display: "flex", alignItems: "center", gap: 10 },
+          h("div", { display: "flex", gap: 6 }, ...markets.markets.map((m) => logo(m.symbol, 30))),
+          "Stock Tokens on Robinhood Chain",
+        ),
       ),
     ),
   );

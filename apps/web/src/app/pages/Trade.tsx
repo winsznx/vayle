@@ -2,7 +2,7 @@ import { formatFixed, parseFixed } from "@vayle/units";
 import { useRef } from "react";
 import { Link, useSearchParams } from "react-router";
 import { DisclosureList } from "../../ui/DisclosureList.tsx";
-import { TickerBadge } from "../../ui/TickerBadge.tsx";
+import { TokenLogo } from "../../ui/TokenLogo.tsx";
 import { Ladder } from "../components/Ladder.tsx";
 import { Ticket, TicketEmpty } from "../components/Ticket.tsx";
 import { sheetRows } from "../rates.ts";
@@ -94,7 +94,7 @@ export function TradePage() {
           <span className="live-now-list">
             Live now:
             {config.markets.map((m) => (
-              <TickerBadge key={m.token} symbol={m.symbol} size="sm" named />
+              <TokenLogo key={m.token} symbol={m.symbol} size="sm" label />
             ))}
           </span>{" "}
           More Stock Tokens list as they pass the market check.{" "}

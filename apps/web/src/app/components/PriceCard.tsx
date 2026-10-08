@@ -1,4 +1,4 @@
-import { TickerBadge } from "../../ui/TickerBadge.tsx";
+import { TokenLogo } from "../../ui/TokenLogo.tsx";
 import type { AppConfig } from "../config.ts";
 import { easternTime, feedDollars } from "../format.ts";
 import type { AssetView } from "../useMarket.ts";
@@ -57,7 +57,7 @@ export function PriceCard({ config, asset, now, history, marks }: Props) {
       {config.markets.length > 1 && <AssetSwitcher />}
       <div className="price-head">
         <div className="price-asset">
-          <TickerBadge symbol={market.symbol} size="lg" />
+          <TokenLogo symbol={market.symbol} size="lg" />
           <div>
             <p className="price-symbol">{market.symbol}</p>
             <p className="price-name">Stock Token on Robinhood Chain</p>

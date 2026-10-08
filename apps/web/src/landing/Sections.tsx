@@ -4,7 +4,7 @@ import signedOff from "../../disclosures.signed-off.json" with { type: "json" };
 import { parseDisclosures } from "../disclosures.ts";
 import { DisclosureList } from "../ui/DisclosureList.tsx";
 import { CASH_SYMBOL } from "../tokens.ts";
-import { TickerBadge } from "../ui/TickerBadge.tsx";
+import { TokenLogo } from "../ui/TokenLogo.tsx";
 
 // The art names a Stock Token by the first market the build lists.
 const SHOWN = markets.at(0)?.symbol ?? "Stock Token";
@@ -117,11 +117,11 @@ export function HowItWorks() {
           <Vignette>
             <div className="mini-ticket">
               <span className="mini-field">
-                <TickerBadge symbol={SHOWN} size="sm" />
+                <TokenLogo symbol={SHOWN} size="sm" />
                 <span className="mini-bar" />
               </span>
               <span className="mini-field">
-                <TickerBadge symbol={CASH_SYMBOL} size="sm" />
+                <TokenLogo symbol={CASH_SYMBOL} size="sm" />
                 <span className="mini-bar mini-bar-short" />
               </span>
               <span className="mini-button">Set target</span>
@@ -422,17 +422,17 @@ export function Closing() {
       </div>
       <div className="closing-art" aria-hidden="true">
         <div className="float-order">
-          <TickerBadge symbol={SHOWN} size="md" />
+          <TokenLogo symbol={SHOWN} size="md" />
           <div>
             <p className="float-title">Sell target</p>
             <p className="float-detail">At your price, renews weekly</p>
           </div>
         </div>
         <div className="float-token float-token-a">
-          <TickerBadge symbol={SHOWN} size="hero" />
+          <TokenLogo symbol={SHOWN} size="hero" />
         </div>
         <div className="float-token float-token-b">
-          <TickerBadge symbol={CASH_SYMBOL} size="xl" />
+          <TokenLogo symbol={CASH_SYMBOL} size="xl" />
         </div>
       </div>
     </section>

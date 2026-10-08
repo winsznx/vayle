@@ -11,7 +11,7 @@ import {
 } from "viem";
 import type { Market } from "@vayle/markets";
 import { CASH_SYMBOL } from "../../tokens.ts";
-import { TickerBadge } from "../../ui/TickerBadge.tsx";
+import { TokenLogo } from "../../ui/TokenLogo.tsx";
 import { AssetSwitcher } from "../components/AssetSwitcher.tsx";
 import { WeekCard } from "../components/StatCards.tsx";
 import type { AppConfig } from "../config.ts";
@@ -855,7 +855,7 @@ function ContractRow({
   return (
     <li className="mk-contract">
       <span className="mk-contract-icon">
-        {icon !== null && <TickerBadge symbol={icon} size="sm" />}
+        {icon !== null && <TokenLogo symbol={icon} size="sm" />}
       </span>
       <span className="mk-contract-name">{name}</span>
       {children}

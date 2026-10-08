@@ -1,7 +1,7 @@
 import "./markets.css";
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router";
-import { TickerBadge } from "../../ui/TickerBadge.tsx";
+import { TokenLogo } from "../../ui/TokenLogo.tsx";
 import { withAsset } from "../assets.ts";
 import { dollars, easternTime, premium } from "../format.ts";
 import {
@@ -129,7 +129,7 @@ function LiveMarket({
   return (
     <article className="card mkts-market" aria-labelledby={`mkts-${market.token}`}>
       <div className="mkts-market-head">
-        <TickerBadge symbol={market.symbol} size="lg" />
+        <TokenLogo symbol={market.symbol} size="lg" />
         <div className="mkts-market-name">
           <h3 id={`mkts-${market.token}`} className="mkts-symbol">
             {market.symbol}
@@ -184,7 +184,7 @@ function OtherToken({ token }: { readonly token: CheckedToken }) {
   return (
     <li className="mkts-other">
       <div className="mkts-other-head">
-        <TickerBadge symbol={token.symbol} size="md" quiet />
+        <TokenLogo symbol={token.symbol} size="md" quiet />
         <div className="mkts-market-name">
           <p className="mkts-other-symbol">{token.symbol}</p>
           <p className="mkts-sub">{token.name}</p>

@@ -2,7 +2,7 @@ import type { MarketEvent, OrderState } from "@vayle/market";
 import { formatFixed } from "@vayle/units";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
-import { TickerBadge } from "../../ui/TickerBadge.tsx";
+import { TokenLogo } from "../../ui/TokenLogo.tsx";
 import { Holdings } from "../components/Holdings.tsx";
 import { actionFor, lineOf, OrderBadge, type Action } from "../components/Orders.tsx";
 import { PriceCard } from "../components/PriceCard.tsx";
@@ -360,7 +360,7 @@ function RecentActivity({
           {recent.map(({ event, line }) => (
             <li key={`${event.block_number}:${event.log_index}`} className="ov-event">
               <p className="ov-event-title">
-                {line.ticker !== null && <TickerBadge symbol={line.ticker} size="xs" named />}
+                {line.ticker !== null && <TokenLogo symbol={line.ticker} size="xs" label />}
                 {line.title}
               </p>
               <EventTime config={config} event={event} />

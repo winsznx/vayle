@@ -80,7 +80,8 @@
 }
 
 /* The market the event is about, ahead of what happened. */
-.ac-title .ticker {
+.ac-title .ticker,
+.ac-title .logo-labeled {
   margin-right: 8px;
   vertical-align: 1px;
 }

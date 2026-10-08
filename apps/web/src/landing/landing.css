@@ -1076,6 +1076,11 @@
   background: #04060f;
 }
 
+/* The floating logos on the dark band keep a hairline of light around their plate. */
+.float-token .logo::after {
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.18);
+}
+
 .float-token-a {
   top: 4%;
   right: 12%;

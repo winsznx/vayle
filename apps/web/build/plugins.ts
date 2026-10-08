@@ -1,3 +1,6 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { CARDS, renderCard } from "@vayle/brand/cards";
 import type { Plugin, ProxyOptions } from "vite";
 
@@ -13,6 +16,38 @@ export function ogImages(): Plugin {
           type: "asset",
           fileName: `og/${card.key}.png`,
           source: await renderCard(card),
+        });
+      }
+    },
+  };
+}
+
+// The asset logos, served from the brand package's pinned files at /logos/ in dev and emitted
+// there in every build.
+const LOGOS_DIR = fileURLToPath(new URL("../../../packages/brand/logos/", import.meta.url));
+const LOGO_FILE = /^[a-z0-9]+\.(png|webp)$/;
+
+export function tokenLogos(): Plugin {
+  return {
+    name: "vayle-token-logos",
+    configureServer(server) {
+      server.middlewares.use("/logos", (req, res, next) => {
+        const name = (req.url ?? "").split("?")[0]?.replace(/^\//, "") ?? "";
+        if (!LOGO_FILE.test(name)) {
+          next();
+          return;
+        }
+        res.setHeader("content-type", name.endsWith(".png") ? "image/png" : "image/webp");
+        res.end(readFileSync(join(LOGOS_DIR, name)));
+      });
+    },
+    generateBundle() {
+      for (const name of readdirSync(LOGOS_DIR)) {
+        if (!LOGO_FILE.test(name)) continue;
+        this.emitFile({
+          type: "asset",
+          fileName: `logos/${name}`,
+          source: readFileSync(join(LOGOS_DIR, name)),
         });
       }
     },

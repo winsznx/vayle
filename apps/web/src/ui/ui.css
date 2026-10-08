@@ -384,3 +384,107 @@ select {
     scroll-behavior: auto !important;
   }
 }
+
+/* Asset logos. A Stock Token's logo sits in a rounded tile and USDG's in a disc, each on a plate of
+   its own so a logo drawn for a light ground keeps its colours in the dark theme too. A hairline
+   ring separates the plate from the surface under it. */
+.logo {
+  --logo-size: 24px;
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--logo-size);
+  height: var(--logo-size);
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.logo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px rgb(4 6 15 / 0.08);
+  pointer-events: none;
+}
+
+.logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.logo-inset img {
+  object-fit: contain;
+  padding: 14%;
+}
+
+.logo-tile {
+  border-radius: 28%;
+}
+
+.logo-disc {
+  border-radius: 50%;
+}
+
+.logo-plate-light {
+  background: #ffffff;
+}
+
+.logo-plate-dark {
+  background: #0b0e18;
+}
+
+.logo-xs {
+  --logo-size: 16px;
+}
+
+.logo-sm {
+  --logo-size: 20px;
+}
+
+.logo-md {
+  --logo-size: 24px;
+}
+
+.logo-lg {
+  --logo-size: 34px;
+}
+
+.logo-xl {
+  --logo-size: 44px;
+}
+
+.logo-hero {
+  --logo-size: 60px;
+}
+
+.logo-quiet {
+  opacity: 0.62;
+}
+
+.logo-labeled {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.logo-labeled.logo-quiet {
+  opacity: 1;
+  color: var(--muted);
+}
+
+.logo-labeled.logo-quiet .logo {
+  opacity: 0.62;
+}
+
+.logo-labeled-xs,
+.logo-labeled-sm {
+  font-size: 0.8125rem;
+}

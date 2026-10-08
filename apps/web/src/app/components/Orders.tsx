@@ -7,7 +7,8 @@ import {
   type OrderSummary,
 } from "@vayle/market";
 import { Link } from "react-router";
-import { TickerBadge, type BadgeSize } from "../../ui/TickerBadge.tsx";
+import { type BadgeSize } from "../../ui/TickerBadge.tsx";
+import { TokenLogo } from "../../ui/TokenLogo.tsx";
 import { marketOfToken } from "../assets.ts";
 import type { AppConfig } from "../config.ts";
 import { unitOf, usdgAmount } from "../format.ts";
@@ -114,9 +115,9 @@ export function OrderBadge({
 }) {
   const market = marketOfToken(config.markets, order.asset);
   return market === undefined ? (
-    <TickerBadge symbol={`${order.asset.slice(0, 6)}…${order.asset.slice(-4)}`} size={size} quiet />
+    <TokenLogo symbol={`${order.asset.slice(0, 6)}…${order.asset.slice(-4)}`} size={size} quiet />
   ) : (
-    <TickerBadge symbol={market.symbol} size={size} />
+    <TokenLogo symbol={market.symbol} size={size} />
   );
 }
 

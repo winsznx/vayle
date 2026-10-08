@@ -3,7 +3,7 @@ import type { MarketEvent, OrderState, OrderSummary } from "@vayle/market";
 import { useId, type ReactNode } from "react";
 import { Link, useParams } from "react-router";
 import { CASH_SYMBOL } from "../../tokens.ts";
-import { TickerBadge } from "../../ui/TickerBadge.tsx";
+import { TokenLogo } from "../../ui/TokenLogo.tsx";
 import { marketOfToken } from "../assets.ts";
 import { HistoryNote } from "../components/HistoryNote.tsx";
 import { EditOrder } from "../components/EditOrder.tsx";
@@ -218,7 +218,7 @@ function EarningsBody({
   return (
     <dl className="od-tallies">
       <Term label="Earned" className={earned > 0n ? "od-tally od-tally-paid" : "od-tally"}>
-        <TickerBadge symbol={CASH_SYMBOL} size="md" />
+        <TokenLogo symbol={CASH_SYMBOL} size="md" />
         <span className="num">{usdgAmount(earned, config.usdgDecimals)}</span>
       </Term>
       <Term label="Weeks paid" className="od-tally">

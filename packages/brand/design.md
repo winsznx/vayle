@@ -210,7 +210,7 @@ UI icons are drawn on an 18-unit grid and sit in an 18 px box.
 
 ### Stroke and fill
 
-Icons are 1.5-unit strokes with round caps and joins and no fill, in the text colour of their label. The symbol is the only filled mark. Tokens are ticker badges, not artwork.
+Icons are 1.5-unit strokes with round caps and joins and no fill, in the text colour of their label. The symbol is the only filled mark. Tokens show their real logos.
 
 ### Perspective
 
@@ -220,12 +220,13 @@ Flat and front-on. No isometric or 3D icons.
 
 - The symbol is never an icon, a bullet or a loading indicator, and no other icon draws a ladder.
 - Every token is a ticker badge, from [`css/ticker.css`](css/ticker.css): its ticker in Plus Jakarta Sans at weight 700 with 0.02 em tracking, set at 0.44 of the badge's height and never under 10 px. A Stock Token is an ink tile with inverse text and corners at 0.3 of the height. USDG is a pill on the sheet with ink text and a 1 px `--control` ring. A choice that isn't the current one, or a token that isn't listed, is the outlined tile. Heights run 16, 20, 24, 32, 40 and 56 px. The badge sits to the left of the text that names its token, and on a surface of fixed colour, like the dark band, it keeps its contrast by turning over.
-- Badges stay neutral: blue is for the holder's price, and no company's or issuer's artwork appears anywhere.
+- Every asset shows its real logo from [`logos/`](logos): a Stock Token the mark of the company or fund it tracks, in a rounded tile at 0.28 of its size, and USDG its own mark in a disc. Each sits on a plate, white for most and ink for a white mark, so it keeps its colours in the dark theme, with a hairline ring between plate and surface. A bare mark sits inset by 14%. The logo goes left of the text that names the asset. The network operator's feather, which the issuer serves as a placeholder for every Stock Token, never appears.
+- A token with no pinned logo falls back to its ticker badge.
 - Robinhood Chain is named in words, next to a neutral glyph.
 
 ## Image and render system
 
-Vayle uses no photography, 3D renders or generated images. The imagery is the product itself: the ladder, target states and ticker badges.
+Vayle uses no photography, 3D renders or generated images. The imagery is the product itself: the ladder, target states and the assets' logos.
 
 ### Composition
 
@@ -269,7 +270,8 @@ None. The system uses no outside reference imagery.
 | App icon master                                                      | `source/vayle-app-icon.svg`                           |
 | Favicons and app icons                                               | `favicon/`, copied into `apps/web/public/`            |
 | Social card, 1200 by 630                                             | `social/cards.ts`, rendered per page by the web build |
-| Ticker badge                                                         | `css/ticker.css`                                      |
+| Asset logos, pinned by checksum                                      | `logos/`                                              |
+| Ticker badge, the fallback                                           | `css/ticker.css`                                      |
 | Machine-readable spec                                                | `brand.json`                                          |
 
 ## Validation

@@ -3,7 +3,7 @@ import { formatFixed } from "@vayle/units";
 import { useId, useState } from "react";
 import { maxUint256 } from "viem";
 import { CASH_SYMBOL } from "../../tokens.ts";
-import { TickerBadge } from "../../ui/TickerBadge.tsx";
+import { TokenLogo } from "../../ui/TokenLogo.tsx";
 import type { Run } from "../state.tsx";
 import type { AppConfig } from "../config.ts";
 import { amountOf, dollars, easternTime, premium, unitOf, usdgAmount } from "../format.ts";
@@ -136,7 +136,7 @@ export function Ticket(props: {
       }}
     >
       <p className="ticket-kicker">
-        <TickerBadge symbol={market.symbol} size="sm" />
+        <TokenLogo symbol={market.symbol} size="sm" />
         {selling ? `Sell target for ${market.symbol} at` : `Buy target for ${market.symbol} at`}
       </p>
       <p className="ticket-price num">{dollars(rung.strike)}</p>
@@ -151,7 +151,7 @@ export function Ticket(props: {
           Amount
         </label>
         <div className="field">
-          <TickerBadge symbol={market.symbol} size="sm" />
+          <TokenLogo symbol={market.symbol} size="sm" />
           <input
             id={`${id}-amount`}
             inputMode="decimal"
@@ -180,7 +180,7 @@ export function Ticket(props: {
           Least payment each week
         </label>
         <div className="field">
-          <TickerBadge symbol={CASH_SYMBOL} size="sm" />
+          <TokenLogo symbol={CASH_SYMBOL} size="sm" />
           <input
             id={`${id}-minimum`}
             inputMode="decimal"

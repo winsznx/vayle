@@ -3,7 +3,7 @@ import type { MarketEvent } from "@vayle/market";
 import { useRef, useState, type ReactNode, type Ref } from "react";
 import { flushSync } from "react-dom";
 import { Link, useSearchParams } from "react-router";
-import { TickerBadge } from "../../ui/TickerBadge.tsx";
+import { TokenLogo } from "../../ui/TokenLogo.tsx";
 import { HistoryNote } from "../components/HistoryNote.tsx";
 import type { AppConfig } from "../config.ts";
 import { contextOf, describeEvent, txUrl, type EventKind, type EventLine } from "../events.ts";
@@ -141,7 +141,7 @@ function Row({
     <li ref={ref} tabIndex={ref === undefined ? undefined : -1} className={classes.join(" ")}>
       <span className="ac-mark" aria-hidden="true" />
       <p className="ac-title">
-        {line.ticker !== null && <TickerBadge symbol={line.ticker} size="xs" named />}
+        {line.ticker !== null && <TokenLogo symbol={line.ticker} size="xs" label />}
         {line.title}
       </p>
       {line.amount !== null && <p className="ac-amount num">{line.amount}</p>}

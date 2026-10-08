@@ -1,0 +1,1761 @@
+{
+  "schema": 1,
+  "about": "Every asset logo Vayle shows, pinned by checksum: each Stock Token in the market check, by the company or fund it tracks, and USDG. scripts/sync-logos.ts downloads them from a sources file kept outside the repo, and test/logos.test.ts checks the files against this manifest.",
+  "logos": {
+    "AAOI": {
+      "file": "aaoi.png",
+      "sha256": "99e48df48549a610444e6e7a496c74901e57ffa250623765a38a2cd15b030a93",
+      "bytes": 964,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:32.701Z"
+    },
+    "AAPL": {
+      "file": "aapl.png",
+      "sha256": "475c11968359342e5599e6cb59ad72a519566ec62fe72d88bb9c2279c467162f",
+      "bytes": 857,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:33.254Z"
+    },
+    "ABCL": {
+      "file": "abcl.png",
+      "sha256": "6e510a6ae458092ad7248ad23f976baa6031adfc811c3a5a446e58f2c09def03",
+      "bytes": 5770,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:33.620Z"
+    },
+    "ADBE": {
+      "file": "adbe.png",
+      "sha256": "58373e644e68b2031093e2b8cfa7a6888b2d9c34660d213bd448c01f6dd0ba15",
+      "bytes": 927,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:33.810Z"
+    },
+    "AEHR": {
+      "file": "aehr.png",
+      "sha256": "3b9195906bd0055b67a4f85ec82e79a64efc8fe71f8bcbe075e6b2828e250880",
+      "bytes": 823,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:34.009Z"
+    },
+    "AEIS": {
+      "file": "aeis.png",
+      "sha256": "d7d7c78702d4ba1a55171d755b78dd65a24690bfab680c5c3af55bfd80ed4c9e",
+      "bytes": 19711,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:34.377Z"
+    },
+    "ALAB": {
+      "file": "alab.png",
+      "sha256": "7bf3b9f541fe716283e017874e46b6bb3a4721a6a564fc31102825c606631d37",
+      "bytes": 14902,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:34.756Z"
+    },
+    "AMAT": {
+      "file": "amat.png",
+      "sha256": "49ad4e8fc8016be0ff81606eac0f7284a2350257693455eae4b7df19e4bfb7e9",
+      "bytes": 1044,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:34.950Z"
+    },
+    "AMBA": {
+      "file": "amba.png",
+      "sha256": "8c1af855b92a0d97116c21ce74cc0aa4020b0925240de7916ee32ac4a0ff7a94",
+      "bytes": 20491,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:35.214Z"
+    },
+    "AMC": {
+      "file": "amc.png",
+      "sha256": "3ea93201092370ec1f2f32e1e9747400b45f91321d51cf48f5466fe86f24fb31",
+      "bytes": 8793,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "inset",
+      "retrievedAt": "2026-10-08T02:10:35.439Z"
+    },
+    "AMD": {
+      "file": "amd.png",
+      "sha256": "593484e40508084dceef14feb61098f4260179a219a2933462f74e393bf840fb",
+      "bytes": 745,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:35.623Z"
+    },
+    "AMKR": {
+      "file": "amkr.png",
+      "sha256": "85e1cf03ba8bb1855bf543e23accd59692d6a5c85304d16765beee268ff5a137",
+      "bytes": 24150,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:35.902Z"
+    },
+    "AMZN": {
+      "file": "amzn.png",
+      "sha256": "4d7e699810d497e6b14fff21e31ed7d7c4880ea33a062830fc0eda57d9b081fd",
+      "bytes": 1175,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:36.081Z"
+    },
+    "ANET": {
+      "file": "anet.png",
+      "sha256": "3b525eb962aaab388ae74ff0170d40cbae939e095eb9fcfd2c8a9659b3bc3006",
+      "bytes": 857,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:36.272Z"
+    },
+    "APLD": {
+      "file": "apld.png",
+      "sha256": "40c282b8d2420fafeb3c26ccbbb865d5f889028734ae4aabc7f45ec5ab31c146",
+      "bytes": 5810,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "inset",
+      "retrievedAt": "2026-10-08T02:10:36.461Z"
+    },
+    "APP": {
+      "file": "app.png",
+      "sha256": "04e27a02d8acdac2fbb42cfe910d243662ca7fec9fac3a80a328a31fbe5eed25",
+      "bytes": 3623,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:36.820Z"
+    },
+    "ASML": {
+      "file": "asml.png",
+      "sha256": "bd02a3003047eb7a14f17dbde99ec4aad0030106fa3447cea076c8f2f650a061",
+      "bytes": 939,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:37.005Z"
+    },
+    "ASTS": {
+      "file": "asts.png",
+      "sha256": "af569b691a7c9096cf4d2c79188e01bf4987e0c105d45362572daf9e092e07e0",
+      "bytes": 597,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:37.179Z"
+    },
+    "AUR": {
+      "file": "aur.png",
+      "sha256": "31ad54c0ed24bab14ec2f3edee2e6cd21402d8299cf8ccea74b027ff7a7a3f5a",
+      "bytes": 1531,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:40.142Z"
+    },
+    "AVAV": {
+      "file": "avav.png",
+      "sha256": "bc376fcc601be4279f9904687e7b17bc66ed4aeca35033fb8e7799b0c62967d4",
+      "bytes": 1162,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:40.345Z"
+    },
+    "AVGO": {
+      "file": "avgo.png",
+      "sha256": "d94bc1d573d973597d8a8d4d4041b58aadc7c5ce08c27730fcacbc9dab87e94e",
+      "bytes": 847,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:40.536Z"
+    },
+    "AXON": {
+      "file": "axon.png",
+      "sha256": "b5eb36cc0193a932af2673093a35478762a1e80805acd44d9e5d4ff7597df228",
+      "bytes": 1139,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:40.718Z"
+    },
+    "AXTI": {
+      "file": "axti.png",
+      "sha256": "42dec0ac6a6edccdb485e4f954f58c04f2e6bddff65096e9f4421e298945cd4f",
+      "bytes": 1431,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:40.902Z"
+    },
+    "BA": {
+      "file": "ba.png",
+      "sha256": "f4350365c95e2be8a87899d455500574d49ee50e834d54244988153d2d56744a",
+      "bytes": 1199,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:41.076Z"
+    },
+    "BABA": {
+      "file": "baba.png",
+      "sha256": "03536800feb5ce9d71d97eb38d207312cd75b45262e7b93dfe81ee7e86b573c4",
+      "bytes": 1000,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:41.254Z"
+    },
+    "BB": {
+      "file": "bb.png",
+      "sha256": "9bac037a9ea742b9277e729609dacaeba916c2f1035c49fcc7fe36f53892bb0f",
+      "bytes": 875,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:41.436Z"
+    },
+    "BE": {
+      "file": "be.png",
+      "sha256": "0d7d153fdeb237d7739ccc75b11c582102a106526ceba25c1c9667cd39736269",
+      "bytes": 1266,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:41.622Z"
+    },
+    "BND": {
+      "file": "bnd.png",
+      "sha256": "5c0db1abb07429258b14cbedf68a4e26f7e004e68bd677eb1cea66a8d156daad",
+      "bytes": 994,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:41.811Z"
+    },
+    "BULL": {
+      "file": "bull.png",
+      "sha256": "57125fdb6dd5ec5a7328610ebdca18ddb2b992c96ce8dc410402a45a21bbbecd",
+      "bytes": 13988,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:42.031Z"
+    },
+    "CBRS": {
+      "file": "cbrs.png",
+      "sha256": "5223cc78e3c0224cb4b3b707cff03d9332ba071f5f65276cf2378435f78efe54",
+      "bytes": 1508,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:42.222Z"
+    },
+    "CCL": {
+      "file": "ccl.png",
+      "sha256": "eede72e8e89eea49ec1f32b2dd8f096def9c6b114ec1cd768f969d22bbafbb54",
+      "bytes": 1416,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:42.398Z"
+    },
+    "CEG": {
+      "file": "ceg.png",
+      "sha256": "457476fd310be0502ec7ff8d05d868350aada4c31b07eab3adc2044e1aabcc86",
+      "bytes": 3732,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:42.579Z"
+    },
+    "CELH": {
+      "file": "celh.png",
+      "sha256": "c2047b97fb7cc80c5d4e07586037671e9b9803bd62bbbf8d75c7ea76f6699c02",
+      "bytes": 5675,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:42.769Z"
+    },
+    "CIEN": {
+      "file": "cien.png",
+      "sha256": "478510e05f191ef2da627423c04cebff77ca1f9a45ab5e63aa81ff94ac0c166f",
+      "bytes": 931,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:42.949Z"
+    },
+    "CLOV": {
+      "file": "clov.png",
+      "sha256": "dd3ae5649b1de4f4287f6feb28955b669a94e686e6b610c6b2f7b3ffefd645bd",
+      "bytes": 7676,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:43.153Z"
+    },
+    "CLS": {
+      "file": "cls.png",
+      "sha256": "232f8765b2192846234a696e7df8dcfd569e0c0afedc353b83eaa1c10a577fbb",
+      "bytes": 1600,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:43.348Z"
+    },
+    "CLSK": {
+      "file": "clsk.png",
+      "sha256": "db95bab35f815b7147487db8d28f2b938cafd5e6165422ae83badbe057e4fd6b",
+      "bytes": 1050,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:43.533Z"
+    },
+    "COHR": {
+      "file": "cohr.png",
+      "sha256": "0adede12326356e4799f7afac3cadb9d04313e4e982b2d6de4524d3cc1b923bc",
+      "bytes": 3680,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "inset",
+      "retrievedAt": "2026-10-08T02:10:43.911Z"
+    },
+    "COIN": {
+      "file": "coin.png",
+      "sha256": "0bbe5e8a73e8e52c9b5c25e7cdbf97cd25fe77b4ef6771a38644877bf8cab546",
+      "bytes": 1063,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:44.103Z"
+    },
+    "COST": {
+      "file": "cost.png",
+      "sha256": "e334ef6b11e67f14323919eb5cc5ba95adb15e1144e8ea4a6dddd45236ead61f",
+      "bytes": 1489,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:44.288Z"
+    },
+    "CRCL": {
+      "file": "crcl.png",
+      "sha256": "2f896f7a08d098a4fbfeff30d1025aabef0334d8f0a13662f5a980d503b44291",
+      "bytes": 3765,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:44.842Z"
+    },
+    "CRDO": {
+      "file": "crdo.png",
+      "sha256": "87715657e6f1376fa8fcf7a544b35e70b8e3b9767cbed59746954bd22868217a",
+      "bytes": 1291,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:45.020Z"
+    },
+    "CRM": {
+      "file": "crm.png",
+      "sha256": "d0383a5e7399b10fcf4f173eb9bd00cfde849d843134356ccb426dedd66c0d15",
+      "bytes": 838,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:45.206Z"
+    },
+    "CRWD": {
+      "file": "crwd.png",
+      "sha256": "316f02fe692365aa66c895014507e58d88e533d7270d17fe2e1bad182899a114",
+      "bytes": 6740,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:45.398Z"
+    },
+    "CRWV": {
+      "file": "crwv.png",
+      "sha256": "79d3a7c09d9008776f495e2907d8090b53e0e14cd5a7fa054beab72507105af1",
+      "bytes": 18698,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:45.743Z"
+    },
+    "CSCO": {
+      "file": "csco.png",
+      "sha256": "cee02370a6e466e1912ea62998af7c3e1f7065bba3c3481b9489c8649de44a9c",
+      "bytes": 604,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:45.927Z"
+    },
+    "CTSH": {
+      "file": "ctsh.png",
+      "sha256": "3eb6e1a039612e053b5056e4da875105f3c35f1d1f0ff51be6611ee2d70ca374",
+      "bytes": 6894,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:46.124Z"
+    },
+    "CVNA": {
+      "file": "cvna.png",
+      "sha256": "0ff965be90dbb36cc217b90a06b7d358f2bb9c0cc790f56dd66a0af0166a27a0",
+      "bytes": 1154,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:46.300Z"
+    },
+    "DDOG": {
+      "file": "ddog.png",
+      "sha256": "91a587a1aae816d8d671f0b2f42356ca9418dccb1dd9e73651e0b954cfefbdeb",
+      "bytes": 1637,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:46.492Z"
+    },
+    "DELL": {
+      "file": "dell.png",
+      "sha256": "b77418a5bd3946ade901d1a4faf4bcddebe0be46d33cc4989925db029cbf4f77",
+      "bytes": 549,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:46.674Z"
+    },
+    "DJT": {
+      "file": "djt.webp",
+      "sha256": "6d0dbddc5b9ca8c6afb6060f85ded7e4cb885d9fc52feb9e1e151a54e3d980bb",
+      "bytes": 2774,
+      "contentType": "image/webp",
+      "plate": "light",
+      "art": "inset",
+      "retrievedAt": "2026-10-08T02:10:47.190Z"
+    },
+    "DOCN": {
+      "file": "docn.png",
+      "sha256": "36204d0e3dd2ace7026dcb248e910cd6fbf3fefa5e8ff1d53891fb8324132e66",
+      "bytes": 798,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:47.368Z"
+    },
+    "ELF": {
+      "file": "elf.png",
+      "sha256": "318ec4cad3c1cd14981add8877427d030e90574929aaa78acd12219268c875e3",
+      "bytes": 970,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:47.560Z"
+    },
+    "EWT": {
+      "file": "ewt.png",
+      "sha256": "e859fa32c1bc4e2fe613b94a75a859483888515697d3567630fb28b599ef729c",
+      "bytes": 917,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:47.741Z"
+    },
+    "EWY": {
+      "file": "ewy.png",
+      "sha256": "e859fa32c1bc4e2fe613b94a75a859483888515697d3567630fb28b599ef729c",
+      "bytes": 917,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:47.939Z"
+    },
+    "F": {
+      "file": "f.png",
+      "sha256": "161d5eb9b5d25607f088a8dee906e62dcf058ea0e52370e246a1c759125fc21d",
+      "bytes": 1240,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:48.132Z"
+    },
+    "FICO": {
+      "file": "fico.png",
+      "sha256": "04307d21e3baa23904b2987356fcdc19f8c7ac53ce3203a63a1f9ae6f380b9ab",
+      "bytes": 11309,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:48.337Z"
+    },
+    "FIG": {
+      "file": "fig.png",
+      "sha256": "71a91352436b8629838a287ce3a6c2f3390d6e7a6a75c62d0f583fd76985d02c",
+      "bytes": 2258,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "inset",
+      "retrievedAt": "2026-10-08T02:10:48.882Z"
+    },
+    "FISV": {
+      "file": "fisv.png",
+      "sha256": "f800200e12364ccf8a7387076827e7e549bec63062547c32cbdc53c47f8f566e",
+      "bytes": 7028,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:49.093Z"
+    },
+    "FIX": {
+      "file": "fix.png",
+      "sha256": "6a3005c353cd1d26cadeddf428b7296493a35fbded52e0e23ee744965c1b3868",
+      "bytes": 38448,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:49.377Z"
+    },
+    "FLNC": {
+      "file": "flnc.png",
+      "sha256": "969026283bd4ffe1c9c5b0ad5df800e242fbdad6811881e20a17ad0661de1378",
+      "bytes": 731,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:49.574Z"
+    },
+    "FLY": {
+      "file": "fly.webp",
+      "sha256": "6b06ca7b1a2bc0f3ab167e246d011353e8dfefcd9237e13785aa4bc083fa6dde",
+      "bytes": 2972,
+      "contentType": "image/webp",
+      "plate": "light",
+      "art": "inset",
+      "retrievedAt": "2026-10-08T02:10:49.756Z"
+    },
+    "FTNT": {
+      "file": "ftnt.png",
+      "sha256": "8b0f7e6d5369b3c1e76d7959f67cec8ac7b1482ae52240073541873a61300d93",
+      "bytes": 614,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:49.941Z"
+    },
+    "FUTU": {
+      "file": "futu.png",
+      "sha256": "7228f0cbe706db7b1d4b88536d4e75fbe6abc630eb07467a1f926e0897297537",
+      "bytes": 3970,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:50.129Z"
+    },
+    "GE": {
+      "file": "ge.png",
+      "sha256": "f4f63aad09460647a0eb603026ce383f7babf25e49430c12fbd6b44759d64cab",
+      "bytes": 2383,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:50.308Z"
+    },
+    "GEV": {
+      "file": "gev.png",
+      "sha256": "6456d9da043c87010d030033c7ac36eb8ff6a88d059de55fee7face643a175db",
+      "bytes": 3231,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:50.496Z"
+    },
+    "GLD": {
+      "file": "gld.png",
+      "sha256": "0647e693da95a106fa6b275d2487764bbdc9ecea40dc9b72c5fe887d0773b47e",
+      "bytes": 804,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:50.682Z"
+    },
+    "GLW": {
+      "file": "glw.png",
+      "sha256": "b00e37f6b06dc0361619ce6835ce3c97fa9b33c094c7c587746047c77f034696",
+      "bytes": 862,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:50.862Z"
+    },
+    "GLXY": {
+      "file": "glxy.png",
+      "sha256": "b2b246dcd68f03541ec7ca420ddbeff970b10d451d5058de7fd14aa6c2fc8f1b",
+      "bytes": 7046,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:51.421Z"
+    },
+    "GME": {
+      "file": "gme.png",
+      "sha256": "bee722c12d9cc30eb720c802904a5753641cc10abb4827252ac2d670d7d190df",
+      "bytes": 888,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:51.596Z"
+    },
+    "GOOGL": {
+      "file": "googl.png",
+      "sha256": "242990035f6bd35bf736ad7338d40a6cc3ec2d36c20bb60d99555b81af739553",
+      "bytes": 9283,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:51.822Z"
+    },
+    "HII": {
+      "file": "hii.png",
+      "sha256": "741c92218e48c249da19aebf884c192743671a66694e0c32d64d2e92c6195498",
+      "bytes": 2591,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:52.014Z"
+    },
+    "HIMS": {
+      "file": "hims.png",
+      "sha256": "a38dcd5c5a30d9aca0d5c9a8a2ad8bf22f6abc516350c6be8f29728636914307",
+      "bytes": 901,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:52.192Z"
+    },
+    "HPE": {
+      "file": "hpe.png",
+      "sha256": "cf178a3e80b702477fa1b3b600e0d5fad2a3a5a174c50f40c969cfa88c9e902b",
+      "bytes": 599,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:52.369Z"
+    },
+    "HWM": {
+      "file": "hwm.png",
+      "sha256": "965bbedc5e6362997c21e394506b384242100c76e260b0aca792a61b26eb23b4",
+      "bytes": 19121,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:52.594Z"
+    },
+    "IBM": {
+      "file": "ibm.png",
+      "sha256": "dee72d0fad0abfedbfde5a682a489015651ff9c950c64ac1a529802a280d9dd7",
+      "bytes": 793,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:52.777Z"
+    },
+    "IBRX": {
+      "file": "ibrx.png",
+      "sha256": "151168e8e6f15d4c2afd944ca2a34b6d3ad30d0ecf90f55000ca78c1cd7e88f6",
+      "bytes": 1069,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:52.958Z"
+    },
+    "INDA": {
+      "file": "inda.png",
+      "sha256": "e859fa32c1bc4e2fe613b94a75a859483888515697d3567630fb28b599ef729c",
+      "bytes": 917,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:53.137Z"
+    },
+    "INFQ": {
+      "file": "infq.png",
+      "sha256": "b7d3841feeb2a5164b903b56181fbaf489d4a293e6fa93003f99499b5b09ae8e",
+      "bytes": 3612,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:53.531Z"
+    },
+    "INOD": {
+      "file": "inod.png",
+      "sha256": "4070b1d0be524347f079fbfd996687c90a5afc231bc50c14a67d77a339063554",
+      "bytes": 31316,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:53.817Z"
+    },
+    "INTC": {
+      "file": "intc.png",
+      "sha256": "a07a6c1673165e0449df5dc9d4bdac92b72c6e4e99c1dd696e314ffea8178046",
+      "bytes": 825,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:54.004Z"
+    },
+    "INTU": {
+      "file": "intu.png",
+      "sha256": "fc8ef2bc3e08b2bf55e4df5d51609c5feae7de54edad754f5e85f9f9c8514b0c",
+      "bytes": 665,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:54.190Z"
+    },
+    "IONQ": {
+      "file": "ionq.png",
+      "sha256": "8bcfd701aaeaa2898625b4b96c44a6a2641b0495cdc8e2761e5cf815ccc2a6f8",
+      "bytes": 6443,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "inset",
+      "retrievedAt": "2026-10-08T02:10:54.379Z"
+    },
+    "IREN": {
+      "file": "iren.png",
+      "sha256": "1aab5074233833cae0089f6cc048b60a94ad05fece26e5cb77ddf8cf057b5a1e",
+      "bytes": 6941,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:54.573Z"
+    },
+    "JBL": {
+      "file": "jbl.png",
+      "sha256": "8272edd61dbb0641a84f6f228e7f73acdb325528b8bbdffafee40f0768e12aec",
+      "bytes": 1681,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:54.755Z"
+    },
+    "JNJ": {
+      "file": "jnj.png",
+      "sha256": "f19ca41e42472fa345366b5a39119c437b389003713a819b805c681c10a6cecd",
+      "bytes": 994,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:54.928Z"
+    },
+    "JOBY": {
+      "file": "joby.png",
+      "sha256": "538458b3bf0ec006271e4afc5667f23f81a3809e915c25a2ffd25a2afa891a6f",
+      "bytes": 1103,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:55.125Z"
+    },
+    "KLAC": {
+      "file": "klac.png",
+      "sha256": "695f9231ecb4e87a9e621506e05be093174428d5e7b6b5b51d569659d6dc64b6",
+      "bytes": 372,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:55.306Z"
+    },
+    "KSS": {
+      "file": "kss.png",
+      "sha256": "2a18b3d10a76dd2ea855fdea09ebe2438613c6e15198a318756c998db090cfeb",
+      "bytes": 732,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:55.488Z"
+    },
+    "KTOS": {
+      "file": "ktos.png",
+      "sha256": "c6d2ab14300542e8cd844414eb958d3f7655b2437a3f64069ec6e2ec43186ed7",
+      "bytes": 31832,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:55.755Z"
+    },
+    "LHX": {
+      "file": "lhx.png",
+      "sha256": "a10070fcf8cd0f9d5d5a8e16b25099294c738491252dcc96c78d78810d1b3de2",
+      "bytes": 3965,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "inset",
+      "retrievedAt": "2026-10-08T02:10:55.937Z"
+    },
+    "LITE": {
+      "file": "lite.png",
+      "sha256": "c2a4123b08f1184cea7cd75ed97483c9324654b0bbb8c4ec2251f386346cea73",
+      "bytes": 7328,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:56.134Z"
+    },
+    "LLY": {
+      "file": "lly.png",
+      "sha256": "935261193cd5ee3e47948d7e470d989a81e3b8a4e23cebf3f5de0b49516e8a3a",
+      "bytes": 1248,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:56.312Z"
+    },
+    "LMT": {
+      "file": "lmt.png",
+      "sha256": "668a664cd3be0e5054bb0a55ef074cff5aac039105cf5f824aa1363356ba8dd6",
+      "bytes": 971,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:56.488Z"
+    },
+    "LRCX": {
+      "file": "lrcx.png",
+      "sha256": "903fcfe4b631caabf9bab411e5ec02d2e39d39039a8e91d23acf397a7c2cb7b4",
+      "bytes": 3203,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:56.678Z"
+    },
+    "LULU": {
+      "file": "lulu.png",
+      "sha256": "79fa442601f214f18f4c6317ae87c2b5f9ade74d9de17897eddc1b7fb41bd31f",
+      "bytes": 1046,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:56.856Z"
+    },
+    "LUNR": {
+      "file": "lunr.png",
+      "sha256": "4bde9c6b95c7c4f5cf755c61895467df8a4d10fb9a5ed48868d328ca8221f5c9",
+      "bytes": 1105,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:57.040Z"
+    },
+    "MDB": {
+      "file": "mdb.png",
+      "sha256": "2fa75dcaf47ad86e12e2e4c98061bf91d957906543321186941cd3fece3a896c",
+      "bytes": 891,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:57.226Z"
+    },
+    "META": {
+      "file": "meta.png",
+      "sha256": "2923a82bf2c2dd6ba64e8a11c1bec9493a38e419b382f6d2890ae152ad3274c0",
+      "bytes": 2661,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:57.407Z"
+    },
+    "MOD": {
+      "file": "mod.png",
+      "sha256": "37242de3a3d935e3fe053cc8f77cd5d3151d78be40d7e726836b145aa671f507",
+      "bytes": 23737,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:57.755Z"
+    },
+    "MPWR": {
+      "file": "mpwr.png",
+      "sha256": "434e6e8baa6fa82fa60271679b8fc807ca822ee1a72e3348d6fb2895f4456c38",
+      "bytes": 5396,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:57.953Z"
+    },
+    "MRNA": {
+      "file": "mrna.png",
+      "sha256": "8fff4a38b5f4ea586a201b29b83e39406d9954df1263f94f3356c18f9d67aba6",
+      "bytes": 1278,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:58.150Z"
+    },
+    "MRVL": {
+      "file": "mrvl.webp",
+      "sha256": "cf839c7e42995058c8d5a90af9afb01c30e74352dfbd9c5fff8047a6118f2105",
+      "bytes": 2036,
+      "contentType": "image/webp",
+      "plate": "light",
+      "art": "inset",
+      "retrievedAt": "2026-10-08T02:10:58.675Z"
+    },
+    "MSFT": {
+      "file": "msft.png",
+      "sha256": "b0c2e5914cd62d4adc2c3dbea5321be1a3ddc0a8b6e0259df3c32d116985c78e",
+      "bytes": 444,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:58.862Z"
+    },
+    "MSTR": {
+      "file": "mstr.png",
+      "sha256": "40df415c9295c343d8213376fc6d27ece59e93132e01889df9730521e06a891a",
+      "bytes": 994,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:59.036Z"
+    },
+    "MTSI": {
+      "file": "mtsi.png",
+      "sha256": "db58303fa7619686a452a22a9bc6a87ce386a4e214ecd058d85af405be76d19b",
+      "bytes": 19560,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:59.275Z"
+    },
+    "MU": {
+      "file": "mu.png",
+      "sha256": "7ad7e7ed3a1b4a10c48c7f5a83cd743222b1682ae5953e7feeb94bba6bda1ed8",
+      "bytes": 701,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:59.455Z"
+    },
+    "MXL": {
+      "file": "mxl.png",
+      "sha256": "2e6206b4db42f1307e99d30697414ce9c97e5d746c3d4629580c0ba0fd6d7ee3",
+      "bytes": 7648,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:10:59.650Z"
+    },
+    "NAVN": {
+      "file": "navn.png",
+      "sha256": "deab9025d61eefc5e625bb145a4f75cf311dff318207f5297e4b57b7f60d4bd9",
+      "bytes": 4028,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:02.478Z"
+    },
+    "NBIS": {
+      "file": "nbis.png",
+      "sha256": "8d266df984cb901f0cc11ca094949c5bb29390e5e704f68e85b045a694e55da0",
+      "bytes": 1049,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:02.673Z"
+    },
+    "NET": {
+      "file": "net.png",
+      "sha256": "5bbcebedfe165cc574676a53592a29b51c5331434b6b743e1453ed6ba09bb3a6",
+      "bytes": 819,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:02.854Z"
+    },
+    "NFLX": {
+      "file": "nflx.png",
+      "sha256": "156350968ac3a86f1bb294592eaa6cc8d41988f0a0e54e4cc3342b6bd415a632",
+      "bytes": 2140,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:03.196Z"
+    },
+    "NNE": {
+      "file": "nne.png",
+      "sha256": "a1b9bf9ed47db010b0612475de59b3a4f6a9b660f6f153f60b9ca77bbfdebf9d",
+      "bytes": 30052,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "inset",
+      "retrievedAt": "2026-10-08T02:11:03.564Z"
+    },
+    "NOW": {
+      "file": "now.png",
+      "sha256": "5d1c2d713f3ed554e0d70db777e1bd2d96fb709ddc3253c3e3365fc0d6f8b9aa",
+      "bytes": 17590,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "inset",
+      "retrievedAt": "2026-10-08T02:11:03.774Z"
+    },
+    "NU": {
+      "file": "nu.png",
+      "sha256": "9babab9521b0a846d60bcaefecd15fd589ff03f4b8055266e9e5ee12ef109654",
+      "bytes": 816,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:03.971Z"
+    },
+    "NVDA": {
+      "file": "nvda.png",
+      "sha256": "2fcc2b17f57c3dbd4c518fb299c9fee02b133b5ffab19adca5748b9b02d8c55a",
+      "bytes": 1196,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:04.140Z"
+    },
+    "NVTS": {
+      "file": "nvts.png",
+      "sha256": "6a75f9a3529bd9eace5fb023c6d88d0b897a3893b348eebbdbf55dbc39552373",
+      "bytes": 1052,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:04.316Z"
+    },
+    "OKLO": {
+      "file": "oklo.png",
+      "sha256": "b7e05f550f880cabe8dc799c7bda549e2e13ab644b92c9425db6cd6d4c7e2313",
+      "bytes": 2187,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:04.496Z"
+    },
+    "ON": {
+      "file": "on.png",
+      "sha256": "3edbfeb0f78ba583ddbf7f26bdf697c849c723efa38a71c4bb0bcdf2f1240941",
+      "bytes": 905,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:04.671Z"
+    },
+    "ONTO": {
+      "file": "onto.png",
+      "sha256": "602b9f4ca63c2a96ea6ebd72ece235319219c00311e8f7ae1191bc3fc1af6c81",
+      "bytes": 5203,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:04.860Z"
+    },
+    "ORCL": {
+      "file": "orcl.png",
+      "sha256": "9b9160ce8091a2e8162738a2d06978ff3482242aa097a67767cbde843f3b5b9f",
+      "bytes": 690,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "inset",
+      "retrievedAt": "2026-10-08T02:11:05.033Z"
+    },
+    "OUST": {
+      "file": "oust.png",
+      "sha256": "e80c4f2182b240ab4256876ae19abdffd470485cabfc6f5bff13bd1717f8e1b3",
+      "bytes": 9670,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "inset",
+      "retrievedAt": "2026-10-08T02:11:05.233Z"
+    },
+    "P": {
+      "file": "p.png",
+      "sha256": "e74f009797c55a7479c39d2e222a466435dc4c6818ac9c9f909d5e670b8bdfd7",
+      "bytes": 6218,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:05.821Z"
+    },
+    "PANW": {
+      "file": "panw.png",
+      "sha256": "15e7f5755e442462bf014ac49274fd1bc7aea7c715bc9ed48908922615ea9034",
+      "bytes": 2088,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:06.010Z"
+    },
+    "PATH": {
+      "file": "path.png",
+      "sha256": "bd1069f560216b5928171b00d0b74a5e309fdf6c00d03f925e17d16f2b71e460",
+      "bytes": 1098,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:06.188Z"
+    },
+    "PENG": {
+      "file": "peng.png",
+      "sha256": "91c7a345640d149569af72995929a5a8f12d5a8838a851c0f3340196affc610d",
+      "bytes": 8071,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:06.390Z"
+    },
+    "PFE": {
+      "file": "pfe.png",
+      "sha256": "791ccbf4916855727c398f49c2280001cf481f7ccee7effbd2589e084e93a22f",
+      "bytes": 1393,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:06.573Z"
+    },
+    "PL": {
+      "file": "pl.png",
+      "sha256": "92b0d876cfc161bb82d7671f1548039893710ea6cd94461626f0a5ffe0a17e6d",
+      "bytes": 4498,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "inset",
+      "retrievedAt": "2026-10-08T02:11:06.793Z"
+    },
+    "PLTR": {
+      "file": "pltr.png",
+      "sha256": "73a4a5aa8a821726ea37c7d06cd809366dfff6fd672dd83710007e0dd5930230",
+      "bytes": 1090,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:06.973Z"
+    },
+    "POET": {
+      "file": "poet.png",
+      "sha256": "137fd5a5ccca7bcedb2fe01daade6f50995ddb48aa03e37a8e8037ccbbc459aa",
+      "bytes": 2236,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:07.159Z"
+    },
+    "POWL": {
+      "file": "powl.png",
+      "sha256": "85a6b07697125756da762b3b35928964ee5c4006fd43bc17834b675b002955b9",
+      "bytes": 6942,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:07.508Z"
+    },
+    "PR": {
+      "file": "pr.png",
+      "sha256": "784818ca896a940572cf5e20f669c93ac8ef7048f794c7e276168caaafe0ec61",
+      "bytes": 12885,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "inset",
+      "retrievedAt": "2026-10-08T02:11:07.713Z"
+    },
+    "PWR": {
+      "file": "pwr.png",
+      "sha256": "fd04c84b23f2769112fbb21b6b207e097a013a8b23206d9cc9b8f6ff123d948a",
+      "bytes": 13129,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "inset",
+      "retrievedAt": "2026-10-08T02:11:07.923Z"
+    },
+    "QBTS": {
+      "file": "qbts.png",
+      "sha256": "a87eee33e7a3b5c73aaf937484a5b0743db7484d481a925bac100da25e1d7c55",
+      "bytes": 816,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:08.106Z"
+    },
+    "QCOM": {
+      "file": "qcom.png",
+      "sha256": "6b0d2d2bbbee210040e41661a5b41e565f53f311acb35732d0178ac8cc0939b8",
+      "bytes": 1123,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:08.280Z"
+    },
+    "QQQ": {
+      "file": "qqq.png",
+      "sha256": "3ec4f670dc08346af970bec328815e954ff015bf0906e3ed36b43f662257724e",
+      "bytes": 985,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:08.460Z"
+    },
+    "QUBT": {
+      "file": "qubt.png",
+      "sha256": "2ca9b9e1f7d7fc76b6eaf51fcccf6654a5348c82f6d167eb59df828363de40f9",
+      "bytes": 15908,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:08.672Z"
+    },
+    "RBLX": {
+      "file": "rblx.png",
+      "sha256": "baecd6d17a8bbecf932d524ad96d9c1e47edf747a4e082e8948214bed451e8b4",
+      "bytes": 864,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:08.859Z"
+    },
+    "RCAT": {
+      "file": "rcat.png",
+      "sha256": "e910ebf89af066506bf3a66f851f1fd7c4bf2ca2aab9959680efe947952946a4",
+      "bytes": 9678,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:09.205Z"
+    },
+    "RDDT": {
+      "file": "rddt.png",
+      "sha256": "e9719ab153aede5ce5c634abe0e681ade09ee5dd5b39a891c39ddf8b143e606d",
+      "bytes": 2760,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:09.393Z"
+    },
+    "RDW": {
+      "file": "rdw.png",
+      "sha256": "d835403b54e5127bd2d6726ec7fe88eba8f58a923b883c0699042ee5837879d8",
+      "bytes": 6669,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "inset",
+      "retrievedAt": "2026-10-08T02:11:09.597Z"
+    },
+    "RGTI": {
+      "file": "rgti.png",
+      "sha256": "12153a2bc9e49567159ddae15602ae35b549e8520c26abad545c64ce24006628",
+      "bytes": 5467,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:09.783Z"
+    },
+    "RIVN": {
+      "file": "rivn.png",
+      "sha256": "82b6648f95d79ad893f92a66c143541badaf2b6bf6b560a3a66b47a2e25ec453",
+      "bytes": 8280,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:09.990Z"
+    },
+    "RKLB": {
+      "file": "rklb.png",
+      "sha256": "328e4942d56efb6657dd50d04594c272e8ba30fea514ee50b785bdecb0002f3f",
+      "bytes": 1269,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:10.176Z"
+    },
+    "RUN": {
+      "file": "run.png",
+      "sha256": "b5458f761e74531cf4e15e27dc065f1fa874b717f59fce3e068d7ada082b8da8",
+      "bytes": 3045,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:10.377Z"
+    },
+    "SATS": {
+      "file": "sats.png",
+      "sha256": "fbe0fc054d44ebf77c37e8f076bad481820bea9d5f6f7722ee9c6598f49cea8f",
+      "bytes": 25373,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:10.708Z"
+    },
+    "SCHD": {
+      "file": "schd.png",
+      "sha256": "6c0d5bba047aeeb65a286c64701b64381bbc25cfad7b5a650b37fa69a400677e",
+      "bytes": 36560,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:10.967Z"
+    },
+    "SGOV": {
+      "file": "sgov.png",
+      "sha256": "e859fa32c1bc4e2fe613b94a75a859483888515697d3567630fb28b599ef729c",
+      "bytes": 917,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:11.229Z"
+    },
+    "SHOP": {
+      "file": "shop.png",
+      "sha256": "da7cfc44edc01e60efa3946193d9bcf6119f8ad7aa48327fffbd5a6d82f8cd91",
+      "bytes": 1404,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:11.451Z"
+    },
+    "SHY": {
+      "file": "shy.png",
+      "sha256": "e859fa32c1bc4e2fe613b94a75a859483888515697d3567630fb28b599ef729c",
+      "bytes": 917,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:11.639Z"
+    },
+    "SIMO": {
+      "file": "simo.png",
+      "sha256": "a308aad7961814c62b454e7b59741e2b8b29f184011876a964b258a97a85ba0a",
+      "bytes": 2179,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:11.835Z"
+    },
+    "SKHY": {
+      "file": "skhy.png",
+      "sha256": "943239f1aa19431f45946c581dcfd81aa1782f6296710d382e36caf41c033693",
+      "bytes": 10300,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "inset",
+      "retrievedAt": "2026-10-08T02:11:14.892Z"
+    },
+    "SLS": {
+      "file": "sls.png",
+      "sha256": "5105cc48c19bd3aee78171444d7fa5691c3433e39adf89252f3ffd5ce5d84e21",
+      "bytes": 638,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:15.069Z"
+    },
+    "SLV": {
+      "file": "slv.png",
+      "sha256": "e859fa32c1bc4e2fe613b94a75a859483888515697d3567630fb28b599ef729c",
+      "bytes": 917,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:15.255Z"
+    },
+    "SMCI": {
+      "file": "smci.png",
+      "sha256": "192ec32f16867138eb87cd9d00de0f3ec627a2273eb03d6ce4556888d80dd00d",
+      "bytes": 1604,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:15.427Z"
+    },
+    "SMH": {
+      "file": "smh.png",
+      "sha256": "83f90086660846cb8ffb7e347416314d81c944d8b4e6316753206ae289ee5248",
+      "bytes": 978,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:15.606Z"
+    },
+    "SMR": {
+      "file": "smr.png",
+      "sha256": "102e61930d008861901a552cb21bd795bd57019810427d2452e6db1f848468a1",
+      "bytes": 1214,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:15.795Z"
+    },
+    "SNAP": {
+      "file": "snap.png",
+      "sha256": "a2a95fee8c24e4c1ef6d6eed830f3c1b0d054ad92145d7739fda47e5190d4f28",
+      "bytes": 1325,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:15.966Z"
+    },
+    "SNDK": {
+      "file": "sndk.png",
+      "sha256": "0db38df5f7b5a7cffa633597eaa88c48dc89845a997e2e27c00352c84c4772ef",
+      "bytes": 11680,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:16.174Z"
+    },
+    "SNOW": {
+      "file": "snow.png",
+      "sha256": "359527abd80d172574935a7596de46e3432a472aae34378fe5e5f6a1b6cc9985",
+      "bytes": 16565,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:16.389Z"
+    },
+    "SOFI": {
+      "file": "sofi.png",
+      "sha256": "c6117c2961041554ddfe1e25d2fe8c31454629dc6d6ae1ac57c6cccfe555d3fe",
+      "bytes": 22674,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "inset",
+      "retrievedAt": "2026-10-08T02:11:16.957Z"
+    },
+    "SOUN": {
+      "file": "soun.png",
+      "sha256": "f2f4c47e051ccb4f6d9bc9cefb78a1e8668c23ae45245db68877be80d6f0c930",
+      "bytes": 814,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:17.155Z"
+    },
+    "SOXX": {
+      "file": "soxx.png",
+      "sha256": "e859fa32c1bc4e2fe613b94a75a859483888515697d3567630fb28b599ef729c",
+      "bytes": 917,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:17.357Z"
+    },
+    "SPCX": {
+      "file": "spcx.png",
+      "sha256": "0683fd320c580c782f6965d046e8f7d74c55ca387845416a68be77886c418b9a",
+      "bytes": 2562,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:17.735Z"
+    },
+    "SPMO": {
+      "file": "spmo.png",
+      "sha256": "3ec4f670dc08346af970bec328815e954ff015bf0906e3ed36b43f662257724e",
+      "bytes": 985,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:17.917Z"
+    },
+    "SPY": {
+      "file": "spy.png",
+      "sha256": "0647e693da95a106fa6b275d2487764bbdc9ecea40dc9b72c5fe887d0773b47e",
+      "bytes": 804,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:18.098Z"
+    },
+    "TE": {
+      "file": "te.png",
+      "sha256": "67d8c340e88db84c0609363aaca82fbcef43854e8f0d728454504e66a373a958",
+      "bytes": 473,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:18.296Z"
+    },
+    "TEAM": {
+      "file": "team.png",
+      "sha256": "1efe9e22b1c4c65c81ed51baf30aa9f789bb5e31076f79e2688d8855df270099",
+      "bytes": 3281,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:18.487Z"
+    },
+    "TEM": {
+      "file": "tem.png",
+      "sha256": "fe7cc211bea6ec3889d166896910b61d367faf724642c5be1ffe2e1387e5f0fe",
+      "bytes": 6237,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "inset",
+      "retrievedAt": "2026-10-08T02:11:18.678Z"
+    },
+    "TER": {
+      "file": "ter.png",
+      "sha256": "7b7a3354a55aa7d89e7a33008426aef2e5acbaf8ce799f9558c94bf0305338ac",
+      "bytes": 16432,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:18.895Z"
+    },
+    "TSEM": {
+      "file": "tsem.png",
+      "sha256": "a7f039b5f7aabef03faa6884f7c08155659216e7ce7fa184d1ef54fba129e45f",
+      "bytes": 10860,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:19.103Z"
+    },
+    "TSLA": {
+      "file": "tsla.png",
+      "sha256": "fd80d188bc6a7412ca60846ae688124fa13bc2d796134873f76d9ae9aace4a98",
+      "bytes": 1005,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:19.288Z"
+    },
+    "TSM": {
+      "file": "tsm.png",
+      "sha256": "1de72dfdd036f8484f8b64efa5db04bbd3fb204d8dc854ad964cd58f0eac599c",
+      "bytes": 1041,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:19.468Z"
+    },
+    "TTD": {
+      "file": "ttd.png",
+      "sha256": "43fcf2543b09ebb7755ea72ba2a148ae90bb45e52ca37eda32e8924e83223f1b",
+      "bytes": 1100,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:19.657Z"
+    },
+    "TTWO": {
+      "file": "ttwo.png",
+      "sha256": "14eaaa418f90949825d03fe76f0890de460e48393d523baca375b7083cd09348",
+      "bytes": 850,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:19.840Z"
+    },
+    "UMC": {
+      "file": "umc.png",
+      "sha256": "7fd48ccb8038fef80fc8d6c7c033149a56717f33d0a40c5c579c0a1748b50b5d",
+      "bytes": 3317,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:20.036Z"
+    },
+    "UNH": {
+      "file": "unh.png",
+      "sha256": "288771592e51c4c520ecefad852b871839ded33b7e2fb2b4f4da853bf195e106",
+      "bytes": 4311,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:20.225Z"
+    },
+    "UPS": {
+      "file": "ups.png",
+      "sha256": "1dc667676f7adec5d34413cefed1fcaf54e3c5c7e3ce548cb3506828181bcbf2",
+      "bytes": 1323,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:20.408Z"
+    },
+    "USAR": {
+      "file": "usar.png",
+      "sha256": "2a846d5cd6c9f457b8da9b049e5e3affcef4a65a9ca9601844cb1816031b6bd0",
+      "bytes": 25815,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:20.646Z"
+    },
+    "USDG": {
+      "file": "usdg.png",
+      "sha256": "f398f6aad2fe260847cda3d99336fd2a514766f14634f8f1a3c255d218d4a4c3",
+      "bytes": 21396,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "inset",
+      "retrievedAt": "2026-10-08T02:11:27.225Z"
+    },
+    "USO": {
+      "file": "uso.png",
+      "sha256": "0c38ec9e3b13652fadb4091c93fede0ba4fe0ecae8b67d22555506e7e475ed7b",
+      "bytes": 9420,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "inset",
+      "retrievedAt": "2026-10-08T02:11:20.847Z"
+    },
+    "VICR": {
+      "file": "vicr.png",
+      "sha256": "a58fa64f9f1c2a76b5e7d038457d9cda291fab2d72dd5c65f4bea96210f3a614",
+      "bytes": 15610,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:21.063Z"
+    },
+    "VRT": {
+      "file": "vrt.png",
+      "sha256": "b799bab2867c26bc12093e0a71f7684223998baebdc2e368afd4117f97d918d9",
+      "bytes": 1930,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:21.245Z"
+    },
+    "VSAT": {
+      "file": "vsat.png",
+      "sha256": "360140486592bc3670ba8cbd89012918f4bfef6f4355ae08ea828d464ba27861",
+      "bytes": 14884,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:21.449Z"
+    },
+    "VST": {
+      "file": "vst.png",
+      "sha256": "8790f964d7e536a16a04a2fc9f5ee038443128e1fe5cf52f3852806284ccccbd",
+      "bytes": 1018,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:21.630Z"
+    },
+    "VTI": {
+      "file": "vti.png",
+      "sha256": "5c0db1abb07429258b14cbedf68a4e26f7e004e68bd677eb1cea66a8d156daad",
+      "bytes": 994,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:21.816Z"
+    },
+    "WDAY": {
+      "file": "wday.png",
+      "sha256": "08f4f6ec9f99c1131238b814844fc96e0b1178deff0bda685e8f84c4a5d955ab",
+      "bytes": 1340,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:21.997Z"
+    },
+    "WDC": {
+      "file": "wdc.png",
+      "sha256": "dd987834ace4de0b12d5ae4a48904696874991c33f5be05cf43f3780d237d99d",
+      "bytes": 5793,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:22.188Z"
+    },
+    "WULF": {
+      "file": "wulf.png",
+      "sha256": "4e1f07f5e7b5c6be6d4b9025e3cf35ec459b800def87cf4856689aa1021173bc",
+      "bytes": 5827,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:22.513Z"
+    },
+    "WYFI": {
+      "file": "wyfi.png",
+      "sha256": "6546340b92f7c1bcb0df636bd27991e7bde36233276b9f11c8059a7f349ab327",
+      "bytes": 2017,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:25.370Z"
+    },
+    "XLK": {
+      "file": "xlk.png",
+      "sha256": "0647e693da95a106fa6b275d2487764bbdc9ecea40dc9b72c5fe887d0773b47e",
+      "bytes": 804,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:25.548Z"
+    },
+    "XNDU": {
+      "file": "xndu.png",
+      "sha256": "66aa63b5a65964ea3418c5177a0c4a2bc223fea36d1ba323c68c501e3336f8c9",
+      "bytes": 3478,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:25.942Z"
+    },
+    "XOM": {
+      "file": "xom.png",
+      "sha256": "89c95feb455e6c37b734850ca73adac2a31e99d9c64e53482320028f81a5b236",
+      "bytes": 939,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:26.130Z"
+    },
+    "ZM": {
+      "file": "zm.png",
+      "sha256": "8c9451e9a4a6783bffa9d8ff72fd87ae886731d2652ea0d8dd547a5ea422d9a0",
+      "bytes": 923,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:26.308Z"
+    },
+    "ZS": {
+      "file": "zs.png",
+      "sha256": "000f733af9d7c6d6eda046b18b2e642a56ae8628815f76ec0388506013fcdb60",
+      "bytes": 984,
+      "contentType": "image/png",
+      "plate": "light",
+      "art": "full",
+      "retrievedAt": "2026-10-08T02:11:26.492Z"
+    }
+  }
+}

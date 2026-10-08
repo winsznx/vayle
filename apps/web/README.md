@@ -23,7 +23,7 @@ Underneath, every target is a fully collateralized, physically settled weekly op
 
 A build that names no market contract, as the site does before the contracts are deployed, shows a page at `/app/` that says Vayle isn't open yet.
 
-Both pages take their colours, type, symbol and icons from [`packages/brand`](../../packages/brand). Every token appears as a ticker badge, its ticker in a styled badge, and never as a company's or issuer's artwork. They follow the system's light or dark setting, and the theme toggle overrides it for that browser.
+Both pages take their colours, type, symbol and icons from [`packages/brand`](../../packages/brand). Every asset shows its real logo from the brand package's pinned files, served at `/logos/`: a Stock Token the mark of the company or fund it tracks, USDG its own. They follow the system's light or dark setting, and the theme toggle overrides it for that browser.
 
 ## Markets
 

@@ -9,12 +9,14 @@
     "./ticker.css": "./css/ticker.css",
     "./mark": "./src/mark.ts",
     "./cards": "./social/cards.ts",
-    "./brand.json": "./brand.json"
+    "./brand.json": "./brand.json",
+    "./logos/manifest.json": "./logos/manifest.json"
   },
   "scripts": {
     "test": "node --test \"test/*.test.ts\"",
     "social": "node scripts/render-social.ts",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "sync-logos": "node scripts/sync-logos.ts"
   },
   "devDependencies": {
     "@fontsource-variable/plus-jakarta-sans": "5.3.0",

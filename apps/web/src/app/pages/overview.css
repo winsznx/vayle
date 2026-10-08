@@ -211,7 +211,8 @@ a.ov-name:hover .ov-name-text,
 }
 
 /* The market the event is about, ahead of what happened. */
-.ov-event-title .ticker {
+.ov-event-title .ticker,
+.ov-event-title .logo-labeled {
   margin-right: 8px;
   vertical-align: 1px;
 }

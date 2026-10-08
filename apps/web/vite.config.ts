@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv, type Plugin } from "vite";
-import { ogImages, rpcProxy } from "./build/plugins.ts";
+import { ogImages, rpcProxy, tokenLogos } from "./build/plugins.ts";
 
 // `vite --mode fork` only, and only on the dev server: stands in for the owner's disclosures so the
 // ticket can be tried against a local fork. Builds never include it.
@@ -58,7 +58,13 @@ const page = (path: string): string => fileURLToPath(new URL(path, import.meta.u
 export default defineConfig(({ mode }) => {
   const repoEnv = loadEnv(mode, fileURLToPath(new URL("../..", import.meta.url)), "");
   return {
-    plugins: [react(), appRoutes(), ogImages(), ...(mode === "fork" ? [forkDisclosures()] : [])],
+    plugins: [
+      react(),
+      appRoutes(),
+      ogImages(),
+      tokenLogos(),
+      ...(mode === "fork" ? [forkDisclosures()] : []),
+    ],
     // The wallet libraries resolve viem with a different peer set than the workspace packages. One
     // copy keeps the bundle smaller and viem's error classes the same everywhere.
     resolve: { dedupe: ["viem"] },

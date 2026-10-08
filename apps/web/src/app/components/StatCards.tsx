@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { TickerBadge } from "../../ui/TickerBadge.tsx";
+import { TokenLogo } from "../../ui/TokenLogo.tsx";
 import { dollars, easternClock, easternTime, feedDollars } from "../format.ts";
 import type { AssetView } from "../useMarket.ts";
 import {
@@ -46,7 +46,7 @@ export function WeekCard({ asset, now }: { readonly asset: AssetView; readonly n
     return (
       <article className="card stat stat-week">
         <div className="stat-head">
-          <TickerBadge symbol={symbol} size="lg" />
+          <TokenLogo symbol={symbol} size="lg" />
           <div>
             <p className="stat-title">{symbol}</p>
             <p className="stat-note">Its first week hasn&apos;t opened yet</p>
@@ -63,7 +63,7 @@ export function WeekCard({ asset, now }: { readonly asset: AssetView; readonly n
   return (
     <article className="card stat stat-week">
       <div className="stat-head">
-        <TickerBadge symbol={symbol} size="lg" />
+        <TokenLogo symbol={symbol} size="lg" />
         <div>
           <p className="stat-title">{symbol}</p>
           <p className="stat-note">{stageNote(e, now)}</p>

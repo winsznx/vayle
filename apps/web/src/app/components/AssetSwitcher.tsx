@@ -1,4 +1,4 @@
-import { TickerBadge } from "../../ui/TickerBadge.tsx";
+import { TokenLogo } from "../../ui/TokenLogo.tsx";
 import { useApp } from "../state.tsx";
 import { useAsset } from "../useAsset.ts";
 
@@ -21,7 +21,7 @@ export function AssetSwitcher() {
               select(m.symbol);
             }}
           >
-            <TickerBadge symbol={m.symbol} size="sm" quiet={!current} named />
+            <TokenLogo symbol={m.symbol} size="sm" quiet={!current} label />
           </button>
         );
       })}

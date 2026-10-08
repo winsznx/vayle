@@ -3,7 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { dollars, easternClock } from "../app/format.ts";
 import { ladderAround, type Rung } from "../app/week.ts";
 import { CASH_SYMBOL } from "../tokens.ts";
-import { TickerBadge } from "../ui/TickerBadge.tsx";
+import { TokenLogo } from "../ui/TokenLogo.tsx";
 import { readFeed, type FeedPrice } from "./feed.ts";
 import { useReveal, Words } from "./reveal.tsx";
 
@@ -79,7 +79,7 @@ function LadderObject({ state }: { readonly state: FeedState }) {
   return (
     <div className="ladder-object" aria-hidden={live === null}>
       <div className="ladder-head">
-        <TickerBadge symbol={symbol} size="lg" />
+        <TokenLogo symbol={symbol} size="lg" />
         <div>
           <p className="ladder-symbol">{symbol}</p>
           <p className="ladder-sub">
@@ -202,7 +202,7 @@ export function Hero() {
           className="outcome-a"
           title="Paid"
           detail="This week's payment, in USDG"
-          icon={<TickerBadge symbol={CASH_SYMBOL} size="lg" />}
+          icon={<TokenLogo symbol={CASH_SYMBOL} size="lg" />}
         />
         <Outcome
           className="outcome-b"
@@ -214,7 +214,7 @@ export function Hero() {
           className="outcome-c"
           title="Sold at your price"
           detail="Your tokens change hands"
-          icon={<TickerBadge symbol={SHOWN?.symbol ?? "Stock Token"} size="lg" />}
+          icon={<TokenLogo symbol={SHOWN?.symbol ?? "Stock Token"} size="lg" />}
         />
         <Outcome
           className="outcome-d"
@@ -227,12 +227,12 @@ export function Hero() {
       <ul className="proof" aria-label="What Vayle runs on">
         <li>
           {markets.map((m) => (
-            <TickerBadge key={m.token} symbol={m.symbol} size="md" />
+            <TokenLogo key={m.token} symbol={m.symbol} size="md" />
           ))}
           Stock Tokens
         </li>
         <li>
-          <TickerBadge symbol={CASH_SYMBOL} size="md" />
+          <TokenLogo symbol={CASH_SYMBOL} size="md" />
           Paid in USDG
         </li>
         <li>
