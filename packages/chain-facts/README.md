@@ -11,7 +11,7 @@ pnpm --filter @vayle/chain-facts resolve   # rewrite the file from the sources a
 pnpm --filter @vayle/chain-facts verify    # resolve again and compare with the committed file
 ```
 
-Both need `ROBINHOOD_RPC_URL`, an RPC with archive state, and both exit 1 when a check fails. `verify` prints every difference and also fails on drift, a change to anything outside the values that move in normal operation, like the block, the latest feed round, the multiplier and the pause flags. `VOLATILE_PATHS` in `src/facts.ts` lists those. The [deploy runbook](../../DEPLOY.md) runs `verify` first.
+Both need `ROBINHOOD_RPC_URL`, and both exit 1 when a check fails. `resolve` finds Multicall3's creation block by bisection over archive state. `verify` on an RPC without archive state, like the chain's public one, keeps the recorded creation block and says so. `verify` prints every difference and also fails on drift, a change to anything outside the values that move in normal operation, like the block, the latest feed round, the multiplier and the pause flags. `VOLATILE_PATHS` in `src/facts.ts` lists those. The [deploy runbook](../../DEPLOY.md) runs `verify` first.
 
 | Export                                                                           | What it does                                                                                                                                                                           |
 | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -16,15 +16,15 @@ export ROBINHOOD_RPC_URL="$(node --env-file=.env -p 'process.env.ROBINHOOD_RPC_U
 node --env-file=.env packages/chain-facts/src/cli.ts verify
 ```
 
-This is `pnpm --filter @vayle/chain-facts verify` with `.env` loaded, which pnpm doesn't do on its own. It resolves NVDA, USDG, the NVDA/USD feed and Multicall3 from their official sources again, reads each one on chain at a single block, and compares the result with `deployments/robinhood-mainnet.json`. The deploy script lists NVDA from that file, and every service and the app read it too.
+This is `pnpm --filter @vayle/chain-facts verify` with `.env` loaded, which pnpm doesn't do on its own. On an RPC without archive state it keeps the recorded Multicall3 creation block and prints a note saying so. It resolves NVDA, USDG, the NVDA/USD feed and Multicall3 from their official sources again, reads each one on chain at a single block, and compares the result with `deployments/robinhood-mainnet.json`. The deploy script takes USDG from that file, and `pnpm --filter @vayle/markets test` checks NVDA's entry in the market registry against it.
 
 The last line should say `0 drifted`, and the command should exit 0. Lines that start with `changed` are values that move by themselves: the block, the feed's latest round, NVDA's multiplier and the pause flags. Read them anyway, because a pause or a pending multiplier change is worth knowing about before a deploy. A `DRIFT` line means an address, decimals, an implementation or a domain changed. Stop and find out why before going on.
 
 ## 2. Check the RPC
 
-`ROBINHOOD_RPC_URL` is the private Robinhood Chain RPC that the chain facts check, forge, the fork tests and the services all use. It has to serve three things:
+`ROBINHOOD_RPC_URL` is the Robinhood Chain RPC that the chain facts check, forge, the fork tests and the services all use, and the site's `RPC_URL` can be the same one. The chain's public RPC, `chain.publicRpcUrl` in the chain facts, serves everything below. It has to serve three things:
 
-- Archive state, because the chain facts check and the fork tests read state from past blocks.
+- State for recent blocks, about the last 25 minutes, because the fork tests fork one recent block for a whole run and the services pin each run's reads to the block it starts from. Archive state isn't needed.
 - `eth_getLogs` over 10,000 blocks, because the indexer reads the market's logs that many blocks at a time, and so does the app when it reads history itself (`LOG_RANGE` in `packages/market/src/history.ts`).
 - `eth_feeHistory` for the latest block, because forge prices the deploy's transactions with it.
 
@@ -42,17 +42,17 @@ const ask = async (method, params) => {
   return body.error === undefined ? { ok: true, result: body.result } : { ok: false, why: body.error.message };
 };
 const latest = BigInt((await ask("eth_blockNumber", [])).result);
-const range = { fromBlock: `0x${(latest - 9999n).toString(16)}`, toBlock: `0x${latest.toString(16)}` };
-const code = await ask("eth_getCode", ["0xcA11bde05977b3631167028862bE2a173976CA11", "0x1"]);
-const logs = await ask("eth_getLogs", [{ address: "0x0000000000000000000000000000000000000001", ...range }]);
+const hex = (n) => `0x${n.toString(16)}`;
+const recent = await ask("eth_getBalance", ["0xcA11bde05977b3631167028862bE2a173976CA11", hex(latest - 1000n)]);
+const logs = await ask("eth_getLogs", [{ address: "0x0000000000000000000000000000000000000001", fromBlock: hex(latest - 9999n), toBlock: hex(latest) }]);
 const fees = await ask("eth_feeHistory", ["0x1", "latest", []]);
-console.log("archive", code.ok && code.result !== "0x" ? "ok" : `refused: ${code.why ?? "no code at block 1"}`);
+console.log("recent state", recent.ok ? "ok" : `refused: ${recent.why}`);
 console.log("logs", logs.ok ? "ok" : `refused: ${logs.why}`);
 console.log("feeHistory", fees.ok ? "ok" : `refused: ${fees.why}`);
 '
 ```
 
-All three lines should end in `ok`. A refusal prints the RPC's own words. The archive check reads Multicall3's code at block 1, which the chain facts record as there since block 0, and the logs check asks for 10,000 blocks of an address that never logs. The chain's public RPC, `chain.publicRpcUrl` in the chain facts, fails the archive check.
+All three lines should end in `ok`. A refusal prints the RPC's own words. The state check reads a balance 1,000 blocks back, about four minutes, and the logs check asks for 10,000 blocks of an address that never logs. The services make roughly 19,000 requests a day between them, and each open app tab adds about 12 a minute, so a metered RPC needs a plan that covers that.
 
 ## 3. Make the keys
 
@@ -72,28 +72,26 @@ cast wallet address "$(node --env-file=.env -p 'process.env.MAKER_KEY')"
 
 The deploy script reads these from `.env`:
 
-| Variable         | What it is                                                                                                                                                                                                                                                                                                                         |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DEPLOYER_KEY`   | The fresh key from step 3.                                                                                                                                                                                                                                                                                                         |
-| `MULTISIG`       | The multisig that ends up owning everything through the timelock. The script reverts `MultisigHasNoCode` for an address without code, but it can't tell your multisig from anyone else's, so open the address on the explorer first. The deployer gives up its roles in the same broadcast, so a wrong address means a new deploy. |
-| `GUARDIAN`       | The address of the guardian, a key you hold apart from the others. It can pause new orders, for the whole market or for NVDA, and halt everything for up to 72 hours (`HALT_DURATION` in `contracts/src/core/MarketGuard.sol`). It can't move funds.                                                                               |
-| `FEE_RECIPIENT`  | Where protocol fees are credited. The fee starts at zero, and the multisig can raise it through the timelock to at most 5% of the premium (`MAX_FEE_BPS` in `contracts/src/core/QuoteSettlement.sol`).                                                                                                                             |
-| `TEAM_MAKER`     | The maker key's address, from step 3. The deploy flags it as team-operated and approves it as a batch bidder. The market takes renewal bids only from approved makers and refuses the rest with `NotABatchBidder`.                                                                                                                 |
-| `TIMELOCK_DELAY` | The timelock's delay in seconds, as plain digits. Every owner change waits this long. It has to outlast the longest week plus its exercise window, so the script sets a floor of 8 days and 6 hours, 712800 seconds (`MIN_TIMELOCK_DELAY`), and reverts `DelayTooShort` below it.                                                  |
-| `CALL_CAPS`      | Four comma-separated numbers for sell orders, in raw units, where 1 NVDA is 10^18 (`nvda.decimals` in the chain facts): the total size of all open orders, the size per wallet, the open interest per series, and the size per fill.                                                                                               |
-| `PUT_CAPS`       | The same four for buy orders. `0,0,0,0` keeps buy orders closed.                                                                                                                                                                                                                                                                   |
+| Variable       | What it is                                                                                                                                                                                                                                                                                                                                                               |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `DEPLOYER_KEY` | The fresh key from step 3.                                                                                                                                                                                                                                                                                                                                               |
+| `MULTISIG`     | The multisig that ends up owning everything through the timelock, and where protocol fees are credited. The script reverts `MultisigHasNoCode` for an address without code, but it can't tell your multisig from anyone else's, so open the address on the explorer first. The deployer gives up its roles in the same broadcast, so a wrong address means a new deploy. |
+| `GUARDIAN`     | The address of the guardian, a key you hold apart from the others. It can pause new targets, for the whole market or for one token, and halt everything for up to 72 hours (`HALT_DURATION` in `contracts/src/core/MarketGuard.sol`). It can't move funds.                                                                                                               |
+| `TEAM_MAKER`   | The maker key's address, from step 3. The deploy flags it as team-operated and approves it as a batch bidder. The market takes renewal bids only from approved makers and refuses the rest with `NotABatchBidder`.                                                                                                                                                       |
 
-The script takes NVDA, its uid, the NVDA/USD feed and USDG from the chain facts, and the closes from step 5. The order grid is fixed in the script: lots of 0.01 NVDA, premiums on a tick of 0.0001 USDG, and strikes 5 USDG apart within 10% of the week's reference price (`LOT`, `PRICE_TICK`, `STRIKE_TICK` and `STRIKE_RANGE_BPS`).
+Everything else the timelock controls is fixed in the repo, because after the broadcast it can only change through the timelock, 8 days and 6 hours later:
+
+- The markets come from [`deployments/markets.json`](deployments/markets.json): each Stock Token with its uid, feed, order and strike grid, and both sides' caps in raw units with an enable flag each. Sell targets are the call side and buy targets the put side, and a disabled side gets zero caps. `pnpm --filter @vayle/markets test` checks the file: each grid is one the registry accepts, each strike step is about 2% of the token's price on a 1, 2, 5 scale, caps nest in whole lots, and every token, uid and feed matches the chain facts or a passed entry of the market check (`tools/market-check`). Review the caps before the broadcast. They're the most anyone can have open.
+- The protocol fee is zero, credited to `MULTISIG`. The multisig can raise it through the timelock to at most 5% of the payment (`MAX_FEE_BPS` in `contracts/src/core/QuoteSettlement.sol`).
+- The timelock's delay is 8 days and 6 hours, 712,800 seconds (`TIMELOCK_DELAY` in the script). It outlasts the longest week plus its exercise window.
 
 ## 5. Generate the calendar boundaries
 
 ```sh
-pnpm --silent --filter @vayle/calendar boundaries "$(( $(date +%s) + 86400 + 3 * 3600 ))" 10 > deployments/calendar-boundaries.json
+pnpm --silent --filter @vayle/calendar boundaries "$(date +%s)" 26 > deployments/calendar-boundaries.json
 ```
 
-This writes the first ten weekly closes after a day and three hours from now, each with its creation deadline, the Monday 09:30 ET after it. They come from the exchange calendar in `packages/calendar`, so early closes and holiday weeks are already in them.
-
-The first close has to be more than a day after the block the deploy lands in. The calendar refuses anything sooner (`MIN_LEAD` in `contracts/src/calendar/SessionCalendar.sol`), and the deploy's configuration batch would revert `TooSoon`. Starting a day and three hours out leaves three hours to broadcast. If more time than that passes, generate the file again.
+This writes the next 26 weekly closes, each with its creation deadline, the Monday 09:30 ET after it. They come from the exchange calendar in `packages/calendar`, so early closes and holiday weeks are already in them. The calendar takes them in its constructor, so each close only has to be after the block the deploy lands in, and the calendar refuses one that isn't with `TooSoon`. Generate the file shortly before the broadcast.
 
 Check the closes in New York time:
 
@@ -101,7 +99,7 @@ Check the closes in New York time:
 node -p 'require("./deployments/calendar-boundaries.json").map((b) => new Date(b.close * 1000).toLocaleString("en-US", { timeZone: "America/New_York" })).join("\n")'
 ```
 
-The first line is the close the first week opens at. Each close is at 4:00 PM, or 1:00 PM on an early close.
+The first line is the first close. Each market's first week opens shortly after the deploy and runs to it, filled by the maker's quotes only, since that week has no renewal batch (step 15). Each close is at 4:00 PM, or 1:00 PM on an early close. Leave at least a few hours between the deploy and the first close, so the first week has room for quotes.
 
 ## 6. Dry run
 
@@ -111,11 +109,11 @@ forge script contracts/script/DeployVayle.s.sol:DeployVayle --root contracts --r
 
 `robinhood` is the RPC alias in `contracts/foundry.toml`, and it reads `ROBINHOOD_RPC_URL`. The dry run runs the whole deploy against the chain's current state and sends nothing. It works before the deployer has any ETH, and it writes no address file. Only a broadcast writes `deployments/vayle-robinhood-mainnet.json`.
 
-It should print `SIMULATION COMPLETE`. Before that, forge prints an `Error:` line saying `VayleMarket` is above the contract size limit. That one's expected. forge measures against Ethereum's 24,576 bytes, while this chain allows 98,304 (`chain.maxCodeSize` in the chain facts), and `contracts/test/Deployables.t.sol` checks every contract against the chain's limit. A real refusal names itself, like `MultisigHasNoCode`, `DelayTooShort`, `NoBoundaries` or the calendar's `TooSoon`.
+It should print `SIMULATION COMPLETE`. Before that, forge prints an `Error:` line saying `VayleMarket` is above the contract size limit. That one's expected. forge measures against Ethereum's 24,576 bytes, while this chain allows 98,304 (`chain.maxCodeSize` in the chain facts), and `contracts/test/Deployables.t.sol` checks every contract against the chain's limit. A real refusal names itself, like `MultisigHasNoCode`, `NoBoundaries`, `NoMarkets`, the calendar's `TooSoon`, or a registry error such as `UidMismatch` for a market whose entry is wrong.
 
 Write down the `Estimated amount required` line. It's forge's estimate, in ETH, of what the deploy costs at the current gas price.
 
-Two longer rehearsals run the same deploy code. `forge test --root contracts --match-path "test/deploy/*"` deploys on a fork of mainnet and checks the end state and a full week of trading. `pnpm fork up` broadcasts the script to a local fork and runs weeks on it with the production keeper and maker, as [tools/local-fork/README.md](tools/local-fork/README.md) describes.
+Two longer rehearsals run the same deploy code. `pnpm test:contracts --match-path "test/deploy/*"` deploys on a fork of mainnet and checks the end state and a full week of trading. `pnpm fork up` broadcasts the script to a local fork and runs weeks on it with the production keeper and maker, as [tools/local-fork/README.md](tools/local-fork/README.md) describes.
 
 ## 7. Fund the deployer
 
@@ -137,14 +135,13 @@ forge says `VayleMarket` is above the contract size limit and asks whether to co
 
 The broadcast does this, in order:
 
-1. Deploys the timelock with no delay and the deployer as its only proposer and executor, then the liveness checkpoint, the session calendar, the token registry, the price adapter and the market. The timelock owns the calendar, the registry and the market. The market starts with `GUARDIAN` as its guardian, `FEE_RECIPIENT` for fees, and the fee at zero.
+1. Deploys the timelock with no delay and the deployer as its only proposer and executor, then the liveness checkpoint, the session calendar with the boundaries from step 5, the token registry, the price adapter and the market. The timelock owns the calendar, the registry and the market. The market starts with `GUARDIAN` as its guardian, `MULTISIG` for fees, and the fee at zero.
 2. Sends one batch through the timelock at no delay. If any call in it fails, the whole batch reverts, so nothing ends half configured. The batch:
-   - lists NVDA in the registry, with its uid and feed from the chain facts and the grid from step 4
-   - appends the boundaries to the calendar
-   - sets the call caps and the put caps
+   - lists each market from `deployments/markets.json` in the registry, which checks its uid, its interfaces, its oracle flag and its feed on chain
+   - sets each market's sell caps and buy caps
    - flags `TEAM_MAKER` as team-operated, so every fill it makes is tagged onchain
    - approves `TEAM_MAKER` as a batch bidder
-   - raises the timelock's delay to `TIMELOCK_DELAY`
+   - raises the timelock's delay to 712,800 seconds
 3. Grants the timelock's proposer, canceller and executor roles to the multisig, and has the deployer renounce those three and the admin role. From then on the timelock administers itself, and only the multisig can propose or execute through it.
 
 Then forge verifies the six contracts on the explorer, which step 9 covers.
@@ -154,12 +151,14 @@ forge should print `ONCHAIN EXECUTION COMPLETE & SUCCESSFUL`. `deployments/vayle
 Check the handover with the addresses from that file. Each comment is the answer to expect:
 
 ```sh
-cast call <timelock> "getMinDelay()(uint256)" --rpc-url "$ROBINHOOD_RPC_URL"                                                      # TIMELOCK_DELAY
+cast call <timelock> "getMinDelay()(uint256)" --rpc-url "$ROBINHOOD_RPC_URL"                                                      # 712800
 cast call <timelock> "hasRole(bytes32,address)(bool)" "$(cast keccak PROPOSER_ROLE)" <multisig> --rpc-url "$ROBINHOOD_RPC_URL"    # true
 cast call <timelock> "hasRole(bytes32,address)(bool)" "$(cast keccak PROPOSER_ROLE)" <deployer> --rpc-url "$ROBINHOOD_RPC_URL"    # false
 cast call <market> "owner()(address)" --rpc-url "$ROBINHOOD_RPC_URL"                                                              # the timelock
 cast call <market> "batchBidder(address)(bool)" <team maker> --rpc-url "$ROBINHOOD_RPC_URL"                                       # true
-cast call <calendar> "boundaryCount()(uint256)" --rpc-url "$ROBINHOOD_RPC_URL"                                                    # 10
+cast call <market> "feeRecipient()(address)" --rpc-url "$ROBINHOOD_RPC_URL"                                                       # the multisig
+cast call <calendar> "boundaryCount()(uint256)" --rpc-url "$ROBINHOOD_RPC_URL"                                                    # 26
+cast call <registry> "isListed(address)(bool)" <each token in deployments/markets.json> --rpc-url "$ROBINHOOD_RPC_URL"             # true
 ```
 
 The script writes the address file while it runs, before forge sends anything. So a broadcast that fails can leave a file naming contracts that don't exist. Open the market's address on the explorer before giving it to anything. If a broadcast stops partway, the contracts it did deploy hold nothing and nothing will use them. Generate the boundaries again and broadcast again, which deploys a fresh set and rewrites the file.
@@ -233,33 +232,38 @@ VAYLE_REGISTRY = "<registry from the address file>"
 VAYLE_START_BLOCK = "<block from the address file>"
 ```
 
-Without the vars it watches NVDA, USDG and the feed only, so it can go up before step 8, and the vars can follow the deploy. Once it runs, `watcher_state` has one row whose `cursor_block` moves forward every minute.
+Without the vars it watches each market's token and feed and USDG only, so it can go up before step 8, and the vars can follow the deploy. Once it runs, `watcher_state` has one row whose `cursor_block` moves forward every minute. `WATCHER_WEBHOOK_URL` can be a Discord webhook, which gets Discord's own payload.
 
 ### Keeper
 
-Secrets: `ROBINHOOD_RPC_URL` and `KEEPER_KEY`. Vars: `VAYLE_MARKET`, `VAYLE_LIVENESS` and `VAYLE_CALENDAR`, from the address file. Send the keeper's address ETH for gas, which is all it holds.
+Secrets: `ROBINHOOD_RPC_URL` and `KEEPER_KEY`. Vars: `VAYLE_MARKET`, `VAYLE_LIVENESS`, `VAYLE_CALENDAR` and `VAYLE_REGISTRY`, from the address file. Send the keeper's address ETH for gas, which is all it holds.
 
-Have it running, with its secrets and its gas, more than 45 minutes before the first close. A week opens at a close only if the chain was checkpointed with no gap over 5 minutes through the 30 minutes before it, and an observation in its last 5 minutes found NVDA's oracle running (`GAP_THRESHOLD` in `contracts/src/liveness/LivenessCheckpoint.sol`, `LIVENESS_LOOKBACK` and `CLOSE_OBSERVATION_RECENCY` in `contracts/src/core/EpochBook.sol`). The liveness contract counts the time since its own deploy as quiet, so the first checkpoint records one long gap that ends where it lands. The keeper starts checkpointing 45 minutes before each close (`KEEPER_LEAD` in `services/keeper/src/plan.ts`), which puts the end of that gap before the 30 minutes that count. A keeper that starts inside them makes `createEpoch` revert `LivenessGapAtClose` or `CloseNotObserved`, and that week doesn't open. Orders stay idle and withdrawable, and the next week opens as usual once the keeper is running for its close. The keeper does nothing earlier than 45 minutes before a close, so deploying it right after the contracts is fine.
+Deploy it with its secrets and gas within 5 minutes of the broadcast. Each market's first week opens once the liveness record has no gap over 5 minutes through the 30 minutes before the opening, and only from 30 minutes after the market's deploy (`GAP_THRESHOLD` in `contracts/src/liveness/LivenessCheckpoint.sol`, `LIVENESS_LOOKBACK` and `createFirstEpoch` in `contracts/src/core/EpochBook.sol`). The liveness contract counts the time since its own deploy as quiet, so a keeper that starts later records one gap at its first checkpoint, and the first weeks wait 30 minutes past it. Until every market has its first week, the keeper checkpoints every minute and then sends `createFirstEpoch` for each one, with the feed's latest round as the hint.
 
-From 45 minutes before the close, `lastSeen` on the liveness contract should move every minute:
+After that it does what it does every week: from 45 minutes before each close it checkpoints every minute and observes each market's oracle in the last 30, and after the close it creates each market's week (`KEEPER_LEAD` in `services/keeper/src/plan.ts`). A keeper missing at a close makes `createEpoch` revert `LivenessGapAtClose` or `CloseNotObserved`, and that week doesn't open. Targets stay idle and withdrawable, and the next week opens as usual once the keeper is running for its close.
+
+`lastSeen` on the liveness contract should move every minute while the first weeks wait, and each market should then have its first week:
 
 ```sh
 cast call <liveness> "lastSeen()(uint64)" --rpc-url "$ROBINHOOD_RPC_URL"
+cast call <market> "latestExpiry(address)(uint64)" <each token> --rpc-url "$ROBINHOOD_RPC_URL"   # the first close
 ```
 
 ### Maker
 
-Secrets: `ROBINHOOD_RPC_URL` and `MAKER_KEY`, the key whose address is `TEAM_MAKER`. Vars: `VAYLE_MARKET` and the pricing inputs `MAKER_VOL_BPS`, `MAKER_EDGE_BPS`, `MAKER_DIVIDEND_YIELD_BPS`, `MAKER_RATE_BPS`, `MAKER_MAX_PER_SERIES` and `MAKER_RFQ`, which [services/maker/README.md](services/maker/README.md) describes. The Worker reads vars and secrets the same way, so the pricing inputs can be secrets if you'd rather they weren't in the public repo.
+Secrets: `ROBINHOOD_RPC_URL` and `MAKER_KEY`, the key whose address is `TEAM_MAKER`. Vars: `VAYLE_MARKET`, `VAYLE_REGISTRY`, and the pricing inputs `MAKER_EDGE_BPS`, `MAKER_DIVIDEND_YIELD_BPS`, `MAKER_RATE_BPS` and `MAKER_RFQ`, which [services/maker/README.md](services/maker/README.md) describes. Each market's volatility and caps come from `deployments/markets.json`. Set `MAKER_RFQ` to `on`: a first week has no batch, so quotes are the only way its targets get paid.
 
-Fund it before the first bid window. A week's bid window opens two hours after its close, the length of an exercise window, and stays open two hours (`WINDOW_LENGTH` in `contracts/src/core/EpochBook.sol`, `BID_WINDOW` in `contracts/src/core/RenewalBatch.sol`). Renewal bids are only taken inside it. The maker's account needs:
+Fund it before the first weeks open. The maker's account needs:
 
-- USDG for the premiums it bids, plus the strike of every call it may buy, which it keeps back to exercise with. The protocol fee comes on top of premiums and starts at zero.
-- NVDA for every put it may buy. It bids on puts only as far as it holds the NVDA to deliver.
+- USDG for the payments it makes, plus the strike of every sell target it may buy, which it keeps back to exercise with. Every market draws on the same USDG. The protocol fee comes on top of payments and starts at zero.
+- Each market's token for every buy target it may buy. It bids on buy targets only as far as it holds the token to deliver, so with none it doesn't bid on them and the app doesn't show them.
 - ETH for gas.
 
-`MAKER_MAX_PER_SERIES` caps what it buys in one series, so it bounds both amounts per series. With less in its account, the maker bids less rather than buying options it couldn't exercise. Its first run approves the market to move its USDG and NVDA.
+Each series is capped at its side's open interest cap, so the caps bound both amounts. With less in its account, the maker bids less rather than buying options it couldn't exercise. Its first run approves the market to move its USDG and every market's token. It exercises on the close: a week is in the money only if the feed's last round at or before the expiry was past the target.
 
-In the bid window the market should emit `BidSubmitted` for each price with orders, and the app's ladder shows the bids. If it doesn't bid, `pnpm --filter @vayle/web exec wrangler tail vayle-maker` shows why. A run that won't price logs `maker: no bids or quotes this run.` with the reason, and a failed action logs its error.
+The Worker also serves `GET /v1/bids`, the maker's current bid for every target it would quote, which the app shows as rates (`VITE_MAKER_URL` in step 12). Responses are cached for a minute.
+
+In a week with a batch, the market should emit `BidSubmitted` for each price with targets during the bid window. If the maker doesn't bid or quote, `pnpm --filter @vayle/web exec wrangler tail vayle-maker` shows why: a run that won't price a market logs `maker: no bids or quotes for <symbol> this run.` with the reason, and a failed action logs its error.
 
 ### Indexer
 
@@ -292,6 +296,7 @@ The site at vayle.xyz is the Worker in `apps/web`, serving the Vite build as sta
    - `VITE_MARKET` turns the app on.
    - `VITE_MARKET_DEPLOY_BLOCK` is where the app starts reading the market's events from the chain when there's no indexer. It reads at most 500,000 blocks that way (`MAX_CHAIN_HISTORY_BLOCKS` in `apps/web/src/app/useMarketHistory.ts`), which is less than a day of this chain's blocks, so history needs the indexer soon after launch.
    - `VITE_INDEXER_URL` is the indexer's base URL.
+   - `VITE_MAKER_URL` is the maker Worker's base URL, for the rates it would pay now.
    - `VITE_PLACEMENT` stays unset for now. New orders need a build with `VITE_PLACEMENT=open` and the disclosures published at `/disclosures.json`, as [apps/web/README.md](apps/web/README.md) describes. Settling, stopping an order and withdrawing never depend on it.
    - `VITE_WALLETCONNECT_PROJECT_ID` is optional. It turns on WalletConnect for phone wallets.
 
@@ -330,20 +335,22 @@ If the send fails for lack of gas, send a little less. Then delete `DEPLOYER_KEY
 
 All times are New York time, and the numbers come from the constants named above.
 
-| When                              | What should happen                                                                                                                                                                                    |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 45 minutes before the first close | The keeper starts checkpointing the chain every minute.                                                                                                                                               |
-| The last 30 minutes before it     | The keeper observes the close every minute.                                                                                                                                                           |
-| Just after the close              | The keeper creates the first week's epoch, and the watcher posts `EpochCreated`. With no epoch 15 minutes after the close, it raises `epoch-missing`.                                                 |
-| 2 hours after the close           | The bid window opens for 2 hours, and the maker bids on each price that has orders.                                                                                                                   |
-| 4 hours after the close           | The keeper opens, counts and fills the batch for each price with a bid.                                                                                                                               |
-| Sunday 8:00 PM                    | The batch deadline, 13 hours 30 minutes before the Monday 09:30 creation deadline (`BATCH_DEADLINE_LEAD` in `EpochBook.sol`). A batch not counted by then doesn't fill, and its orders skip the week. |
+| When                              | What should happen                                                                                                                                                                                     |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| From the broadcast                | The keeper checkpoints every minute.                                                                                                                                                                   |
+| 30 minutes after it               | The keeper opens each market's first week with `createFirstEpoch`, and the watcher posts `EpochCreated`. Without one an hour later, it raises `first-epoch-missing`.                                   |
+| Until an hour before the close    | Targets are paid only by the maker's quotes, since a first week has no batch. The maker registers a target's series on one run and quotes it on the next.                                              |
+| 45 minutes before the first close | The keeper checkpoints every minute, and observes each market's oracle in the last 30.                                                                                                                 |
+| Just after the close              | The keeper creates each market's next week, and the maker exercises every week that closed in the money. The exercise window runs 2 hours.                                                             |
+| 2 hours after the close           | The first weeks finalize and settle, and the bid window for the next week opens for 2 hours.                                                                                                           |
+| 4 hours after the close           | The keeper opens, counts and fills the batch for each price with a bid.                                                                                                                                |
+| Sunday 8:00 PM                    | The batch deadline, 13 hours 30 minutes before the Monday 09:30 creation deadline (`BATCH_DEADLINE_LEAD` in `EpochBook.sol`). A batch not counted by then doesn't fill, and its targets skip the week. |
 
 The watcher pages if the keeper stops checkpointing for more than 3 minutes from 45 minutes before a close to 2 hours 30 minutes after it.
 
 ## After launch
 
-- The calendar holds the ten weeks from step 5. The watcher warns once fewer than five closes are scheduled ahead (`MIN_BOUNDARIES_AHEAD` in `services/watcher/src/rules.ts`). Adding more goes through the timelock and waits out its delay, so start when the warning comes. Generate the next closes after the last scheduled one with the step 5 command, starting from that close instead of from now, and have the multisig schedule the calendar's `append` with them through the timelock, then execute it after the delay. Each close still has to be more than a day after the block that executes it.
+- The calendar holds the 26 weeks from step 5. The watcher warns once fewer than five closes are scheduled ahead (`MIN_BOUNDARIES_AHEAD` in `services/watcher/src/rules.ts`). Adding more goes through the timelock and waits out its delay, so start when the warning comes. Generate the next closes after the last scheduled one with the step 5 command, starting from that close instead of from now, and have the multisig schedule the calendar's `append` with them through the timelock, then execute it after the delay. Each close still has to be more than a day after the block that executes it.
 - Keep ETH on the keeper's and the maker's accounts, and keep the maker funded for the weeks ahead.
 - Every owner power goes through the timelock, scheduled by the multisig and executed after the delay: caps, the fee, the guardian, the team-operated and batch bidder flags, the calendar, the registry's listings and renewing a halt.
 
@@ -351,14 +358,13 @@ The watcher pages if the keeper stops checkpointing for more than 3 minutes from
 
 What the owner provides:
 
-- [ ] A private Robinhood Chain mainnet RPC with archive state, `eth_getLogs` over 10,000 blocks and `eth_feeHistory`. It's `ROBINHOOD_RPC_URL`, and the site's `RPC_URL`, which can be the same one.
+- [ ] A Robinhood Chain mainnet RPC that passes step 2, such as the chain's public one. It's `ROBINHOOD_RPC_URL`, and the site's `RPC_URL`, which can be the same one.
 - [ ] ETH on Robinhood Chain for the deployer, a few times the dry run's estimate, and for the keeper's and the maker's gas.
-- [ ] The multisig, `MULTISIG`.
+- [ ] The multisig, `MULTISIG`, which also receives protocol fees.
 - [ ] The guardian key, held apart from the rest, with its address as `GUARDIAN`.
-- [ ] `FEE_RECIPIENT`.
-- [ ] `TIMELOCK_DELAY`, `CALL_CAPS` and `PUT_CAPS`.
+- [ ] Approval of `deployments/markets.json`: the markets, their caps and the maker's volatility inputs.
 - [ ] The keeper key and the maker key, `KEEPER_KEY` and `MAKER_KEY`, with the maker's address as `TEAM_MAKER`.
-- [ ] The maker's USDG and NVDA, and its pricing inputs.
+- [ ] The maker's USDG and each market's token, and its pricing inputs.
 - [ ] A Supabase project: its Postgres connection string, `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
 - [ ] A webhook for the watcher's alerts, `WATCHER_WEBHOOK_URL`.
 - [ ] A Cloudflare account on the Workers paid plan, with vayle.xyz as a zone in it.

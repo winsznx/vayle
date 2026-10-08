@@ -13,7 +13,7 @@ pnpm fork advance --without-keeper  # as if the keeper had died, to try the fall
 pnpm fork advance --close-at 250.00 # the next close at $250, to rehearse an order that fills
 ```
 
-`pnpm fork up` stays in the foreground, and Ctrl-C stops the fork. It needs `ROBINHOOD_RPC_URL` in `.env`, pointing at an RPC with archive state, and anvil and forge on the path.
+`pnpm fork up` stays in the foreground, and Ctrl-C stops the fork. It needs `ROBINHOOD_RPC_URL` in `.env` and anvil and forge on the path.
 
 Each `pnpm fork advance` goes to the next of these:
 
@@ -38,4 +38,4 @@ To use the app, add a network to your wallet with RPC URL `http://127.0.0.1:8545
 
 ## Limits
 
-A fork reads each account from the forked RPC the first time something touches it. An RPC that keeps only recent state, like the public one, can't answer once the fork block is a few minutes old, so use one with archive state. The fork also loads Multicall3 as it starts, since the app batches its reads through it, and mines a few blocks of its own, so fee estimates read the fork's own blocks instead of asking the RPC about old ones.
+A fork reads each account from the forked RPC the first time something touches it. The public RPC keeps state for about 25 minutes, so a fork of it can read new accounts for that long after `pnpm fork up`, and an RPC with archive state lifts the limit. The fork also loads Multicall3 as it starts, since the app batches its reads through it, and mines a few blocks of its own, so fee estimates read the fork's own blocks instead of asking the RPC about old ones.

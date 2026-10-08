@@ -6,7 +6,7 @@
 - pnpm 11 through Corepack
 - Foundry 1.7.1
 - git
-- A Robinhood Chain mainnet RPC with archive state, for fork tests, the local fork and the chain facts check
+- A Robinhood Chain mainnet RPC, for fork tests, the local fork and the chain facts check. The chain's public one works
 
 If you install Foundry with foundryup, pin the version with `foundryup --install v1.7.1`.
 
@@ -22,7 +22,7 @@ cp .env.example .env
 
 `pnpm install` also points git at the repo's hooks. Fill in `.env`, which is gitignored. `.env.example` lists every variable with a one-line description and no values, and the hooks block any commit that adds a value to it.
 
-`ROBINHOOD_RPC_URL` is the one value you need to work on Vayle. The RPC behind it has to keep archive state, because fork tests and the local fork read mainnet state at blocks that are minutes or weeks old, and the public RPC keeps only recent state. It has to answer `eth_getLogs` over 10,000 blocks, which is how far the indexer and the app read at a time. The rest of `.env` is for deploying and running the services, which [DEPLOY.md](DEPLOY.md) covers.
+`ROBINHOOD_RPC_URL` is the one value you need to work on Vayle. The chain's public RPC, `https://rpc.mainnet.chain.robinhood.com` (`chain.publicRpcUrl` in the chain facts), does everything here. It keeps state for about the last 6,000 blocks, roughly 25 minutes, so fork tests fork one recent block for a whole run and the local fork lasts that long before it has to start again. It answers `eth_getLogs` over 10,000 blocks, which is how far the indexer and the app read at a time. An RPC with archive state lifts both limits. The rest of `.env` is for deploying and running the services, which [DEPLOY.md](DEPLOY.md) covers.
 
 ## Checks
 
@@ -32,10 +32,10 @@ pnpm typecheck
 pnpm build
 pnpm test        # every package's unit tests, without a network
 pnpm guard       # the tree scan the commit hooks run
+pnpm test:contracts   # forge test with every fork test on one recent block
 cd contracts
 forge fmt --check
 forge build
-forge test       # unit, fork and campaign tests; fork tests need ROBINHOOD_RPC_URL
 slither . --config-file slither.config.json
 ```
 
@@ -55,4 +55,4 @@ Don't bypass the hooks with `--no-verify`. The repository is public, so CI can o
 
 ## Fork tests
 
-Fork tests run against Robinhood Chain mainnet state through `ROBINHOOD_RPC_URL`. Without it they fail with a named error, and nothing falls back to another endpoint.
+Fork tests run against Robinhood Chain mainnet state through `ROBINHOOD_RPC_URL`. Without it they fail with a named error, and nothing falls back to another endpoint. `pnpm test:contracts` pins `FORK_BLOCK` to the chain's current block for the whole run and passes its arguments to `forge test`. The chain makes about four blocks a second, so without a pinned block each test forks a block of its own and every read goes to the RPC again. `FORK_MARKET=SPY pnpm test:contracts` runs every suite against another market in `deployments/markets.json`.
