@@ -14,6 +14,7 @@ import {
   type PublicClient,
 } from "viem";
 import { erc8056InterfaceIds, type Erc8056Interface } from "./erc8056.ts";
+import { errorText } from "./rpc-errors.ts";
 import {
   AmbiguousAddress,
   AssetNotActive,
@@ -209,19 +210,46 @@ async function addressInSlot(
   return getAddress(sliceHex(word ?? "0x", 12, 32));
 }
 
+// An RPC without archive state, like the chain's public one, refuses reads at old blocks this way.
+export function isMissingHistoricalState(error: unknown): boolean {
+  return /historical state [0-9a-fx]* ?is not available/i.test(errorText(error));
+}
+
 // Where Multicall3 is and when it appeared: its code must match the canonical runtime, and the
-// earliest block with code is found by bisection over archive state.
-async function multicall3(client: PublicClient, block: bigint): Promise<ChainFacts["multicall3"]> {
+// earliest block with code is found by bisection over archive state. Without archive state the
+// creation block can't be checked again, so `knownCreated`, a value recorded earlier, stands, and
+// a note says so.
+async function multicall3(
+  client: PublicClient,
+  block: bigint,
+  knownCreated: number | null,
+): Promise<ChainFacts["multicall3"]> {
   const code = (await client.getCode({ address: MULTICALL3, blockNumber: block })) ?? "0x";
   if (code === "0x" || keccak256(code) !== MULTICALL3_RUNTIME_KECCAK) {
     throw new SpecMismatch(
       `${MULTICALL3} doesn't hold Multicall3's runtime code at block ${block}`,
     );
   }
+  const facts = (created: number): ChainFacts["multicall3"] => ({
+    address: MULTICALL3,
+    blockCreated: created,
+    runtimeKeccak: MULTICALL3_RUNTIME_KECCAK,
+    sources: [SOURCES.multicall3],
+  });
   const hasCode = async (at: bigint): Promise<boolean> =>
     ((await client.getCode({ address: MULTICALL3, blockNumber: at })) ?? "0x") !== "0x";
+  let atGenesis: boolean;
+  try {
+    atGenesis = await hasCode(0n);
+  } catch (error) {
+    if (knownCreated === null || !isMissingHistoricalState(error)) throw error;
+    console.warn(
+      `multicall3.blockCreated not checked again: the RPC keeps no state at block 0. Keeping ${knownCreated}.`,
+    );
+    return facts(knownCreated);
+  }
   let created = 0n;
-  if (!(await hasCode(0n))) {
+  if (!atGenesis) {
     let low = 0n;
     let high = block;
     while (low + 1n < high) {
@@ -231,15 +259,16 @@ async function multicall3(client: PublicClient, block: bigint): Promise<ChainFac
     }
     created = high;
   }
-  return {
-    address: MULTICALL3,
-    blockCreated: Number(created),
-    runtimeKeccak: MULTICALL3_RUNTIME_KECCAK,
-    sources: [SOURCES.multicall3],
-  };
+  return facts(Number(created));
 }
 
-export async function resolveFacts(client: PublicClient, now: Date): Promise<ChainFacts> {
+// `knownMulticall3Created` is the creation block a previous run recorded, used only when the RPC
+// keeps no archive state to check it again.
+export async function resolveFacts(
+  client: PublicClient,
+  now: Date,
+  knownMulticall3Created: number | null = null,
+): Promise<ChainFacts> {
   const latest = await client.getBlock({ blockTag: "latest" });
   const block = latest.number;
   const chainId = await client.getChainId();
@@ -443,7 +472,7 @@ export async function resolveFacts(client: PublicClient, now: Date): Promise<Cha
       available: hasUptimeFeed(directory),
       sources: [SOURCES.feedDirectory, SOURCES.sequencerFeeds],
     },
-    multicall3: await multicall3(client, block),
+    multicall3: await multicall3(client, block, knownMulticall3Created),
     erc8056: { interfaceIds: ids, sources: [SOURCES.erc8056] },
   };
 }

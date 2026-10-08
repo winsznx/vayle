@@ -12,9 +12,13 @@ interface IAccessControlled {
 /// @notice Base for tests that run against Robinhood Chain mainnet state.
 /// @dev The Stock Token under test is one market of deployments/markets.json, NVDA unless
 /// FORK_MARKET names another symbol, so every suite can prove a market before it lists. USDG and
-/// the chain ID come from deployments/robinhood-mainnet.json. Forks the latest block unless
-/// FORK_BLOCK pins one. Without an RPC URL, on the wrong chain, or at a block before a dependency
-/// existed, the suite fails with a named error instead of falling back to anything.
+/// the chain ID come from deployments/robinhood-mainnet.json. Forks the block FORK_BLOCK names, or
+/// the latest. This chain makes about four blocks a second, so without FORK_BLOCK every test forks
+/// a block of its own and forge's RPC cache never hits: pin it to a recent block for a whole run,
+/// as `pnpm test:contracts` and CI do. An RPC without archive state, like the chain's public one,
+/// serves a block for about 25 minutes. Without an RPC URL, on the wrong chain, or at a block
+/// before a dependency existed, the suite fails with a named error instead of falling back to
+/// anything.
 abstract contract ForkTest is Test {
     error MissingRpcUrl();
     error WrongChain(uint256 expected, uint256 actual);

@@ -11,16 +11,23 @@ function formatValue(value: unknown): string {
   return JSON.stringify(value);
 }
 
+// The committed facts' Multicall3 creation block, which verify keeps when the RPC can't check it.
+function recordedMulticall3Created(committed: unknown): number | null {
+  if (typeof committed !== "object" || committed === null) return null;
+  const multicall3 = (committed as { multicall3?: { blockCreated?: unknown } }).multicall3;
+  return typeof multicall3?.blockCreated === "number" ? multicall3.blockCreated : null;
+}
+
 async function main(mode: string | undefined): Promise<number> {
   const client = rpcClient(process.env);
-  const facts = await resolveFacts(client, new Date());
+  const committed: unknown = mode === "verify" ? JSON.parse(readFileSync(OUTPUT, "utf8")) : null;
+  const facts = await resolveFacts(client, new Date(), recordedMulticall3Created(committed));
   if (mode === "resolve") {
     writeFileSync(OUTPUT, serializeFacts(facts));
     console.log(`wrote ${OUTPUT} at block ${facts.block.number}`);
     return 0;
   }
   if (mode === "verify") {
-    const committed: unknown = JSON.parse(readFileSync(OUTPUT, "utf8"));
     const differences = diffFacts(committed, JSON.parse(serializeFacts(facts)));
     for (const d of differences) {
       const tag = d.volatile ? "changed" : "DRIFT  ";

@@ -15,6 +15,7 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "build": "pnpm -r --if-present build",
     "test": "pnpm -r --if-present test",
+    "test:contracts": "sh contracts/test.sh",
     "guard": "node packages/repo-guard/src/cli.ts tree",
     "fork": "node --env-file-if-exists=.env tools/local-fork/src/cli.ts"
   },

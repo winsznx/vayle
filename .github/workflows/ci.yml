@@ -91,7 +91,8 @@ jobs:
         env:
           FOUNDRY_PROFILE: ci
           ROBINHOOD_RPC_URL: ${{ secrets.ROBINHOOD_RPC_URL }}
-        run: forge test -vvv
+        # One recent block for every fork test, so forge's RPC cache serves repeated reads.
+        run: FORK_BLOCK="$(cast block-number --rpc-url "$ROBINHOOD_RPC_URL")" forge test -vvv
 
   interface:
     name: Holder flow through the shared call builders
@@ -114,7 +115,7 @@ jobs:
         env:
           FOUNDRY_PROFILE: interface
           ROBINHOOD_RPC_URL: ${{ secrets.ROBINHOOD_RPC_URL }}
-        run: forge test --match-path "test/interface/*" -vvv
+        run: FORK_BLOCK="$(cast block-number --rpc-url "$ROBINHOOD_RPC_URL")" forge test --match-path "test/interface/*" -vvv
 
   slither:
     name: Static analysis
