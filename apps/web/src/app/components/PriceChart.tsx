@@ -1,5 +1,5 @@
 import { useId, useState, type PointerEvent } from "react";
-import { dollars, easternTime } from "../format.ts";
+import { dollars, easternMonthDay, easternTime } from "../format.ts";
 import type { PricePoint } from "../usePriceHistory.ts";
 import "./dashboard.css";
 
@@ -16,17 +16,13 @@ interface Props {
   readonly feedDecimals: number;
   // Chain time, so the last round's step runs up to now.
   readonly now: number;
-  // This week's close and the holder's order prices, in USDG base units.
+  // This week's reference and what it was taken at, and the holder's target prices, in USDG base
+  // units.
   readonly close: bigint | null;
+  readonly closeLabel: string;
   readonly marks: readonly bigint[];
   readonly usdgDecimals: number;
 }
-
-const DAY_FORMAT = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  timeZone: "America/New_York",
-});
 
 // Plot coordinates only. Every figure shown is formatted from the chain's integers.
 function asNumber(value: bigint, decimals: number): number {
@@ -41,7 +37,8 @@ function highest(points: readonly PricePoint[], start: bigint): bigint {
   return points.reduce((high, p) => (p.answer > high ? p.answer : high), start);
 }
 
-export function PriceChart({ points, feedDecimals, now, close, marks, usdgDecimals }: Props) {
+export function PriceChart(props: Props) {
+  const { points, feedDecimals, now, close, closeLabel, marks, usdgDecimals } = props;
   const gradient = useId();
   const [hover, setHover] = useState<PricePoint | null>(null);
   const first = points[0];
@@ -113,7 +110,9 @@ export function PriceChart({ points, feedDecimals, now, close, marks, usdgDecima
             className="chart-level chart-close"
             style={{ top: down(asNumber(close, usdgDecimals)) }}
           >
-            <span className="close-pill num">Close {dollars(close, usdgDecimals)}</span>
+            <span className="close-pill num">
+              {closeLabel} {dollars(close, usdgDecimals)}
+            </span>
           </div>
         )}
         {marks.map((mark) => (
@@ -140,7 +139,7 @@ export function PriceChart({ points, feedDecimals, now, close, marks, usdgDecima
         )}
       </div>
       <div className="chart-axis" aria-hidden="true">
-        <span>{DAY_FORMAT.format(new Date(first.time * 1000))}</span>
+        <span>{easternMonthDay(first.time)}</span>
         <span>Now</span>
       </div>
     </figure>

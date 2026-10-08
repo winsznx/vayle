@@ -15,11 +15,11 @@ const TABS: readonly { readonly key: Show; readonly label: string }[] = [
 ];
 
 const EMPTY: Readonly<Record<Show, string>> = {
-  open: "No open orders. Choose a price to place one.",
+  open: "No open targets. Choose a price to set one.",
   action: "Nothing needs you right now.",
-  week: "No order is in this week's trade.",
-  waiting: "No order is waiting for a week.",
-  closed: "No closed orders yet.",
+  week: "No target is in this week's trade.",
+  waiting: "No target is waiting for a week.",
+  closed: "No closed targets yet.",
 };
 
 function isShow(value: string | null): value is Show {
@@ -37,8 +37,8 @@ export function OrdersPage() {
   if (account === null) {
     return (
       <section className="card notice-card">
-        <h2 className="h3">Your orders</h2>
-        <p className="muted">Connect a wallet to see your orders.</p>
+        <h2 className="h3">Your targets</h2>
+        <p className="muted">Connect a wallet to see your targets.</p>
       </section>
     );
   }
@@ -68,7 +68,7 @@ export function OrdersPage() {
   return (
     <>
       <div className="page-head">
-        <div className="tabs" role="group" aria-label="Show orders">
+        <div className="tabs" role="group" aria-label="Show targets">
           {TABS.map((t) => (
             <button
               key={t.key}
@@ -85,7 +85,7 @@ export function OrdersPage() {
           ))}
         </div>
         <Link className="btn btn-ink btn-sm" to="/trade">
-          Place an order
+          Set a target
         </Link>
       </div>
       <article className="card orders-card">
@@ -94,7 +94,7 @@ export function OrdersPage() {
         ) : (
           <OrdersTable
             orders={shown}
-            label={`${TABS.find((t) => t.key === show)?.label ?? ""} orders`}
+            label={`${TABS.find((t) => t.key === show)?.label ?? ""} targets`}
           />
         )}
       </article>

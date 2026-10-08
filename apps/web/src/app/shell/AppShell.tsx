@@ -82,20 +82,31 @@ function Frame({ title, children }: { readonly title: string; readonly children:
   );
 }
 
+const TICKERS = new Intl.ListFormat("en-US", { type: "conjunction" });
+
 // A halt or a pause changes what every page can do, so it's said above every page while it lasts.
 function MarketNotice({ view }: { readonly view: MarketView }) {
-  if (view.now < view.guard.haltedUntil) {
+  if (view.now < view.haltedUntil) {
     return (
       <p className="market-notice market-notice-halted" role="status">
-        The market is halted until {easternTime(view.guard.haltedUntil)}. Nothing can be placed,
-        changed, settled or withdrawn until then.
+        The market is halted until {easternTime(view.haltedUntil)}. Nothing can be set, changed,
+        settled or withdrawn until then.
       </p>
     );
   }
-  if (view.guard.paused) {
+  if (view.paused) {
     return (
       <p className="market-notice" role="status">
-        New orders are paused. Settling, stopping and withdrawing still work.
+        New targets are paused. Settling, stopping and withdrawing still work.
+      </p>
+    );
+  }
+  const paused = view.assets.filter((a) => a.paused).map((a) => a.market.symbol);
+  if (paused.length > 0) {
+    return (
+      <p className="market-notice" role="status">
+        New {TICKERS.format(paused)} targets are paused. Settling, stopping and withdrawing still
+        work.
       </p>
     );
   }

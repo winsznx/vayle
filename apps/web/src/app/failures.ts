@@ -3,27 +3,28 @@
 
 const MARKET: Readonly<Record<string, string>> = {
   MarketHalted: "The market is halted, so nothing can change until the halt ends.",
-  MarketPaused: "New orders are paused right now. Settling, stopping and withdrawing still work.",
-  OraclePaused: "NVDA's price feed is paused, so new orders and fills wait until it's back.",
+  MarketPaused: "New targets are paused right now. Settling, stopping and withdrawing still work.",
+  OraclePaused:
+    "This Stock Token's price feed is paused, so new targets and fills wait until it's back.",
   CapExceeded: "That's over the market's current limit for this side. Try a smaller amount.",
-  OrderFrozen: "This order is in this week's batch. You can change it once the batch finishes.",
+  OrderFrozen: "This target is in this week's batch. You can change it once the batch finishes.",
   TargetFrozen:
     "That price is in this week's batch. Pick another, or change it once the batch finishes.",
   OrderAttached:
-    "Part of this order is in this week's trade, so its price and amount stay until the week settles.",
-  OrderNotActive: "This order isn't active anymore.",
-  NotOrderOwner: "This order belongs to another wallet.",
+    "Part of this target is in this week's trade, so its price and amount stay until the week settles.",
+  OrderNotActive: "This target isn't active anymore.",
+  NotOrderOwner: "This target belongs to another wallet.",
   StrikeNotListed: "That price isn't on this week's ladder.",
-  NotALot: "Amounts move in steps of 0.01 NVDA.",
-  NotOnTick: "That premium isn't on the market's price steps.",
+  NotALot: "That amount isn't a whole number of lots.",
+  NotOnTick: "That payment isn't on the market's price steps.",
   InsufficientClaimable: "There's less ready to withdraw than that. Refresh and try again.",
   WindowStillOpen: "This week's result isn't final yet.",
   WindowClosed: "That week's window has closed.",
   WindowNotOpen: "That week hasn't reached its window yet.",
   SeriesNotSettled: "This week's result isn't final yet.",
-  NothingToSettle: "There's nothing to settle on this order.",
+  NothingToSettle: "There's nothing to settle on this target.",
   ZeroAmount: "Enter an amount above zero.",
-  ExceedsUncommitted: "That's more than the order has free.",
+  ExceedsUncommitted: "That's more than the target has free.",
   SafeERC20FailedOperation: "The token transfer failed. Check your balance and approval.",
 };
 

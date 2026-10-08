@@ -2,13 +2,16 @@ import { robinhoodChain } from "@vayle/chain-facts/chain";
 import { withGasMargin, type Call } from "@vayle/market";
 import { createContext, use, useMemo, useState, type ReactNode } from "react";
 import type { Chain, PublicClient } from "viem";
+import { makerBidsOf } from "./bidSheet.ts";
 import { publicClientOf } from "./chain.ts";
 import { describeFailure, reverted } from "./failures.ts";
 import { easternTime } from "./format.ts";
+import type { RateInputs } from "./rates.ts";
 import { placementRestricted } from "./region.ts";
 import type { AppConfig } from "./config.ts";
+import { useBidSheet, type BidSheetState } from "./useBidSheet.ts";
 import { useDisclosures, type DisclosuresState } from "./useDisclosures.ts";
-import { useMarket, type MarketView } from "./useMarket.ts";
+import { useMarket, type AssetView, type MarketView } from "./useMarket.ts";
 import { useMarketHistory, type MarketHistory } from "./useMarketHistory.ts";
 import { useWallet, type Wallet } from "./wallet.ts";
 
@@ -54,6 +57,10 @@ export interface AppState {
   readonly readError: string | null;
   readonly history: MarketHistory;
   readonly disclosures: DisclosuresState;
+  readonly bidSheet: BidSheetState;
+  // What a market's targets are paid this week, from its batch bids and the maker's bid sheet, or
+  // null while it has no week open.
+  readonly rates: (asset: AssetView) => RateInputs | null;
   readonly tx: TxState;
   readonly busy: boolean;
   readonly run: Run;
@@ -84,7 +91,7 @@ function placementOf(
     return {
       open: false,
       reason:
-        "New orders aren't open yet. Existing orders can still be settled, stopped and withdrawn.",
+        "New targets aren't open yet. Existing targets can still be settled, stopped and withdrawn.",
     };
   }
   if (disclosures.status !== "approved") {
@@ -94,27 +101,35 @@ function placementOf(
     return {
       open: false,
       reason:
-        "New orders aren't available where you are. Your existing orders can still be settled, stopped and withdrawn.",
+        "New targets aren't available where you are. Your existing targets can still be settled, stopped and withdrawn.",
     };
   }
-  if (view !== null && view.now < view.guard.haltedUntil) {
+  if (view !== null && view.now < view.haltedUntil) {
     return {
       open: false,
-      reason: `The market is halted until ${easternTime(view.guard.haltedUntil)}, so nothing can change until then.`,
+      reason: `The market is halted until ${easternTime(view.haltedUntil)}, so nothing can change until then.`,
     };
   }
-  if (view?.guard.paused === true) {
+  if (view?.paused === true) {
     return {
       open: false,
-      reason: "New orders are paused right now. Settling, stopping and withdrawing still work.",
+      reason: "New targets are paused right now. Settling, stopping and withdrawing still work.",
     };
   }
-  if (wallet.address === null)
-    return { open: false, reason: "Connect a wallet to place an order." };
+  if (wallet.address === null) return { open: false, reason: "Connect a wallet to set a target." };
   if (!onChain) {
-    return { open: false, reason: "Switch your wallet to Robinhood Chain to place an order." };
+    return { open: false, reason: "Switch your wallet to Robinhood Chain to set a target." };
   }
   return { open: true, reason: "" };
+}
+
+// Whether a target can be set on one market: the app-wide answer, then that market's own pause.
+export function placementFor(placement: Placement, asset: AssetView): Placement {
+  if (!placement.open || !asset.paused) return placement;
+  return {
+    open: false,
+    reason: `New ${asset.market.symbol} targets are paused right now. Settling, stopping and withdrawing still work.`,
+  };
 }
 
 export function AppProvider({
@@ -131,6 +146,7 @@ export function AppProvider({
   const { view, error } = useMarket(client, config, wallet.address, version);
   const history = useMarketHistory(client, config, wallet.address, version);
   const disclosures = useDisclosures();
+  const bidSheet = useBidSheet(config);
   // Where the visitor is doesn't change while the page is open, so it's read once.
   const [restricted] = useState(placementRestricted);
   const onChain = wallet.address !== null && wallet.chainId === config.chainId;
@@ -161,6 +177,18 @@ export function AppProvider({
     }
   };
 
+  const rates = (asset: AssetView): RateInputs | null => {
+    if (view === null || asset.epoch === null) return null;
+    const sheet = bidSheet.status === "ready" ? bidSheet.sheet : null;
+    return {
+      epoch: asset.epoch,
+      now: view.now,
+      batch: asset.bids,
+      readsSheet: config.makerUrl !== null,
+      maker: makerBidsOf(sheet, asset.market, asset.epoch),
+    };
+  };
+
   const state: AppState = {
     config,
     client,
@@ -171,6 +199,8 @@ export function AppProvider({
     readError: error,
     history,
     disclosures,
+    bidSheet,
+    rates,
     tx,
     busy: tx.status === "signing" || tx.status === "confirming",
     run,

@@ -1,0 +1,65 @@
+/*
+  Ticker badges: the brand's mark for every token, its ticker in a badge, never artwork. A Stock
+  Token sits in an ink tile, USDG in an outlined pill. Badges stay neutral, since blue is for the
+  holder's own price. Needs tokens.css. The spec is in design.md, under Iconography.
+*/
+
+.ticker {
+  --ticker-h: 24px;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  height: var(--ticker-h);
+  min-width: var(--ticker-h);
+  padding: 0 calc(var(--ticker-h) * 0.28);
+  border-radius: calc(var(--ticker-h) * 0.3);
+  font-size: max(10px, calc(var(--ticker-h) * 0.44));
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.ticker-stock {
+  color: var(--inverse);
+  background: var(--ink);
+}
+
+.ticker-quiet {
+  color: var(--ink);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--control);
+}
+
+.ticker-cash {
+  border-radius: var(--radius-pill);
+  color: var(--ink);
+  background: var(--sheet);
+  box-shadow: inset 0 0 0 1px var(--control);
+}
+
+.ticker-xs {
+  --ticker-h: 16px;
+}
+
+.ticker-sm {
+  --ticker-h: 20px;
+}
+
+.ticker-md {
+  --ticker-h: 24px;
+}
+
+.ticker-lg {
+  --ticker-h: 32px;
+}
+
+.ticker-xl {
+  --ticker-h: 40px;
+}
+
+.ticker-hero {
+  --ticker-h: 56px;
+}

@@ -272,7 +272,7 @@
 
 .stage-track {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(var(--stages, 5), 1fr);
   gap: 6px;
   margin-top: 8px;
 }
@@ -330,17 +330,83 @@
 
 /* Trade: the ladder and the ticket side by side */
 
+/* The ladder and what sits under it on the left, the ticket on the right. On narrow screens the
+   ticket comes straight after the ladder, before the notes. */
 .trade {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(320px, 1fr);
+  grid-template-areas:
+    "ladder side"
+    "notes side";
   align-items: start;
   gap: 20px;
+}
+
+.trade-ladder {
+  grid-area: ladder;
+}
+
+.trade-notes {
+  display: grid;
+  grid-area: notes;
+  gap: 20px;
+}
+
+/* Under the rate sheet: the markets that are live, and how more of them list. */
+.live-now {
+  padding: 0 8px;
+  color: var(--muted);
+  font-size: var(--text-label);
+  line-height: 1.9;
+  text-wrap: pretty;
+}
+
+.live-now-list {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-right: 2px;
+  color: var(--ink);
+  font-weight: 600;
+  vertical-align: middle;
 }
 
 .trade-side {
   position: sticky;
   top: 110px;
+  grid-area: side;
   scroll-margin-top: 96px;
+}
+
+/* The rate sheet's head: the title and what's above and below the close, beside the market
+   switcher, with the legend on a line of its own under them. */
+.ladder-head {
+  flex-wrap: wrap;
+}
+
+.ladder-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  padding: 0 24px 8px;
+}
+
+.ladder-legend .legend {
+  white-space: normal;
+}
+
+/* Which source a rate came from, when the sheet shows both. */
+.row-bid-source {
+  display: block;
+  color: var(--muted);
+  font-size: var(--text-caption);
+  font-weight: 560;
+}
+
+/* The market switcher: each listed market as its ticker, the current one filled. */
+.asset-switch .tab {
+  padding: 0 8px;
 }
 
 .legend {
@@ -492,6 +558,9 @@
 }
 
 .ticket-kicker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   color: var(--muted);
   font-size: var(--text-body-s);
   font-weight: 600;
@@ -782,20 +851,23 @@
   white-space: nowrap;
 }
 
-/* Disclosures */
+/* Disclosures: the owner's published risk lines, under the ladder. */
 
 .disclosures {
-  display: grid;
-  gap: 14px;
-  max-width: 48rem;
-  padding: 8px 4px;
-  color: var(--muted);
+  padding: 0 24px 14px;
+}
+
+.disclosures li {
+  padding: 12px 0;
+  border-top: 1px solid var(--hairline);
+  color: var(--body);
   font-size: var(--text-label);
+  line-height: 1.5;
+  text-wrap: pretty;
 }
 
 .disclosure-title {
   color: var(--ink);
-  font-size: var(--text-label);
   font-weight: 650;
 }
 
@@ -959,8 +1031,8 @@
     inset: auto 0 0;
     z-index: 30;
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
     background: color-mix(in srgb, var(--sheet) 92%, transparent);
     box-shadow: 0 -1px 0 var(--hairline);
     backdrop-filter: saturate(1.4) blur(16px);
@@ -970,11 +1042,19 @@
     display: grid;
     justify-items: center;
     gap: 4px;
-    padding: 8px 2px;
+    min-width: 0;
+    padding: 8px 0;
     border-radius: 12px;
     color: var(--muted);
-    font-size: 11.5px;
+    font-size: clamp(10px, 2.9vw, 11.5px);
     font-weight: 600;
+  }
+
+  .phone-tab span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .phone-tab .nav-icon {
@@ -1004,6 +1084,10 @@
 
   .trade {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "ladder"
+      "side"
+      "notes";
   }
 
   .trade-side {
@@ -1023,6 +1107,10 @@
   .ladder-card .card-head {
     flex-direction: column;
     gap: 10px;
+  }
+
+  .ladder-legend {
+    padding: 0 18px 6px;
   }
 
   .topbar {
@@ -1104,7 +1192,7 @@
     border: 0;
   }
 
-  .orders-table td[data-label="Order"] {
+  .orders-table td[data-label="Target"] {
     grid-column: 1;
   }
 

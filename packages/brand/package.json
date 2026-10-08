@@ -6,14 +6,13 @@
   "type": "module",
   "exports": {
     "./tokens.css": "./css/tokens.css",
+    "./ticker.css": "./css/ticker.css",
     "./mark": "./src/mark.ts",
     "./cards": "./social/cards.ts",
-    "./brand.json": "./brand.json",
-    "./assets/*": "./assets/*"
+    "./brand.json": "./brand.json"
   },
   "scripts": {
     "test": "node --test \"test/*.test.ts\"",
-    "sync-tokens": "node scripts/sync-tokens.ts",
     "social": "node scripts/render-social.ts",
     "typecheck": "tsc -p tsconfig.json"
   },

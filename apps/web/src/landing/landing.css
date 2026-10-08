@@ -12,13 +12,15 @@
 .statement,
 .how,
 .week,
-.safety {
+.safety,
+.risks {
   padding-inline: clamp(20px, 5vw, 72px);
 }
 
 .how,
 .week,
-.safety {
+.safety,
+.risks {
   max-width: 1280px;
   margin-inline: auto;
 }
@@ -498,6 +500,16 @@
   max-width: 15ch;
 }
 
+.how-lede {
+  display: grid;
+  gap: 14px;
+}
+
+/* What sets the product apart reads in ink beside the muted explanation. */
+.how-settles {
+  color: var(--ink);
+}
+
 /* How it works */
 
 .steps {
@@ -923,7 +935,7 @@
 
 .bento-lead {
   position: relative;
-  grid-row: span 3;
+  grid-row: span 2;
   align-content: start;
   overflow: hidden;
   color: rgb(255 255 255 / 0.84);
@@ -958,6 +970,26 @@
   height: 12px;
   background: rgb(255 255 255 / 0.92);
   box-shadow: 0 0 24px rgb(255 255 255 / 0.4);
+}
+
+/* Risks: the owner's signed-off lines in their order, down one column and then the next. */
+
+.risks {
+  padding-bottom: clamp(96px, 12vw, 160px);
+}
+
+.risk-list {
+  columns: 2;
+  column-gap: clamp(32px, 5vw, 80px);
+  margin-top: clamp(32px, 4vw, 48px);
+}
+
+.risk-list li {
+  break-inside: avoid;
+  padding: 18px 0;
+  border-top: 1px solid var(--hairline);
+  color: var(--body);
+  text-wrap: pretty;
 }
 
 /* Closing band */
@@ -1019,6 +1051,7 @@
 .float-title {
   color: #04060f;
   font-weight: 650;
+  white-space: nowrap;
 }
 
 .float-detail {
@@ -1029,6 +1062,18 @@
 .float-token {
   position: absolute;
   filter: drop-shadow(0 18px 28px rgb(0 0 0 / 0.5));
+}
+
+/* On the dark band a Stock Token's ink tile turns over, like the white order card beside it, and
+   inside that card it stays ink whatever the theme. */
+.float-token .ticker-stock {
+  color: #04060f;
+  background: #ffffff;
+}
+
+.float-order .ticker-stock {
+  color: #ffffff;
+  background: #04060f;
 }
 
 .float-token-a {
@@ -1047,7 +1092,7 @@
 
 .footer {
   display: grid;
-  grid-template-columns: 1fr 1.5fr 1.1fr;
+  grid-template-columns: 1fr 1.6fr;
   gap: 12px;
   padding: 0 clamp(10px, 1.6vw, 20px) clamp(10px, 1.6vw, 20px);
 }
@@ -1088,10 +1133,6 @@
   color: var(--ink);
   font-size: var(--text-label);
   font-weight: 650;
-}
-
-.footer-risks .muted {
-  font-size: var(--text-body-s);
 }
 
 .footer-base {
@@ -1164,7 +1205,7 @@
   }
 
   .footer {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
 
   .footer-links {
@@ -1180,6 +1221,10 @@
   .steps,
   .bento {
     grid-template-columns: 1fr;
+  }
+
+  .risk-list {
+    columns: 1;
   }
 
   .hero-actions .btn {

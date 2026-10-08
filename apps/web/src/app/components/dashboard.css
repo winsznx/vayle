@@ -1,4 +1,4 @@
-/* The dashboard's pieces: NVDA's price and its last month, the holder's holdings, and the week from
+/* The dashboard's pieces: a market's price and its last month, the holder's holdings, and the week from
    one close to the next. Blue marks the holder's own prices and the week's current stage. */
 
 /* Price card */
@@ -7,6 +7,10 @@
   display: grid;
   gap: 18px;
   padding: 24px 24px 18px;
+}
+
+.price-card > .asset-switch {
+  justify-self: start;
 }
 
 .price-head {
@@ -363,13 +367,13 @@
   position: relative;
 }
 
-/* Five even stages: the line runs from the first dot's center, at a tenth of the width, to the
-   last one's. */
+/* Even stages, as many as the week has (--stages on the body): the line runs from the first dot's
+   center, half a column in, to the last one's. */
 .week-track-line {
   position: absolute;
   top: 5px;
-  right: 10%;
-  left: 10%;
+  right: calc(50% / var(--stages, 5));
+  left: calc(50% / var(--stages, 5));
   height: 3px;
   border-radius: 3px;
   background: var(--sunken);
@@ -385,7 +389,7 @@
 .week-track-stages {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--stages, 5), minmax(0, 1fr));
 }
 
 .week-track-stages > li {

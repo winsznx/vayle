@@ -1,7 +1,7 @@
 {
   "name": "Vayle",
   "short_name": "Vayle",
-  "description": "Paid limit orders for NVDA on Robinhood Chain.",
+  "description": "Weekly pay for Stock Token holders on Robinhood Chain.",
   "start_url": "/app/",
   "display": "standalone",
   "background_color": "#E4E7F1",

@@ -1,13 +1,14 @@
+import { markets } from "@vayle/markets";
 import { useEffect, useState, type ReactNode } from "react";
 import { dollars, easternClock } from "../app/format.ts";
 import { ladderAround, type Rung } from "../app/week.ts";
-import { TokenIcon } from "../ui/TokenIcon.tsx";
+import { CASH_SYMBOL } from "../tokens.ts";
+import { TickerBadge } from "../ui/TickerBadge.tsx";
 import { readFeed, type FeedPrice } from "./feed.ts";
 import { useReveal, Words } from "./reveal.tsx";
 
-// The listing's grid: strikes every $5 within 10% of the reference, as listed by the deploy script.
-const STRIKE_TICK = 5_000_000n;
-const STRIKE_RANGE_BPS = 1000;
+// The hero's example ladder uses the first market the build lists, on that listing's grid.
+const SHOWN = markets.at(0) ?? null;
 const PLACEHOLDER_RUNGS = 8;
 // Feed round IDs carry the aggregator phase in their top bits; the round itself is the low 64.
 const AGGREGATOR_ROUND = (1n << 64n) - 1n;
@@ -20,12 +21,12 @@ type FeedState =
 function useFeed(): FeedState {
   const rpcUrl = import.meta.env.VITE_RPC_URL ?? "";
   const [state, setState] = useState<FeedState>(
-    rpcUrl === "" ? { status: "unavailable" } : { status: "loading" },
+    rpcUrl === "" || SHOWN === null ? { status: "unavailable" } : { status: "loading" },
   );
   useEffect(() => {
-    if (rpcUrl === "") return;
+    if (rpcUrl === "" || SHOWN === null) return;
     const controller = new AbortController();
-    readFeed(rpcUrl, controller.signal).then(
+    readFeed(rpcUrl, SHOWN, controller.signal).then(
       (feed) => {
         setState(feed === null ? { status: "unavailable" } : { status: "live", feed });
       },
@@ -48,9 +49,12 @@ function heldRung(rungs: readonly Rung[]): bigint | null {
 }
 
 function LadderObject({ state }: { readonly state: FeedState }) {
-  const live = state.status === "live" ? state.feed : null;
+  const live = state.status === "live" && SHOWN !== null ? state.feed : null;
   const rungs =
-    live === null ? [] : ladderAround(live.price, STRIKE_TICK, STRIKE_RANGE_BPS).slice(1, -1);
+    live === null || SHOWN === null
+      ? []
+      : ladderAround(live.price, SHOWN.strikeTick, SHOWN.strikeRangeBps).slice(1, -1);
+  const symbol = SHOWN?.symbol ?? "Stock Token";
   const held = heldRung(rungs);
   const closeAt = rungs.findIndex((r) => r.side === "buy");
   const tag = <span className="held-tag">Your price</span>;
@@ -75,9 +79,9 @@ function LadderObject({ state }: { readonly state: FeedState }) {
   return (
     <div className="ladder-object" aria-hidden={live === null}>
       <div className="ladder-head">
-        <TokenIcon symbol="NVDA" size="lg" />
+        <TickerBadge symbol={symbol} size="lg" />
         <div>
-          <p className="ladder-symbol">NVDA</p>
+          <p className="ladder-symbol">{symbol}</p>
           <p className="ladder-sub">
             {live === null
               ? state.status === "loading"
@@ -87,13 +91,16 @@ function LadderObject({ state }: { readonly state: FeedState }) {
           </p>
         </div>
       </div>
-      <ol className="ladder-rungs" aria-label="Prices on the ladder around NVDA's current price">
+      <ol
+        className="ladder-rungs"
+        aria-label={`Prices on the ladder around ${symbol}'s current price`}
+      >
         {rows}
       </ol>
       <p className="ladder-source">
         {live === null
-          ? "An example ladder from Chainlink NVDA/USD"
-          : `An example ladder around Chainlink NVDA/USD, round ${live.round & AGGREGATOR_ROUND}`}
+          ? `An example ladder from Chainlink ${symbol}/USD`
+          : `An example ladder around Chainlink ${symbol}/USD, round ${live.round & AGGREGATOR_ROUND}`}
       </p>
     </div>
   );
@@ -127,19 +134,19 @@ export function Hero() {
   return (
     <section className="hero" aria-labelledby="hero-title">
       <div className="hero-copy">
-        <p className="tag">Paid limit orders for NVDA on Robinhood Chain</p>
+        <p className="tag">Weekly pay for Stock Token holders on Robinhood Chain</p>
         <h1 id="hero-title" ref={headline} className="display-1 hero-title reveal">
           <span className="ghost">
-            <Words text="Name your price for NVDA." />
+            <Words text="Pick the price you'd sell at." />
           </span>
           <span>
-            <Words text="Get paid while it waits." delay={5} />
+            <Words text="Get paid while you wait for it." delay={6} />
           </span>
         </h1>
         <p className="lede hero-lede">
-          Place one order at a price you choose. Each week it earns that week&apos;s premium, skips
-          the week, or fills at exactly your price, settled in the actual token. It renews until it
-          fills or you cancel.
+          Each week a buyer pays you for the right to buy your tokens at that price when the market
+          closes Friday. If the stock closes above it, your tokens sell at exactly your price. If
+          not, you keep them and the payment, and it renews for another week.
         </p>
         <div className="hero-actions">
           <a className="btn btn-brand btn-lg" href="/app/">
@@ -193,21 +200,21 @@ export function Hero() {
         <LadderObject state={state} />
         <Outcome
           className="outcome-a"
-          title="Earned"
-          detail="This week's premium from the team-operated maker"
-          icon={<TokenIcon symbol="USDG" size="lg" />}
+          title="Paid"
+          detail="This week's payment, in USDG"
+          icon={<TickerBadge symbol={CASH_SYMBOL} size="lg" />}
         />
         <Outcome
           className="outcome-b"
           title="Skipped"
-          detail="The bid was under your minimum"
+          detail="The bid was under your least payment"
           icon={<span className="outcome-dot" />}
         />
         <Outcome
           className="outcome-c"
-          title="Filled at your price"
-          detail="The actual token changes hands"
-          icon={<TokenIcon symbol="NVDA" size="lg" />}
+          title="Sold at your price"
+          detail="Your tokens change hands"
+          icon={<TickerBadge symbol={SHOWN?.symbol ?? "Stock Token"} size="lg" />}
         />
         <Outcome
           className="outcome-d"
@@ -219,12 +226,14 @@ export function Hero() {
 
       <ul className="proof" aria-label="What Vayle runs on">
         <li>
-          <TokenIcon symbol="NVDA" size="md" />
-          NVDA Stock Token
+          {markets.map((m) => (
+            <TickerBadge key={m.token} symbol={m.symbol} size="md" />
+          ))}
+          Stock Tokens
         </li>
         <li>
-          <TokenIcon symbol="USDG" size="md" />
-          Premium paid in USDG
+          <TickerBadge symbol={CASH_SYMBOL} size="md" />
+          Paid in USDG
         </li>
         <li>
           <svg className="glyph" viewBox="0 0 20 20" aria-hidden="true" focusable="false">

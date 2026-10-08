@@ -10,6 +10,7 @@ import {
   type MarketEvent,
   type Week,
   weekSettlesAt,
+  weeksOf,
 } from "../src/history.ts";
 
 const MARKET = "0x00000000000000000000000000000000000000aa";
@@ -219,5 +220,34 @@ describe("weekSettlesAt", () => {
     const settles = weekSettlesAt(opening);
     // #then the batch deadline, Sun Dec 27 20:00 EST, and an hour more
     assert.equal(settles, 1_798_419_600 + 3600);
+  });
+});
+
+describe("weeksOf", () => {
+  function epoch(asset: string, opening: number, expiry: number): MarketEvent {
+    return {
+      block_number: 1,
+      log_index: 0,
+      tx_hash: TX,
+      block_time: "2026-10-09T20:05:00Z",
+      name: "EpochCreated",
+      order_id: null,
+      series: null,
+      account: null,
+      args: { asset, opening: String(opening), expiry: String(expiry) },
+    };
+  }
+
+  it("keeps only the asset's own weeks, whatever the letter case of its address", () => {
+    // #given: two markets opened the same week
+    const spy = "0x117cc2133c37B721F49dE2A7a74833232B3B4C0C";
+    const events = [epoch(NVDA, 100, 200), epoch(spy, 100, 200), epoch(NVDA, 200, 300)];
+    // #when
+    const weeks = weeksOf(events, NVDA.toLowerCase());
+    // #then
+    assert.deepEqual(weeks, [
+      { opening: 100, expiry: 200 },
+      { opening: 200, expiry: 300 },
+    ]);
   });
 });

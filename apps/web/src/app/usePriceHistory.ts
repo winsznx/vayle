@@ -70,9 +70,13 @@ async function readPrices(
 }
 
 // The feed is the external system: read it now, every five minutes while the page is in view, and
-// on coming back to the page. A failed refresh keeps the chart that was showing.
+// on coming back to the page. A failed refresh keeps the chart that was showing. A read is kept with
+// the feed it came from, so switching to another market's feed never shows the last one's rounds.
 export function usePriceHistory(client: PublicClient, feed: Address): PriceHistory {
-  const [state, setState] = useState<PriceHistory>({ status: "loading" });
+  const [read, setRead] = useState<{ readonly feed: Address; readonly history: PriceHistory }>({
+    feed,
+    history: { status: "loading" },
+  });
   useEffect(() => {
     let cancelled = false;
     let running = false;
@@ -82,14 +86,14 @@ export function usePriceHistory(client: PublicClient, feed: Address): PriceHisto
       readPrices(client, feed)
         .then(
           ({ points, decimals }) => {
-            if (!cancelled) setState({ status: "ready", points, decimals });
+            if (!cancelled) setRead({ feed, history: { status: "ready", points, decimals } });
           },
           (error: unknown) => {
             if (cancelled) return;
-            setState((previous) =>
-              previous.status === "ready"
+            setRead((previous) =>
+              previous.feed === feed && previous.history.status === "ready"
                 ? previous
-                : { status: "failed", reason: shortError(error) },
+                : { feed, history: { status: "failed", reason: shortError(error) } },
             );
           },
         )
@@ -109,5 +113,5 @@ export function usePriceHistory(client: PublicClient, feed: Address): PriceHisto
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [client, feed]);
-  return state;
+  return read.feed === feed ? read.history : { status: "loading" };
 }

@@ -72,12 +72,18 @@ importers:
       '@vayle/brand':
         specifier: workspace:*
         version: link:../../packages/brand
+      '@vayle/calendar':
+        specifier: workspace:*
+        version: link:../../packages/calendar
       '@vayle/chain-facts':
         specifier: workspace:*
         version: link:../../packages/chain-facts
       '@vayle/market':
         specifier: workspace:*
         version: link:../../packages/market
+      '@vayle/markets':
+        specifier: workspace:*
+        version: link:../../packages/markets
       '@vayle/units':
         specifier: workspace:*
         version: link:../../packages/units

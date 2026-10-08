@@ -135,12 +135,22 @@
     "caps": "round",
     "joins": "round",
     "fill": "none",
-    "tokenLogos": "assets/tokens/manifest.json"
+    "tickerBadge": {
+      "source": "css/ticker.css",
+      "weight": 700,
+      "trackingEm": 0.02,
+      "typeOfHeight": 0.44,
+      "minTypePx": 10,
+      "heightsPx": [16, 20, 24, 32, 40, 56],
+      "stockToken": "ink tile, inverse text, corners at 0.3 of the height",
+      "usdg": "pill on the sheet, ink text, 1px control ring",
+      "notCurrent": "outlined tile"
+    }
   },
   "render": {
     "photography": false,
     "threeD": false,
-    "imagery": "the product's own UI: the ladder, order states and real token logos",
+    "imagery": "the product's own UI: the ladder, target states and ticker badges",
     "lighting": "flat, with depth only from the shadow tokens",
     "finish": "matte"
   },

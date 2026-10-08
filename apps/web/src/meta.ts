@@ -9,9 +9,9 @@ export interface PageMeta {
 }
 
 export const LANDING: PageMeta = {
-  title: "Vayle: paid limit orders for NVDA",
+  title: "Vayle: weekly pay for Stock Token holders",
   description:
-    "Name your price once. Each week your order earns that week's premium, skips the week, or fills at exactly your price, settled in the actual token.",
+    "Pick the price you'd sell at. Get paid while you wait for it. Each week a buyer pays you for the right to buy your tokens at that price when the market closes Friday.",
   card: "landing",
 };
 
@@ -19,33 +19,39 @@ export const LANDING: PageMeta = {
 export const APP_PAGES: Readonly<Record<string, PageMeta>> = {
   "/": {
     title: "Overview",
-    description: "Your orders, what they've earned and what's ready to withdraw.",
+    description: "Your targets, what they've earned and what's ready to withdraw.",
     card: "app",
   },
   "/trade": {
     title: "Trade",
-    description: "This week's prices for NVDA. Above the close you sell, below it you buy.",
+    description:
+      "This week's rates for each Stock Token. Set a sell target above the close or a buy target below it.",
     card: "trade",
   },
+  "/markets": {
+    title: "Markets",
+    description:
+      "Every Stock Token market: the live ones with their week and rates, and the rest with what the market check found.",
+    card: "markets",
+  },
   "/orders": {
-    title: "Orders",
-    description: "Every order, and what it's doing this week.",
+    title: "Targets",
+    description: "Every target, and what it's doing this week.",
     card: "orders",
   },
   "/orders/:id": {
-    title: "Order",
-    description: "One order: its terms, this week, and what it has earned.",
+    title: "Target",
+    description: "One target: its terms, this week, and what it has earned.",
     card: "orders",
   },
   "/activity": {
     title: "Activity",
-    description: "Premiums, fills and withdrawals, each linked to its transaction.",
+    description: "Payments, fills and withdrawals, each linked to its transaction.",
     card: "activity",
   },
   "/market": {
-    title: "Market",
-    description:
-      "This week's prices, the feed, the limits and the schedule, read from the contracts.",
+    title: "Status",
+    description: "Each market's week, feed, limits and schedule, read from the contracts.",
     card: "market",
   },
 };

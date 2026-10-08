@@ -22,14 +22,20 @@ export const SECTIONS: readonly Section[] = [
     icon: "M3 4.5A1.5 1.5 0 0 1 4.5 3H9l6 6-6 6-6-6V4.5ZM6.5 6.5h.01",
     end: false,
   },
-  { to: "/orders", label: "Orders", icon: "M3.5 5h11M3.5 9h11M3.5 13h7", end: false },
+  {
+    to: "/markets",
+    label: "Markets",
+    icon: "M3 15h12M4.5 12.5V8.5M9 12.5V4.5M13.5 12.5V7",
+    end: false,
+  },
+  { to: "/orders", label: "Targets", icon: "M3.5 5h11M3.5 9h11M3.5 13h7", end: false },
   {
     to: "/activity",
     label: "Activity",
     icon: "M9 15.5a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13ZM9 5.5V9l2.5 1.5",
     end: false,
   },
-  { to: "/market", label: "Market", icon: "M2.5 9h3l2-4.5 3 9 2-4.5h3", end: false },
+  { to: "/market", label: "Status", icon: "M2.5 9h3l2-4.5 3 9 2-4.5h3", end: false },
 ];
 
 export const EXTERNAL_ICON =

@@ -61,6 +61,8 @@ async function order(id: string, deps: ApiDeps): Promise<Response> {
     `or=(order_id.eq.${id},and(name.eq.OrderFlipped,args->>toId.eq.${id}))`,
   );
   if (events.length === 0) return json({ error: "no such order" }, 404);
+  const placed = events.find((e) => e.name === "OrderPlaced" && e.order_id === id);
+  const asset = typeof placed?.args["asset"] === "string" ? placed.args["asset"] : "";
   const series = [...new Set(events.flatMap((e) => (e.series === null ? [] : [e.series])))];
   const [epochs, registered] = await Promise.all([
     deps.select("name=eq.EpochCreated"),
@@ -69,7 +71,7 @@ async function order(id: string, deps: ApiDeps): Promise<Response> {
       : deps.select(`name=eq.SeriesRegistered&series=in.(${series.join(",")})`),
   ]);
   return json({
-    order: orderSummary(id, events, weeksOf(epochs), seriesExpiries(registered), deps.now()),
+    order: orderSummary(id, events, weeksOf(epochs, asset), seriesExpiries(registered), deps.now()),
     events,
     source: await deps.source(),
   });

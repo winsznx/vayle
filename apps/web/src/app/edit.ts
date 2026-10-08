@@ -1,13 +1,15 @@
 import { amendOrder, approve, updateOrder, type Call, type OrderState } from "@vayle/market";
 import { parseFixed } from "@vayle/units";
 import { maxUint256, type Address } from "viem";
+import { step, type TokenUnit } from "./format.ts";
 import { capProblem, checkTicket, roomUnderCaps } from "./ticket.ts";
 import type { BySide, Caps } from "./useMarket.ts";
 import type { Epoch } from "./week.ts";
 
-// What changing an order takes, worked out before anything is signed. An idle order takes a new
-// price, amount and least premium through one amend, and only the difference in what it locks
-// moves. Once part of it is in this week's trade, only the least premium can change.
+// What changing a target takes, worked out before anything is signed. An idle target takes a new
+// price, amount and least payment through one amend (the market's minPremium), and only the
+// difference in what it locks moves. Once part of it is in this week's trade, only the least
+// payment can change.
 
 export interface EditInput {
   readonly target: bigint;
@@ -24,7 +26,7 @@ export interface Holdings {
   readonly walletOpen: BySide<bigint>;
 }
 
-// The market's caps and how much each side holds now.
+// The target's market: its caps and how much each side holds now.
 export interface Limits {
   readonly caps: BySide<Caps>;
   readonly open: BySide<bigint>;
@@ -36,8 +38,8 @@ export interface Addresses {
   readonly usdg: Address;
 }
 
-// How what the order locks changes: more taken from the wallet, or some freed to withdraw. In NVDA
-// for a sell order and USDG for a buy order.
+// How what the target locks changes: more taken from the wallet, or some freed to withdraw. In the
+// token for a sell target and USDG for a buy target.
 export interface Move {
   readonly direction: "locks" | "frees";
   readonly amount: bigint;
@@ -55,13 +57,16 @@ export function planEdit(
   holdings: Holdings,
   addresses: Addresses,
   limits: Limits,
-  units: { readonly usdg: number; readonly asset: number; readonly symbol: string },
+  units: { readonly usdg: number; readonly asset: TokenUnit },
 ): EditPlan {
   const selling = order.side === 0;
   if (order.series !== 0n) {
     const least = parseFixed(input.minimum === "" ? "0" : input.minimum, units.usdg);
     if (least === null || least % epoch.priceTick !== 0n) {
-      return { kind: "problem", problem: "The least premium goes in steps of $0.0001, like 0.50." };
+      return {
+        kind: "problem",
+        problem: `The least payment goes in steps of ${step(epoch.priceTick, units.usdg)}.`,
+      };
     }
     if (least === order.minPremium) return { kind: "unchanged" };
     return {
@@ -98,7 +103,7 @@ export function planEdit(
     holdings.walletOpen[side],
     order.size,
   );
-  const overCap = capProblem(size, room, limits.caps[side], side, units.symbol, units.asset);
+  const overCap = capProblem(size, room, limits.caps[side], side, units.asset);
   if (overCap !== null) return { kind: "problem", problem: overCap };
   if (input.target === order.target && size === order.size && minPremium === order.minPremium) {
     return { kind: "unchanged" };

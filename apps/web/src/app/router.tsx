@@ -1,6 +1,7 @@
 import { createBrowserRouter } from "react-router";
 import { ActivityPage } from "./pages/Activity.tsx";
 import { MarketPage } from "./pages/Market.tsx";
+import { MarketsPage } from "./pages/Markets.tsx";
 import { NotFoundPage } from "./pages/NotFound.tsx";
 import { OrderPage } from "./pages/Order.tsx";
 import { OrdersPage } from "./pages/Orders.tsx";
@@ -20,10 +21,11 @@ export const router = createBrowserRouter(
       children: [
         { index: true, Component: OverviewPage, handle: title("Overview") },
         { path: "trade", Component: TradePage, handle: title("Trade") },
-        { path: "orders", Component: OrdersPage, handle: title("Orders") },
-        { path: "orders/:id", Component: OrderPage, handle: title("Order") },
+        { path: "markets", Component: MarketsPage, handle: title("Markets") },
+        { path: "orders", Component: OrdersPage, handle: title("Targets") },
+        { path: "orders/:id", Component: OrderPage, handle: title("Target") },
         { path: "activity", Component: ActivityPage, handle: title("Activity") },
-        { path: "market", Component: MarketPage, handle: title("Market") },
+        { path: "market", Component: MarketPage, handle: title("Status") },
         { path: "*", Component: NotFoundPage, handle: title("Not found") },
       ],
     },

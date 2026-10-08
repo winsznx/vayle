@@ -3,14 +3,15 @@ import type { MarketEvent } from "@vayle/market";
 import { useRef, useState, type ReactNode, type Ref } from "react";
 import { flushSync } from "react-dom";
 import { Link, useSearchParams } from "react-router";
+import { TickerBadge } from "../../ui/TickerBadge.tsx";
 import { HistoryNote } from "../components/HistoryNote.tsx";
 import type { AppConfig } from "../config.ts";
-import { describeEvent, sidesOf, txUrl, type EventKind, type EventLine } from "../events.ts";
-import { easternClock } from "../format.ts";
+import { contextOf, describeEvent, txUrl, type EventKind, type EventLine } from "../events.ts";
+import { easternClock, easternDate, easternDay, easternMoment } from "../format.ts";
 import { EXTERNAL_ICON, NavIcon } from "../shell/nav.tsx";
 import { useApp } from "../state.tsx";
 
-// Everything that happened on the holder's orders and balances, by Eastern day, newest first. The
+// Everything that happened on the holder's targets and balances, by Eastern day, newest first. The
 // filter lives in the URL, ?show=earnings, so a filtered view can be linked to.
 
 type Show = "all" | "earnings" | "fills" | "orders" | "wallet";
@@ -28,7 +29,7 @@ const ALL: Tab = {
   label: "All",
   kind: null,
   empty:
-    "No activity yet. Orders you place, the premiums they earn and what you withdraw show up here.",
+    "No activity yet. Targets you set, the payments they earn and what you withdraw show up here.",
 };
 
 const TABS: readonly Tab[] = [
@@ -37,19 +38,19 @@ const TABS: readonly Tab[] = [
     key: "earnings",
     label: "Earnings",
     kind: "earned",
-    empty: "No premiums yet. When an order earns a week's premium, it shows up here.",
+    empty: "No payments yet. When a target is paid for a week, it shows up here.",
   },
   {
     key: "fills",
     label: "Fills",
     kind: "filled",
-    empty: "No fills yet. When the maker takes an order at your price, it shows up here.",
+    empty: "No fills yet. When a target fills at your price, it shows up here.",
   },
   {
     key: "orders",
-    label: "Orders",
+    label: "Targets",
     kind: "order",
-    empty: "No order updates yet. Placing, changing, settling and stopping orders show up here.",
+    empty: "No target updates yet. Setting, changing, settling and stopping targets show up here.",
   },
   {
     key: "wallet",
@@ -60,27 +61,6 @@ const TABS: readonly Tab[] = [
 ];
 
 const PAGE = 50;
-
-const ZONE = "America/New_York";
-const DATE_PARTS = new Intl.DateTimeFormat("en-US", {
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-  timeZone: ZONE,
-});
-const DAY = new Intl.DateTimeFormat("en-US", {
-  weekday: "short",
-  month: "short",
-  day: "numeric",
-  timeZone: ZONE,
-});
-const DAY_IN_YEAR = new Intl.DateTimeFormat("en-US", {
-  weekday: "short",
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-  timeZone: ZONE,
-});
 
 interface Item {
   readonly key: string;
@@ -99,29 +79,14 @@ interface Day {
   readonly rows: { readonly item: Item; readonly index: number }[];
 }
 
-function easternDate(seconds: number): string {
-  const parts = DATE_PARTS.formatToParts(new Date(seconds * 1000));
-  const part = (type: Intl.DateTimeFormatPartTypes): string =>
-    parts.find((p) => p.type === type)?.value ?? "";
-  return `${part("year")}-${part("month")}-${part("day")}`;
-}
-
-// "Fri, Nov 20", with the year only when it isn't the current one.
-function dayLabel(seconds: number, thisYear: string): string {
-  const moment = new Date(seconds * 1000);
-  return easternDate(seconds).startsWith(thisYear)
-    ? DAY.format(moment)
-    : DAY_IN_YEAR.format(moment);
-}
-
 // The events the holder would recognize, newest first. Events describeEvent has no words for are
 // left out.
 function itemsOf(events: readonly MarketEvent[], config: AppConfig): Item[] {
-  const sideOf = sidesOf(events);
+  const context = contextOf(events, config.markets);
   return [...events]
     .sort((a, b) => b.block_number - a.block_number || b.log_index - a.log_index)
     .flatMap((event) => {
-      const line = describeEvent(event, config, sideOf);
+      const line = describeEvent(event, config, context);
       if (line === null) return [];
       const ms = Date.parse(event.block_time);
       const seconds = Number.isNaN(ms) ? null : Math.floor(ms / 1000);
@@ -134,7 +99,7 @@ function inTab(items: readonly Item[], tab: Tab): readonly Item[] {
 }
 
 // Rows are newest first, so the rows of one day sit next to each other.
-function byDay(items: readonly Item[], thisYear: string): Day[] {
+function byDay(items: readonly Item[], thisYear: number): Day[] {
   const days: Day[] = [];
   items.forEach((item, index) => {
     const date = item.seconds === null ? null : easternDate(item.seconds);
@@ -146,7 +111,7 @@ function byDay(items: readonly Item[], thisYear: string): Day[] {
     days.push({
       key: item.key,
       date,
-      label: item.seconds === null ? "Time unavailable" : dayLabel(item.seconds, thisYear),
+      label: item.seconds === null ? "Time unavailable" : easternDay(item.seconds, thisYear),
       rows: [{ item, index }],
     });
   });
@@ -175,7 +140,10 @@ function Row({
   return (
     <li ref={ref} tabIndex={ref === undefined ? undefined : -1} className={classes.join(" ")}>
       <span className="ac-mark" aria-hidden="true" />
-      <p className="ac-title">{line.title}</p>
+      <p className="ac-title">
+        {line.ticker !== null && <TickerBadge symbol={line.ticker} size="xs" named />}
+        {line.title}
+      </p>
       {line.amount !== null && <p className="ac-amount num">{line.amount}</p>}
       {line.detail !== null && <p className="ac-detail">{line.detail}</p>}
       <p className="ac-time num">
@@ -208,7 +176,8 @@ function ActivityList({
   readonly config: AppConfig;
   readonly tab: Tab;
   readonly items: readonly Item[];
-  readonly thisYear: string;
+  // The chain's current Eastern year: a day in it shows without its year.
+  readonly thisYear: number;
 }) {
   const [limit, setLimit] = useState(PAGE);
   const revealed = useRef<HTMLLIElement>(null);
@@ -219,7 +188,7 @@ function ActivityList({
         <p className="muted">{tab.empty}</p>
         {tab.kind === null && (
           <Link className="btn btn-ink btn-sm" to="/trade">
-            Place an order
+            Set a target
           </Link>
         )}
       </article>
@@ -317,14 +286,14 @@ export function ActivityPage(): ReactNode {
             </button>
           ))}
         </div>
-        <p className="ac-note">Bids and premiums come from the maker the Vayle team operates.</p>
+        <p className="ac-note">Bids and payments come from the maker Vayle operates.</p>
       </div>
       <ActivityList
         key={tab.key}
         config={config}
         tab={tab}
         items={inTab(items, tab)}
-        thisYear={easternDate(view.now).slice(0, 4)}
+        thisYear={easternMoment(view.now).year}
       />
       <div className="ac-history">
         <HistoryNote />

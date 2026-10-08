@@ -1,0 +1,258 @@
+/* Markets: the live markets as cards with their week and rates, then every other Stock Token from
+   the market check as rows. Built from the dashboard's own cards, chips and side tags. */
+
+.mkts-live {
+  display: grid;
+  gap: 14px;
+}
+
+.mkts-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mkts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: 20px;
+}
+
+.mkts-market {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  padding: 22px 24px;
+  container-type: inline-size;
+}
+
+.mkts-market-body {
+  display: grid;
+  gap: 16px;
+}
+
+/* A card with room puts the week beside its rates. */
+@container (min-width: 640px) {
+  .mkts-market-body {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+    align-items: start;
+    gap: 32px;
+  }
+
+  .mkts-market-body .mkts-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.mkts-market-head,
+.mkts-other-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+}
+
+.mkts-market-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.mkts-symbol,
+.mkts-other-symbol {
+  color: var(--ink);
+  font-size: var(--text-body-l);
+  font-weight: 650;
+  letter-spacing: var(--track-tight);
+}
+
+.mkts-other-symbol {
+  font-size: var(--text-body);
+}
+
+.mkts-sub {
+  display: block;
+  color: var(--muted);
+  font-size: var(--text-label);
+  font-weight: 450;
+  overflow-wrap: anywhere;
+}
+
+.mkts-quiet {
+  color: var(--muted);
+  font-size: var(--text-body-s);
+}
+
+.mkts-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+  margin: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--hairline);
+}
+
+.mkts-fact dt {
+  color: var(--muted);
+  font-size: var(--text-label);
+  font-weight: 560;
+}
+
+.mkts-fact dd {
+  margin: 2px 0 0;
+  color: var(--ink);
+  font-size: var(--text-body-s);
+  font-weight: 560;
+}
+
+.mkts-figure {
+  display: block;
+  font-size: var(--text-h3);
+  font-weight: 600;
+  letter-spacing: var(--track-tight);
+}
+
+.mkts-rates-block {
+  display: grid;
+  gap: 8px;
+}
+
+.mkts-rates-title {
+  color: var(--ink);
+  font-size: var(--text-label);
+  font-weight: 650;
+}
+
+.mkts-rates {
+  display: grid;
+}
+
+.mkts-rate {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.mkts-rate-price {
+  color: var(--ink);
+  font-size: var(--text-body-s);
+  font-weight: 600;
+}
+
+.mkts-rate-bid {
+  color: var(--muted);
+  font-size: var(--text-label);
+  text-align: right;
+}
+
+.mkts-rate-bid .num {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.mkts-open {
+  justify-self: start;
+}
+
+/* Not listed yet: one row per token, its checks under it, or between its name and its state on a
+   card with room. */
+
+.mkts-card {
+  container-type: inline-size;
+}
+
+.mkts-note {
+  padding: 0 24px 12px;
+  color: var(--muted);
+  font-size: var(--text-label);
+}
+
+.mkts-others {
+  padding: 0 24px 8px;
+}
+
+.mkts-other {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "token state"
+    "checks checks";
+  align-items: center;
+  gap: 8px 16px;
+  padding: 14px 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.mkts-other-head {
+  grid-area: token;
+}
+
+.mkts-other-state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px 12px;
+  grid-area: state;
+}
+
+.mkts-other .mkts-checks {
+  grid-area: checks;
+}
+
+@container (min-width: 900px) {
+  .mkts-other {
+    grid-template-columns: minmax(13rem, 1fr) minmax(0, 2fr) auto;
+    grid-template-areas: "token checks state";
+  }
+}
+
+@container (max-width: 480px) {
+  .mkts-other {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "token"
+      "checks"
+      "state";
+  }
+
+  .mkts-other-state {
+    justify-content: flex-start;
+  }
+}
+
+.mkts-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mkts-checks .chip {
+  height: 24px;
+  padding: 0 9px;
+  font-size: var(--text-caption);
+}
+
+.mkts-more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 24px 22px;
+}
+
+@media (max-width: 640px) {
+  .mkts-market {
+    padding: 20px 18px;
+  }
+
+  .mkts-note,
+  .mkts-others,
+  .mkts-more {
+    padding-right: 18px;
+    padding-left: 18px;
+  }
+}

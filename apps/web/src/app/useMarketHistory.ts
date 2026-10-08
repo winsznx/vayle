@@ -5,6 +5,7 @@ import {
   weeksOf,
   type MarketEvent,
   type OrderSummary,
+  type Week,
 } from "@vayle/market";
 import { useEffect, useRef, useState } from "react";
 import type { Address, PublicClient } from "viem";
@@ -82,6 +83,18 @@ async function getJson(url: string, signal: AbortSignal): Promise<unknown> {
   return response.json();
 }
 
+// The token each target was set on, lowercased, from its placement.
+function assetsOf(events: readonly MarketEvent[]): Map<string, string> {
+  const assets = new Map<string, string>();
+  for (const e of events) {
+    const asset = e.args["asset"];
+    if (e.name === "OrderPlaced" && e.order_id !== null && typeof asset === "string") {
+      assets.set(e.order_id, asset.toLowerCase());
+    }
+  }
+  return assets;
+}
+
 function placedBy(events: readonly MarketEvent[], account: string): Set<string> {
   return new Set(
     events.flatMap((e) =>
@@ -155,11 +168,22 @@ async function fromChain(
   const events = all.filter(
     (e) => e.account === account || (e.order_id !== null && ids.has(e.order_id)),
   );
-  const weeks = weeksOf(all);
   const expiries = seriesExpiries(all);
   const now = Number(latest.timestamp);
+  // Every market opens its own weeks, so a target's skip streak counts only its own market's.
+  const weeks = new Map<string, Week[]>();
+  const weeksOn = (asset: string): Week[] => {
+    const known = weeks.get(asset);
+    if (known !== undefined) return known;
+    const own = weeksOf(all, asset);
+    weeks.set(asset, own);
+    return own;
+  };
+  const assets = assetsOf(all);
   const summaries = new Map(
-    [...ids].map((id) => [id, orderSummary(id, events, weeks, expiries, now)] as const),
+    [...ids].map(
+      (id) => [id, orderSummary(id, events, weeksOn(assets.get(id) ?? ""), expiries, now)] as const,
+    ),
   );
   return { toBlock: cache.toBlock, events, summaries };
 }

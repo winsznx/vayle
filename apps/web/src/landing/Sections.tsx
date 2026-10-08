@@ -1,5 +1,13 @@
+import { markets } from "@vayle/markets";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { TokenIcon } from "../ui/TokenIcon.tsx";
+import signedOff from "../../disclosures.signed-off.json" with { type: "json" };
+import { parseDisclosures } from "../disclosures.ts";
+import { DisclosureList } from "../ui/DisclosureList.tsx";
+import { CASH_SYMBOL } from "../tokens.ts";
+import { TickerBadge } from "../ui/TickerBadge.tsx";
+
+// The art names a Stock Token by the first market the build lists.
+const SHOWN = markets.at(0)?.symbol ?? "Stock Token";
 import { useReveal, Words } from "./reveal.tsx";
 
 function Icon({ d }: { readonly d: string }) {
@@ -38,7 +46,7 @@ function Heading({
 export function Statement() {
   return (
     <section className="statement" aria-labelledby="statement-title">
-      <span className="sticker sticker-a chip chip-earned">Earned</span>
+      <span className="sticker sticker-a chip chip-earned">Paid</span>
       <span className="sticker sticker-b chip">Skipped</span>
       <span className="sticker sticker-c chip chip-brand">Filled at your price</span>
       <p className="tag tag-soft">How a week works</p>
@@ -62,10 +70,16 @@ export function HowItWorks() {
     <section id="how" className="how" aria-labelledby="how-title">
       <div className="split">
         <Heading className="h1">Built for holders, not options traders</Heading>
-        <p className="lede">
-          Underneath, each order is a fully collateralized weekly option. You never pick strikes,
-          expiries or assignment rules. You choose a price and an amount, and Vayle runs the week.
-        </p>
+        <div className="how-lede">
+          <p className="lede">
+            Underneath, each target is a fully collateralized weekly option. You never pick strikes,
+            expiries or assignment rules. You choose a price and an amount, and Vayle runs the week.
+          </p>
+          <p className="lede how-settles">
+            Your tokens actually change hands at your price. Nothing is settled in cash against a
+            price feed.
+          </p>
+        </div>
       </div>
       <h2 id="how-title" className="visually-hidden">
         How it works
@@ -77,8 +91,8 @@ export function HowItWorks() {
           </span>
           <h3 className="h3">Pick a price</h3>
           <p className="muted">
-            This week&apos;s prices sit every $5 within 10% of the last close. Above it you sell,
-            below it you buy.
+            Each week&apos;s prices sit on a fixed step around the last close. Above it you set a
+            sell target, below it a buy target.
           </p>
           <Vignette>
             <div className="mini-ladder">
@@ -95,24 +109,22 @@ export function HowItWorks() {
           <span className="step-icon">
             <Icon d={ICON_TICKET} />
           </span>
-          <h3 className="h3">Place one order</h3>
+          <h3 className="h3">Set one target</h3>
           <p className="muted">
-            Lock the NVDA you&apos;d sell or the USDG you&apos;d spend, and set the least
-            you&apos;ll accept for a week.
+            Lock the tokens you&apos;d sell or the USDG you&apos;d spend, and set the least payment
+            you&apos;ll take for a week.
           </p>
           <Vignette>
             <div className="mini-ticket">
               <span className="mini-field">
-                <TokenIcon symbol="NVDA" size="sm" />
+                <TickerBadge symbol={SHOWN} size="sm" />
                 <span className="mini-bar" />
-                NVDA
               </span>
               <span className="mini-field">
-                <TokenIcon symbol="USDG" size="sm" />
+                <TickerBadge symbol={CASH_SYMBOL} size="sm" />
                 <span className="mini-bar mini-bar-short" />
-                USDG
               </span>
-              <span className="mini-button">Place order</span>
+              <span className="mini-button">Set target</span>
             </div>
           </Vignette>
         </li>
@@ -122,15 +134,15 @@ export function HowItWorks() {
           </span>
           <h3 className="h3">Let it run</h3>
           <p className="muted">
-            Each week it earns that week&apos;s premium, skips if the bid is under your minimum, or
-            fills at your price. It renews until it fills or you cancel.
+            Each week it&apos;s paid, skipped when the bid is under your least payment, or filled at
+            your price. It renews until it fills or you cancel.
           </p>
           <Vignette>
             <div className="mini-weeks">
-              <span className="mini-week mini-week-earned">Earned</span>
-              <span className="mini-week mini-week-earned">Earned</span>
+              <span className="mini-week mini-week-earned">Paid</span>
+              <span className="mini-week mini-week-earned">Paid</span>
               <span className="mini-week">Skipped</span>
-              <span className="mini-week mini-week-earned">Earned</span>
+              <span className="mini-week mini-week-earned">Paid</span>
               <span className="mini-week mini-week-filled">Filled</span>
             </div>
           </Vignette>
@@ -144,27 +156,27 @@ const STAGES = [
   {
     when: "Weekly close",
     title: "The close sets the prices",
-    body: "NVDA's close fixes this week's ladder. Options from last week can be exercised for the next two hours.",
+    body: "Each Stock Token's close sets this week's prices and settles last week's targets.",
   },
   {
-    when: "Two hours later",
-    title: "The maker bids",
-    body: "The team-operated maker bids on each price that has orders. Your minimum decides whether you take it.",
+    when: "After the close",
+    title: "The buyer bids",
+    body: "The buyer bids on each price that has targets. Your least payment decides whether you take it.",
   },
   {
-    when: "Four hours later",
-    title: "The batch fills",
-    body: "Every order at a price fills at one clearing bid, shared pro rata. The premium is yours to withdraw right away.",
+    when: "That evening",
+    title: "The batch pays",
+    body: "Every target at a price is paid the same clearing bid, shared pro rata. The payment is yours to withdraw right away.",
   },
   {
     when: "Through the week",
     title: "Your price holds",
-    body: "If NVDA closes the week past your price, the maker can take the order at exactly that price, in the actual token, for at least two hours after the close.",
+    body: "If the stock closes above your price, your tokens sell at exactly your price. If not, you keep them and the payment.",
   },
   {
     when: "Next close",
     title: "It renews",
-    body: "Unless it filled or you cancelled, the order moves into the next week on its own.",
+    body: "Unless it filled or you cancelled, the target moves into the next week on its own.",
   },
 ] as const;
 
@@ -242,7 +254,7 @@ const ROWS: readonly {
   options: boolean | "varies";
   vayle: boolean;
 }[] = [
-  { label: "Pays you while it waits", plain: false, options: true, vayle: true },
+  { label: "Pays you while you wait", plain: false, options: true, vayle: true },
   { label: "No options knowledge needed", plain: true, options: false, vayle: true },
   { label: "Settles in the actual token", plain: true, options: "varies", vayle: true },
   { label: "Fully collateralized, no margin calls", plain: true, options: "varies", vayle: true },
@@ -274,7 +286,7 @@ export function Compare() {
       </svg>
       <div className="compare-head">
         <h2 id="compare-title" className="h1">
-          A paid limit order, not an options account
+          Paid to wait, without an options account
         </h2>
         <p className="lede">The parts of options that pay, without the parts that need a desk.</p>
       </div>
@@ -323,10 +335,10 @@ export function Safety() {
       </h2>
       <ul className="bento">
         <li className="bento-card bento-lead">
-          <h3 className="h2">Every order is fully collateralized</h3>
+          <h3 className="h2">Every target is fully collateralized</h3>
           <p>
-            The NVDA you&apos;d sell or the USDG you&apos;d spend is locked when you place the
-            order. There&apos;s no margin and nothing to liquidate.
+            The tokens you&apos;d sell or the USDG you&apos;d spend are locked when you set the
+            target. There&apos;s no margin and nothing to liquidate.
           </p>
           <div className="lead-art" aria-hidden="true">
             <span />
@@ -337,7 +349,9 @@ export function Safety() {
         </li>
         <li className="bento-card">
           <h3 className="h3">The actual token moves</h3>
-          <p className="muted">When an order fills, NVDA changes hands. Nothing settles in cash.</p>
+          <p className="muted">
+            When a target fills, the Stock Token changes hands. Nothing settles in cash.
+          </p>
         </li>
         <li className="bento-card">
           <h3 className="h3">Every week is onchain</h3>
@@ -353,21 +367,27 @@ export function Safety() {
           </p>
         </li>
         <li className="bento-card">
-          <h3 className="h3">The maker is ours, and says so</h3>
+          <h3 className="h3">The buyer is ours, and says so</h3>
           <p className="muted">
-            Bids come from a maker the Vayle team operates, and the contract marks its address as
-            team-operated.
-          </p>
-        </li>
-        <li className="bento-card">
-          <h3 className="h3">Every stop has a limit</h3>
-          <p className="muted">
-            A pause stops new orders, never exits or withdrawals. An emergency halt freezes
-            everything for up to 72 hours unless the timelocked owner renews it, and exercise
-            windows stretch by however long it lasted. Order sizes are capped while Vayle is young.
+            The buyer is currently one market maker operated by Vayle, and the contract marks its
+            address as team-operated.
           </p>
         </li>
       </ul>
+    </section>
+  );
+}
+
+// The owner's signed-off risk lines, exactly as the app shows them once they're published.
+const RISKS = parseDisclosures(signedOff) ?? [];
+
+export function Risks() {
+  return (
+    <section id="risks" className="risks" aria-labelledby="risks-title">
+      <Heading id="risks-title" className="h1">
+        Risks
+      </Heading>
+      <DisclosureList items={RISKS} className="risk-list" />
     </section>
   );
 }
@@ -389,7 +409,7 @@ export function Closing() {
           Put your price on this week&apos;s ladder
         </h2>
         <p className="lede">
-          Connect a wallet that holds NVDA or USDG on Robinhood Chain to begin.
+          Connect a wallet that holds Stock Tokens or USDG on Robinhood Chain to begin.
         </p>
         <div className="hero-actions">
           <a className="btn btn-brand btn-lg" href="/app/">
@@ -402,17 +422,17 @@ export function Closing() {
       </div>
       <div className="closing-art" aria-hidden="true">
         <div className="float-order">
-          <TokenIcon symbol="NVDA" size="lg" />
+          <TickerBadge symbol={SHOWN} size="md" />
           <div>
-            <p className="float-title">Sell NVDA</p>
+            <p className="float-title">Sell target</p>
             <p className="float-detail">At your price, renews weekly</p>
           </div>
         </div>
         <div className="float-token float-token-a">
-          <TokenIcon symbol="NVDA" size="hero" />
+          <TickerBadge symbol={SHOWN} size="hero" />
         </div>
         <div className="float-token float-token-b">
-          <TokenIcon symbol="USDG" size="xl" />
+          <TickerBadge symbol={CASH_SYMBOL} size="xl" />
         </div>
       </div>
     </section>

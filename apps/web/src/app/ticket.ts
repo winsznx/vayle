@@ -1,5 +1,5 @@
 import { parseFixed } from "@vayle/units";
-import { tokens } from "./format.ts";
+import { amountOf, step, type TokenUnit } from "./format.ts";
 import type { Caps } from "./useMarket.ts";
 import type { Epoch, Side } from "./week.ts";
 
@@ -8,7 +8,7 @@ import type { Epoch, Side } from "./week.ts";
 export interface TicketInput {
   readonly side: Side;
   readonly strike: bigint;
-  // Text as typed: an amount of NVDA and a minimum premium in USDG per NVDA.
+  // Text as typed: an amount of the token and the least payment in USDG per token.
   readonly amount: string;
   readonly minPremium: string;
 }
@@ -21,7 +21,7 @@ export interface Balances {
 export interface CheckedTicket {
   readonly size: bigint;
   readonly minPremium: bigint;
-  // What the order locks: NVDA for a sell order, USDG for a buy order.
+  // What the target locks: the token for a sell target, USDG for a buy target.
   readonly collateral: bigint;
 }
 
@@ -34,21 +34,32 @@ export function checkTicket(
   e: Epoch,
   balances: Balances,
   usdgDecimals: number,
-  assetDecimals: number,
+  unit: TokenUnit,
 ): TicketResult {
-  const size = parseFixed(input.amount, assetDecimals);
-  if (size === null || size === 0n)
-    return { ok: false, problem: "Enter how much NVDA, like 0.50." };
-  if (size % e.lot !== 0n) return { ok: false, problem: "Amounts go in steps of 0.01 NVDA." };
+  const size = parseFixed(input.amount, unit.decimals);
+  if (size === null || size === 0n) {
+    return {
+      ok: false,
+      problem: `Enter how much ${unit.symbol} you'd ${input.side === "sell" ? "sell" : "buy"}.`,
+    };
+  }
+  if (size % e.lot !== 0n) {
+    return { ok: false, problem: `Amounts go in steps of ${amountOf(e.lot, unit)}.` };
+  }
   const minPremium = parseFixed(input.minPremium === "" ? "0" : input.minPremium, usdgDecimals);
-  if (minPremium === null)
-    return { ok: false, problem: "Enter the minimum premium in dollars, like 0.50." };
+  if (minPremium === null) {
+    return { ok: false, problem: "Enter the least payment in dollars." };
+  }
   if (minPremium % e.priceTick !== 0n) {
-    return { ok: false, problem: "The minimum premium goes in steps of $0.0001." };
+    return {
+      ok: false,
+      problem: `The least payment goes in steps of ${step(e.priceTick, usdgDecimals)}.`,
+    };
   }
   if (input.side === "sell") {
-    if (size > balances.asset)
-      return { ok: false, problem: "That's more NVDA than this wallet holds." };
+    if (size > balances.asset) {
+      return { ok: false, problem: `That's more ${unit.symbol} than this wallet holds.` };
+    }
     return { ok: true, ticket: { size, minPremium, collateral: size } };
   }
   const collateral = (size * input.strike) / e.rawUnit;
@@ -59,8 +70,8 @@ export function checkTicket(
 }
 
 // How much more of one side this wallet can place right now under the market's caps, in raw token
-// units: what's left of the side's total and of the wallet's own share, whichever is less. An
-// order being changed counts its own size as released first, as the market does.
+// units: what's left of the side's total and of the wallet's own share, whichever is less. A
+// target being changed counts its own size as released first, as the market does.
 export function roomUnderCaps(caps: Caps, open: bigint, walletOpen: bigint, released = 0n): bigint {
   const market = caps.openSize + released - open;
   const wallet = caps.walletSize + released - walletOpen;
@@ -68,19 +79,18 @@ export function roomUnderCaps(caps: Caps, open: bigint, walletOpen: bigint, rele
   return room > 0n ? room : 0n;
 }
 
-// Why an order of `size` doesn't fit under the caps, or null when it does.
+// Why a target of `size` doesn't fit under the caps, or null when it does.
 export function capProblem(
   size: bigint,
   room: bigint,
   caps: Caps,
   side: Side,
-  symbol: string,
-  assetDecimals: number,
+  unit: TokenUnit,
 ): string | null {
   if (size <= room) return null;
   if (caps.openSize === 0n) {
-    return side === "buy" ? "Buy orders aren't open yet." : "Sell orders aren't open yet.";
+    return side === "buy" ? "Buy targets aren't open yet." : "Sell targets aren't open yet.";
   }
-  if (room === 0n) return `The market is at its limit for ${side} orders right now.`;
-  return `That's over the market's limit for now. Up to ${tokens(room, symbol, assetDecimals)} fits.`;
+  if (room === 0n) return `The market is at its limit for ${side} targets right now.`;
+  return `That's over the market's limit for now. Up to ${amountOf(room, unit)} fits.`;
 }

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { BrandMark } from "../ui/BrandMark.tsx";
 import { ThemeToggle } from "../ui/ThemeToggle.tsx";
 import { Hero } from "./Hero.tsx";
-import { Closing, Compare, HowItWorks, Safety, Statement, TheWeek } from "./Sections.tsx";
+import { Closing, Compare, HowItWorks, Risks, Safety, Statement, TheWeek } from "./Sections.tsx";
 
 const REPO = "https://github.com/winsznx/vayle";
 
@@ -50,7 +50,7 @@ function Footer() {
     <footer className="footer">
       <div className="footer-panel footer-brand">
         <BrandMark />
-        <p className="muted">Paid limit orders for Stock Tokens on Robinhood Chain.</p>
+        <p className="muted">Weekly pay for Stock Token holders on Robinhood Chain.</p>
         <a className="btn btn-ink" href="/app/">
           Open the app
         </a>
@@ -74,16 +74,6 @@ function Footer() {
           <a href={`${REPO}/tree/main/apps/fallback`}>Fallback page</a>
         </div>
       </nav>
-      <div id="risks" className="footer-panel footer-risks">
-        <p className="footer-title">Risks</p>
-        <p className="muted">
-          An order can fill when you&apos;d rather it hadn&apos;t, and a week can pay nothing. A
-          fill depends on the maker taking it in the window after the close. Prices come from an
-          oracle, the tokens have issuers who can pause them, an emergency halt can freeze the
-          market for up to 72 hours, and the contracts are new. Only use what you can afford to have
-          locked for a week or more.
-        </p>
-      </div>
       <p className="footer-base muted">
         <span>© 2026 Vayle</span>
         <span>Not affiliated with the issuers of the assets shown.</span>
@@ -103,6 +93,7 @@ export function Landing() {
         <TheWeek />
         <Compare />
         <Safety />
+        <Risks />
         <Closing />
       </main>
       <Footer />

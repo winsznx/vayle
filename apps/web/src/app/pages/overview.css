@@ -1,7 +1,7 @@
 /* Overview: the holder's home page. It lays out the shared cards from app.css and adds the rows
    and the price strip that only this page has. */
 
-/* The first row: NVDA's price and chart beside what the holder holds. */
+/* The first row: one market's price and chart beside what the holder holds. */
 
 .ov-hero {
   display: grid;
@@ -208,6 +208,12 @@ a.ov-name:hover .ov-name-text,
   color: var(--ink);
   font-size: var(--text-body-s);
   font-weight: 600;
+}
+
+/* The market the event is about, ahead of what happened. */
+.ov-event-title .ticker {
+  margin-right: 8px;
+  vertical-align: 1px;
 }
 
 .ov-event-time {

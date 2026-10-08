@@ -7,12 +7,13 @@ import {
   type OrderSummary,
 } from "@vayle/market";
 import { Link } from "react-router";
-import { TokenIcon } from "../../ui/TokenIcon.tsx";
+import { TickerBadge, type BadgeSize } from "../../ui/TickerBadge.tsx";
+import { marketOfToken } from "../assets.ts";
 import type { AppConfig } from "../config.ts";
-import { usdgAmount } from "../format.ts";
-import { describeOrder, type OrderLine } from "../orders.ts";
+import { unitOf, usdgAmount } from "../format.ts";
+import { describeOrder, nameOf, type OrderLine } from "../orders.ts";
 import { useApp } from "../state.tsx";
-import type { AccountView, MarketView } from "../useMarket.ts";
+import { assetOf, type AccountView, type MarketView } from "../useMarket.ts";
 
 const MAX_TICKS = 8;
 
@@ -71,7 +72,7 @@ export function actionFor(config: AppConfig, order: OrderState, line: OrderLine)
     };
   }
   if (line.action === "cancel") {
-    return { label: "Cancel order", calls: [cancelOrder(config.market, order.id)], quiet: true };
+    return { label: "Cancel target", calls: [cancelOrder(config.market, order.id)], quiet: true };
   }
   if (line.action === "stop-renewing") {
     return { label: "Stop renewing", calls: [cancelOrder(config.market, order.id)], quiet: true };
@@ -79,22 +80,43 @@ export function actionFor(config: AppConfig, order: OrderState, line: OrderLine)
   return null;
 }
 
-// How an order reads right now, with the series it's in and the end finalize reports when the
-// chain's been quiet.
+// How a target reads right now, on its own market's week, with the series it's in and the end
+// finalize reports when the chain's been quiet.
 export function lineOf(
   config: AppConfig,
   view: MarketView,
   account: AccountView,
   order: OrderState,
 ): OrderLine {
+  const market = marketOfToken(config.markets, order.asset);
+  const asset = market === undefined ? undefined : assetOf(view, market.token);
   const series = order.series === 0n ? null : (account.series.get(order.series) ?? null);
   return describeOrder(
     order,
     series,
-    view.epoch,
+    asset?.epoch ?? null,
     view.now,
-    config.assetSymbol,
+    market === undefined ? null : unitOf(market),
     account.heldOpen.get(order.series) ?? null,
+  );
+}
+
+// The ticker badge of a target's market. A market the build doesn't list shows its token's
+// address, shortened, in an outlined badge.
+export function OrderBadge({
+  config,
+  order,
+  size,
+}: {
+  readonly config: AppConfig;
+  readonly order: OrderState;
+  readonly size: BadgeSize;
+}) {
+  const market = marketOfToken(config.markets, order.asset);
+  return market === undefined ? (
+    <TickerBadge symbol={`${order.asset.slice(0, 6)}…${order.asset.slice(-4)}`} size={size} quiet />
+  ) : (
+    <TickerBadge symbol={market.symbol} size={size} />
   );
 }
 
@@ -113,7 +135,7 @@ export function OrdersTable({
     <table className="orders-table" aria-label={label}>
       <thead>
         <tr>
-          <th scope="col">Order</th>
+          <th scope="col">Target</th>
           <th scope="col">Price</th>
           <th scope="col">Status</th>
           <th scope="col">This week</th>
@@ -129,10 +151,10 @@ export function OrdersTable({
           const summary = summaries?.get(order.id.toString());
           return (
             <tr key={order.id.toString()}>
-              <td data-label="Order">
+              <td data-label="Target">
                 <Link className="order-name" to={`/orders/${order.id.toString()}`}>
-                  <TokenIcon symbol="NVDA" size="md" />
-                  <span>{line.title.replace(/ at$/, "")}</span>
+                  <OrderBadge config={config} order={order} size="md" />
+                  <span>{nameOf(line)}</span>
                 </Link>
               </td>
               <td data-label="Price" className="order-price num">

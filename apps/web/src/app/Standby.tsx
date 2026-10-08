@@ -15,7 +15,7 @@ export function Standby({ missing }: { readonly missing: readonly string[] }) {
             <h1 className="h2">Vayle isn&apos;t open yet</h1>
             <p className="muted">
               The market&apos;s contracts aren&apos;t deployed on Robinhood Chain yet. Once they
-              are, this is where you&apos;ll place orders, see what they earn and withdraw.
+              are, this is where you&apos;ll set targets, see what they earn and withdraw.
             </p>
           </>
         ) : (

@@ -1,8 +1,9 @@
 import { nextStep, type NextStep, type OrderState, type SeriesState } from "@vayle/market";
-import { dollars, easternTime, tokens } from "./format.ts";
-import { BID_WINDOW, ladder, type Epoch } from "./week.ts";
+import { amountOf, dollars, easternTime, type TokenUnit } from "./format.ts";
+import { batchOpensAt, hasBatch, ladder, type Epoch } from "./week.ts";
 
-// How an order reads on its row: what it is, what's happening to it, and what the holder can do.
+// How a target reads on its row: what it is, what's happening to it, and what the holder can do.
+// A sell target is the market's order on the call side, a buy target its order on the put side.
 
 export type Tone = "brand" | "earned" | "plain";
 
@@ -12,13 +13,23 @@ export interface Chip {
   readonly tone: Tone;
 }
 
+export type Kind = "Sell target" | "Buy target";
+
 export interface OrderLine {
   readonly side: "sell" | "buy";
-  readonly title: string;
+  readonly kind: Kind;
+  // How much it's for, with the token's ticker, or null once nothing is left of it or when the
+  // build doesn't list the target's market.
+  readonly amount: string | null;
   readonly price: string;
   readonly status: string;
   readonly chip: Chip;
   readonly action: NextStep;
+}
+
+// The target in a sentence: its kind, then how much it's for.
+export function nameOf(line: OrderLine): string {
+  return line.amount === null ? line.kind : `${line.kind} for ${line.amount}`;
 }
 
 function chipFor(
@@ -62,17 +73,23 @@ function idleStatus(order: OrderState, epoch: Epoch | null, now: number): string
       ? "Skipping this week: the market passed your price."
       : "Skipping this week: your price is outside this week's range.";
   }
-  const batchOpens = epoch.opening + epoch.windowLength + BID_WINDOW;
+  if (now >= epoch.expiry) return "Waiting for the next week to open.";
+  // A week without a batch fills only by quote, all the way to the close.
+  if (!hasBatch(epoch)) {
+    return `Waiting. It fills if the maker quotes it before the close on ${easternTime(epoch.expiry)}.`;
+  }
+  const batchOpens = batchOpensAt(epoch);
   if (now < batchOpens) return `Joins this week's batch, which starts ${easternTime(batchOpens)}.`;
   return "Waiting. It fills if the maker quotes it this week, or joins next week's batch.";
 }
 
-// An order in this week's trade, said as what happens to the holder rather than in option terms.
+// A target in this week's trade, said with the signed-off risk lines filled in with its own stock,
+// price and close.
 function writtenStatus(
   order: OrderState,
   series: SeriesState,
   now: number,
-  symbol: string,
+  unit: TokenUnit | null,
   heldUntil: bigint | null,
 ): string {
   if (series.settled) return "This week's result is in. Settle to collect it.";
@@ -80,13 +97,15 @@ function writtenStatus(
     return `The week ended, and its result is final from ${easternTime(Number(heldUntil))} at the earliest. The chain has been quiet, and quiet time keeps the window open longer.`;
   }
   if (BigInt(now) < series.expiry) {
-    const whole = order.committed === order.size;
-    const amount = tokens(order.committed, symbol);
+    const amount = unit === null ? null : amountOf(order.committed, unit);
+    // Only part of the target in this week's trade is named by its amount.
+    const part = order.committed === order.size ? null : amount;
+    const stock = unit?.symbol ?? "the stock";
     const ends = easternTime(Number(series.expiry));
     const outcome =
       order.side === 0
-        ? `If ${symbol} closes above ${dollars(order.target)} on ${ends}, the maker can buy ${whole ? `your ${symbol}` : amount} at that price.`
-        : `If ${symbol} closes below ${dollars(order.target)} on ${ends}, the maker can sell you ${whole ? symbol : amount} at that price.`;
+        ? `If ${stock} closes above ${dollars(order.target)} on ${ends}, ${part === null ? "your tokens sell" : `${part} sells`} at exactly your price.`
+        : `If ${stock} closes below ${dollars(order.target)} on ${ends}, you buy ${amount === null ? "" : `${amount} `}at that price, even if the close is lower.`;
     return order.status === "active" ? outcome : `${outcome} It won't renew after this week.`;
   }
   if (BigInt(now) < series.windowEnd) {
@@ -95,27 +114,27 @@ function writtenStatus(
   return "The week is over. Settle to collect the result.";
 }
 
-// `heldUntil` is the end finalize reports for the order's series when the view says its window is
-// over but finalize would still find it open.
+// `unit` is how the target's token prints, null when the build doesn't list its market. `heldUntil`
+// is the end finalize reports for the target's series when the view says its window is over but
+// finalize would still find it open.
 export function describeOrder(
   order: OrderState,
   series: SeriesState | null,
   epoch: Epoch | null,
   now: number,
-  symbol: string,
+  unit: TokenUnit | null,
   heldUntil: bigint | null = null,
 ): OrderLine {
   const side = order.side === 0 ? "sell" : "buy";
-  const verb = side === "sell" ? "Sell" : "Buy";
-  const title =
-    order.size === 0n ? `${verb} ${symbol} at` : `${verb} ${tokens(order.size, symbol)} at`;
+  const kind = side === "sell" ? "Sell target" : "Buy target";
+  const amount = order.size === 0n || unit === null ? null : amountOf(order.size, unit);
   const step = nextStep(order, series, BigInt(now));
   const action = step === "finalize-then-settle" && heldUntil !== null ? "wait" : step;
   let status: string;
   if (order.series !== 0n && series !== null) {
-    status = writtenStatus(order, series, now, symbol, heldUntil);
+    status = writtenStatus(order, series, now, unit, heldUntil);
   } else if (order.status === "active") status = idleStatus(order, epoch, now);
   else status = order.status === "cancelled" ? "Cancelled." : "Closed.";
   const chip = chipFor(order, series, epoch, now, action);
-  return { side, title, price: dollars(order.target), status, chip, action };
+  return { side, kind, amount, price: dollars(order.target), status, chip, action };
 }

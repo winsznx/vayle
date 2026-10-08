@@ -5,7 +5,8 @@ import satori from "satori";
 
 // Vayle's link previews, drawn from data and rendered at build time: the same card for every page,
 // with that page's two-line headline and sentence. Satori lays it out and turns text into paths,
-// resvg rasterizes it at 1200 by 630. No live numbers go in: platforms keep previews for days.
+// resvg rasterizes it at 1200 by 630. No live numbers go in: platforms keep previews for days. Tokens
+// appear as ticker badges, never as artwork.
 
 export const CARD_WIDTH = 1200;
 export const CARD_HEIGHT = 630;
@@ -21,34 +22,39 @@ export interface Card {
 export const CARDS: readonly Card[] = [
   {
     key: "landing",
-    headline: ["Name your price for NVDA.", "Get paid while it waits."],
-    sentence: "Paid limit orders for NVDA on Robinhood Chain, settled in the actual token.",
+    headline: ["Pick the price you'd sell at.", "Get paid while you wait for it."],
+    sentence: "Weekly pay for Stock Token holders on Robinhood Chain.",
   },
   {
     key: "app",
-    headline: ["Your paid limit orders,", "in one place."],
-    sentence: "Your orders, what they've earned and what's ready to withdraw.",
+    headline: ["Your targets,", "in one place."],
+    sentence: "Your targets, what they've earned and what's ready to withdraw.",
   },
   {
     key: "trade",
-    headline: ["This week's prices for NVDA.", "Pick yours on the ladder."],
-    sentence:
-      "Above the close you sell, below it you buy, and each week the order is paid to wait.",
+    headline: ["This week's rates.", "Pick your target."],
+    sentence: "Set a sell target above the close or a buy target below it, and get paid each week.",
   },
   {
     key: "orders",
-    headline: ["Every order,", "and what it's doing this week."],
-    sentence: "Earned, skipped or filled, with what to do next.",
+    headline: ["Every target,", "and what it's doing this week."],
+    sentence: "Paid, skipped or filled, with what to do next.",
   },
   {
     key: "activity",
     headline: ["Every week,", "on the record."],
-    sentence: "Premiums, fills and withdrawals, each linked to its transaction.",
+    sentence: "Payments, fills and withdrawals, each linked to its transaction.",
+  },
+  {
+    key: "markets",
+    headline: ["Every Stock Token,", "live or checked."],
+    sentence:
+      "The live markets with their week and rates, and the rest with what the market check found.",
   },
   {
     key: "market",
     headline: ["The market's state,", "straight from the contracts."],
-    sentence: "This week's prices, the feed, the limits and the schedule.",
+    sentence: "Each market's week, feed, limits and schedule.",
   },
 ];
 
@@ -60,6 +66,7 @@ const SHEET = "#ffffff";
 const RAISED = "#fafbfe";
 const SUNKEN = "#f3f5f9";
 const HAIRLINE = "#e6e8ef";
+const CONTROL = "#d4d8e2";
 const FAINT = "#9298a8";
 const BLUE = "#253cef";
 const BLUE_SOFT = "#f0f1ff";
@@ -134,7 +141,28 @@ function rung(held: boolean): ReactElement {
   );
 }
 
-function ladder(nvdaLogo: string): ReactElement {
+// A token named by its ticker, as the web app draws it: USDG in an outlined pill.
+function tickerBadge(symbol: string): ReactElement {
+  return h(
+    "div",
+    {
+      display: "flex",
+      alignItems: "center",
+      height: 30,
+      padding: "0 12px",
+      borderRadius: 999,
+      color: INK,
+      background: SHEET,
+      boxShadow: `inset 0 0 0 1px ${CONTROL}`,
+      fontSize: 14,
+      fontWeight: 600,
+      letterSpacing: 0.3,
+    },
+    symbol,
+  );
+}
+
+function ladder(): ReactElement {
   return h(
     "div",
     {
@@ -161,8 +189,7 @@ function ladder(nvdaLogo: string): ReactElement {
         fontSize: 18,
         fontWeight: 600,
       },
-      img(nvdaLogo, { width: 36, height: 36, borderRadius: 11 }),
-      "NVDA",
+      "This week's targets",
     ),
     rung(false),
     rung(false),
@@ -174,18 +201,7 @@ function ladder(nvdaLogo: string): ReactElement {
   );
 }
 
-function tokenNote(src: string, round: boolean, text: string): ReactElement {
-  return h(
-    "div",
-    { display: "flex", alignItems: "center", gap: 10 },
-    img(src, { width: 28, height: 28, borderRadius: round ? 14 : 9 }),
-    text,
-  );
-}
-
 function card(c: Card): ReactElement {
-  const nvda = dataUri("assets/tokens/nvda.png", "image/png");
-  const usdg = dataUri("assets/tokens/usdg.png", "image/png");
   const lockup = dataUri("source/vayle-lockup-horizontal.svg", "image/svg+xml");
   return h(
     "div",
@@ -217,7 +233,7 @@ function card(c: Card): ReactElement {
           left: 64,
           display: "flex",
           flexDirection: "column",
-          width: 620,
+          width: 680,
           fontSize: 52,
           fontWeight: 400,
           letterSpacing: -1.8,
@@ -240,7 +256,7 @@ function card(c: Card): ReactElement {
         },
         c.sentence,
       ),
-      ladder(nvda),
+      ladder(),
       h(
         "div",
         {
@@ -253,8 +269,13 @@ function card(c: Card): ReactElement {
           fontSize: 18,
           fontWeight: 500,
         },
-        tokenNote(nvda, false, "NVDA Stock Token"),
-        tokenNote(usdg, true, "Premium in USDG"),
+        h(
+          "div",
+          { display: "flex", alignItems: "center", gap: 10 },
+          tickerBadge("USDG"),
+          "Paid in USDG",
+        ),
+        h("div", { display: "flex", alignItems: "center" }, "Stock Tokens on Robinhood Chain"),
       ),
     ),
   );

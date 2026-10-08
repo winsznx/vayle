@@ -1,21 +1,24 @@
 import { vayleMarketAbi } from "@vayle/abi";
 import {
   balanceOf,
+  CALL,
   claimable,
   finalizeBlockedUntil,
   ordersOf,
+  PUT,
   seriesId,
   seriesState,
   type OrderState,
   type SeriesState,
 } from "@vayle/market";
+import type { Market } from "@vayle/markets";
 import { useEffect, useState } from "react";
-import { erc20Abi, parseAbi, type Address, type PublicClient } from "viem";
+import { erc20Abi, parseAbi, zeroAddress, type Address, type PublicClient } from "viem";
 import type { AppConfig } from "./config.ts";
 import { shortError } from "./failures.ts";
 import { ladder, type Epoch } from "./week.ts";
 
-// What one side of the market may take, in raw token units. A buy order counts the NVDA it would
+// What one side of a market may take, in raw token units. A buy target counts the tokens it would
 // buy.
 export interface Caps {
   readonly openSize: bigint;
@@ -29,43 +32,59 @@ export interface BySide<T> {
   readonly buy: T;
 }
 
-// What can stop the market and how full it is.
-export interface GuardView {
-  // New orders are paused for every asset or for NVDA.
+// One listed market as the chain reports it.
+export interface AssetView {
+  readonly market: Market;
+  readonly epoch: Epoch | null;
+  readonly feedAnswer: bigint;
+  readonly feedDecimals: number;
+  // This week's batch best bid per listed strike, in USDG base units per raw token.
+  readonly bids: ReadonlyMap<bigint, bigint>;
+  // New targets are paused on this market alone.
   readonly paused: boolean;
-  // When the latest emergency halt ends, in seconds, or 0 when there's never been one.
-  readonly haltedUntil: number;
   readonly caps: BySide<Caps>;
-  // The size of every active order, per side.
+  // The size of every active target on this market, per side.
   readonly open: BySide<bigint>;
 }
 
-export interface AccountView {
-  readonly orders: readonly OrderState[];
-  // The size of this wallet's active orders, per side, which the per-wallet cap counts.
+export interface Holding {
+  readonly balance: bigint;
+  readonly allowance: bigint;
+  readonly claimable: bigint;
+}
+
+export interface TokenAccount extends Holding {
+  // The size of this wallet's active targets on the market, per side, which the per-wallet cap
+  // counts.
   readonly walletOpen: BySide<bigint>;
+}
+
+export interface AccountView {
+  // Every target the wallet set, on every market.
+  readonly orders: readonly OrderState[];
   readonly series: ReadonlyMap<bigint, SeriesState>;
   // Series whose window the view says is over but that finalize would still find open, with the
   // end it reports. The chain has been quiet, and quiet time extends windows.
   readonly heldOpen: ReadonlyMap<bigint, bigint>;
-  readonly claimableAsset: bigint;
-  readonly claimableUsdg: bigint;
-  readonly balanceAsset: bigint;
-  readonly balanceUsdg: bigint;
-  readonly allowanceAsset: bigint;
-  readonly allowanceUsdg: bigint;
+  readonly usdg: Holding;
+  // Each listed market's token, by its address.
+  readonly tokens: ReadonlyMap<Address, TokenAccount>;
 }
 
 export interface MarketView {
   readonly block: bigint;
   readonly now: number;
-  readonly epoch: Epoch | null;
-  readonly feedAnswer: bigint;
-  readonly feedDecimals: number;
-  // This week's best bid per listed strike, in USDG base units per raw token.
-  readonly bids: ReadonlyMap<bigint, bigint>;
-  readonly guard: GuardView;
+  // New targets are paused on every market.
+  readonly paused: boolean;
+  // When the latest emergency halt ends, in seconds, or 0 when there's never been one.
+  readonly haltedUntil: number;
+  // Every listed market, in the build's order.
+  readonly assets: readonly AssetView[];
   readonly account: AccountView | null;
+}
+
+export function assetOf(view: MarketView, token: Address): AssetView | undefined {
+  return view.assets.find((a) => a.market.token === token);
 }
 
 const feedAbi = parseAbi([
@@ -73,13 +92,11 @@ const feedAbi = parseAbi([
   "function latestRoundData() view returns (uint80, int256, uint256, uint256, uint80)",
 ]);
 const POLL_MS = 15_000;
-const NO_MAKER = "0x0000000000000000000000000000000000000000";
-const CALL = 0;
-const PUT = 1;
 
 // Every read in a poll is pinned to the block the poll starts from, so the page never shows one
-// block's orders beside another block's series. Reads that don't wait on each other start together,
-// and the client sends each such group as one Multicall3 call.
+// block's targets beside another block's series. Reads that don't wait on each other start
+// together, and the client sends each such group as one Multicall3 call. Every market's reads start
+// in the same groups, so more markets add reads to the calls a poll makes, not calls.
 
 interface Head {
   readonly number: bigint;
@@ -89,19 +106,20 @@ interface Head {
 async function readEpoch(
   client: PublicClient,
   config: AppConfig,
+  market: Market,
   blockNumber: bigint,
 ): Promise<Epoch | null> {
-  const market = { address: config.market, abi: vayleMarketAbi, blockNumber } as const;
+  const at = { address: config.market, abi: vayleMarketAbi, blockNumber } as const;
   const expiry = await client.readContract({
-    ...market,
+    ...at,
     functionName: "latestExpiry",
-    args: [config.asset],
+    args: [market.token],
   });
   if (expiry === 0n) return null;
   const e = await client.readContract({
-    ...market,
+    ...at,
     functionName: "epoch",
-    args: [config.asset, expiry],
+    args: [market.token, expiry],
   });
   return {
     opening: Number(e.opening),
@@ -120,21 +138,22 @@ async function readEpoch(
 async function readBids(
   client: PublicClient,
   config: AppConfig,
+  market: Market,
   epoch: Epoch,
   blockNumber: bigint,
 ): Promise<Map<bigint, bigint>> {
   const bids = new Map<bigint, bigint>();
   await Promise.all(
     ladder(epoch).map(async (rung) => {
-      const side = rung.side === "sell" ? 0 : 1;
+      const side = rung.side === "sell" ? CALL : PUT;
       const series = seriesId({
         chainId: BigInt(config.chainId),
-        asset: config.asset,
+        asset: market.token,
         side,
         strike: rung.strike,
         expiry: BigInt(epoch.expiry),
         windowLength: epoch.windowLength,
-        collateralToken: side === 0 ? config.asset : config.usdg,
+        collateralToken: side === CALL ? market.token : config.usdg,
       });
       const bid = await client.readContract({
         address: config.market,
@@ -143,34 +162,91 @@ async function readBids(
         args: [series],
         blockNumber,
       });
-      if (bid.maker !== NO_MAKER) bids.set(rung.strike, bid.premium);
+      if (bid.maker !== zeroAddress) bids.set(rung.strike, bid.premium);
     }),
   );
   return bids;
 }
 
-async function readGuard(
+async function readAsset(
   client: PublicClient,
   config: AppConfig,
+  market: Market,
   blockNumber: bigint,
-): Promise<GuardView> {
-  const market = { address: config.market, abi: vayleMarketAbi, blockNumber } as const;
-  const [paused, assetPaused, haltedUntil, sellCaps, buyCaps, openSell, openBuy] =
+): Promise<AssetView> {
+  const at = { address: config.market, abi: vayleMarketAbi, blockNumber } as const;
+  const feed = { address: market.feed, abi: feedAbi, blockNumber } as const;
+  const [week, round, feedDecimals, paused, sellCaps, buyCaps, openSell, openBuy] =
     await Promise.all([
-      client.readContract({ ...market, functionName: "paused" }),
-      client.readContract({ ...market, functionName: "assetPaused", args: [config.asset] }),
-      client.readContract({ ...market, functionName: "haltedUntil" }),
-      client.readContract({ ...market, functionName: "capsOf", args: [config.asset, CALL] }),
-      client.readContract({ ...market, functionName: "capsOf", args: [config.asset, PUT] }),
-      client.readContract({ ...market, functionName: "openSize", args: [config.asset, CALL] }),
-      client.readContract({ ...market, functionName: "openSize", args: [config.asset, PUT] }),
+      readEpoch(client, config, market, blockNumber).then(async (epoch) => ({
+        epoch,
+        bids:
+          epoch === null
+            ? new Map<bigint, bigint>()
+            : await readBids(client, config, market, epoch, blockNumber),
+      })),
+      client.readContract({ ...feed, functionName: "latestRoundData" }),
+      client.readContract({ ...feed, functionName: "decimals" }),
+      client.readContract({ ...at, functionName: "assetPaused", args: [market.token] }),
+      client.readContract({ ...at, functionName: "capsOf", args: [market.token, CALL] }),
+      client.readContract({ ...at, functionName: "capsOf", args: [market.token, PUT] }),
+      client.readContract({ ...at, functionName: "openSize", args: [market.token, CALL] }),
+      client.readContract({ ...at, functionName: "openSize", args: [market.token, PUT] }),
     ]);
   return {
-    paused: paused || assetPaused,
-    haltedUntil: Number(haltedUntil),
+    market,
+    epoch: week.epoch,
+    feedAnswer: round[1],
+    feedDecimals,
+    bids: week.bids,
+    paused,
     caps: { sell: sellCaps, buy: buyCaps },
     open: { sell: openSell, buy: openBuy },
   };
+}
+
+async function readHolding(
+  client: PublicClient,
+  config: AppConfig,
+  owner: Address,
+  token: Address,
+  blockNumber: bigint,
+): Promise<Holding> {
+  const [balance, allowance, owed] = await Promise.all([
+    balanceOf(client, token, owner, blockNumber),
+    client.readContract({
+      address: token,
+      abi: erc20Abi,
+      functionName: "allowance",
+      args: [owner, config.market],
+      blockNumber,
+    }),
+    claimable(client, config.market, owner, token, blockNumber),
+  ]);
+  return { balance, allowance, claimable: owed };
+}
+
+async function readTokenAccount(
+  client: PublicClient,
+  config: AppConfig,
+  owner: Address,
+  market: Market,
+  blockNumber: bigint,
+): Promise<TokenAccount> {
+  const wallet = (side: typeof CALL | typeof PUT): Promise<bigint> =>
+    client.readContract({
+      address: config.market,
+      abi: vayleMarketAbi,
+      functionName: "walletSize",
+      args: [owner, market.token, side],
+      blockNumber,
+    });
+  const [holding, sell, buy] = await Promise.all([
+    readHolding(client, config, owner, market.token, blockNumber),
+    wallet(CALL),
+    wallet(PUT),
+  ]);
+  return { ...holding, walletOpen: { sell, buy } };
 }
 
 async function readAccount(
@@ -179,42 +255,15 @@ async function readAccount(
   owner: Address,
   head: Head,
 ): Promise<AccountView> {
-  const allowance = (token: Address): Promise<bigint> =>
-    client.readContract({
-      address: token,
-      abi: erc20Abi,
-      functionName: "allowance",
-      args: [owner, config.market],
-      blockNumber: head.number,
-    });
-  const wallet = (side: number): Promise<bigint> =>
-    client.readContract({
-      address: config.market,
-      abi: vayleMarketAbi,
-      functionName: "walletSize",
-      args: [owner, config.asset, side],
-      blockNumber: head.number,
-    });
-  const [
-    orders,
-    claimableAsset,
-    claimableUsdg,
-    balanceAsset,
-    balanceUsdg,
-    allowanceAsset,
-    allowanceUsdg,
-    walletSell,
-    walletBuy,
-  ] = await Promise.all([
+  const [orders, usdg, tokens] = await Promise.all([
     ordersOf(client, config.market, owner, head.number),
-    claimable(client, config.market, owner, config.asset, head.number),
-    claimable(client, config.market, owner, config.usdg, head.number),
-    balanceOf(client, config.asset, owner, head.number),
-    balanceOf(client, config.usdg, owner, head.number),
-    allowance(config.asset),
-    allowance(config.usdg),
-    wallet(CALL),
-    wallet(PUT),
+    readHolding(client, config, owner, config.usdg, head.number),
+    Promise.all(
+      config.markets.map(
+        async (m) =>
+          [m.token, await readTokenAccount(client, config, owner, m, head.number)] as const,
+      ),
+    ),
   ]);
   const ids = [...new Set(orders.filter((o) => o.series !== 0n).map((o) => o.series))];
   const series = new Map(
@@ -234,18 +283,7 @@ async function readAccount(
   );
   const heldOpen = new Map<bigint, bigint>();
   for (const [id, until] of blocked) if (until !== null) heldOpen.set(id, until);
-  return {
-    orders,
-    walletOpen: { sell: walletSell, buy: walletBuy },
-    series,
-    heldOpen,
-    claimableAsset,
-    claimableUsdg,
-    balanceAsset,
-    balanceUsdg,
-    allowanceAsset,
-    allowanceUsdg,
-  };
+  return { orders, series, heldOpen, usdg, tokens: new Map(tokens) };
 }
 
 async function readMarket(
@@ -254,33 +292,19 @@ async function readMarket(
   owner: Address | null,
 ): Promise<MarketView> {
   const head = await client.getBlock({ blockTag: "latest" });
-  const at = { blockNumber: head.number } as const;
-  const [week, round, feedDecimals, guard, account] = await Promise.all([
-    readEpoch(client, config, head.number).then(async (epoch) => ({
-      epoch,
-      bids:
-        epoch === null
-          ? new Map<bigint, bigint>()
-          : await readBids(client, config, epoch, head.number),
-    })),
-    client.readContract({
-      address: config.feed,
-      abi: feedAbi,
-      functionName: "latestRoundData",
-      ...at,
-    }),
-    client.readContract({ address: config.feed, abi: feedAbi, functionName: "decimals", ...at }),
-    readGuard(client, config, head.number),
+  const at = { address: config.market, abi: vayleMarketAbi, blockNumber: head.number } as const;
+  const [assets, paused, haltedUntil, account] = await Promise.all([
+    Promise.all(config.markets.map((m) => readAsset(client, config, m, head.number))),
+    client.readContract({ ...at, functionName: "paused" }),
+    client.readContract({ ...at, functionName: "haltedUntil" }),
     owner === null ? Promise.resolve(null) : readAccount(client, config, owner, head),
   ]);
   return {
     block: head.number,
     now: Number(head.timestamp),
-    epoch: week.epoch,
-    feedAnswer: round[1],
-    feedDecimals,
-    bids: week.bids,
-    guard,
+    paused,
+    haltedUntil: Number(haltedUntil),
+    assets,
     account,
   };
 }

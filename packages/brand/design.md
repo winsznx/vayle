@@ -3,7 +3,7 @@
 ## Document control
 
 - Brand: Vayle
-- Product: paid limit orders on Stock Tokens, starting with NVDA, on Robinhood Chain
+- Product: weekly pay for Stock Token holders on Robinhood Chain, through sell and buy targets, starting with NVDA
 - Status: draft, waiting on owner sign-off
 - Version: 1.0.0
 - Owner: Vayle
@@ -23,15 +23,15 @@ When two sources disagree, the higher one wins and the lower one gets fixed in t
 
 ### Product truth
 
-A holder locks NVDA they'd sell at a higher price, or USDG they'd spend at a lower one, and picks that price on the week's ladder. Each week the order earns that week's premium, skips the week when the bid is under the holder's minimum, or fills at exactly the holder's price, settled in the actual token. It renews until it fills or the holder cancels. Underneath, each order is a fully collateralized weekly option, but the holder never has to work in options terms.
+A holder locks Stock Tokens they'd sell at a higher price, a sell target, or USDG they'd spend at a lower one, a buy target, and picks that price on the week's ladder. Each week the target is paid that week's payment, skips the week when the bid is under the holder's least payment, or fills at exactly the holder's price when Friday's close passes it, settled in the actual token. It renews until it fills or the holder cancels. Underneath, each target is a fully collateralized weekly option, but the holder never has to work in options terms.
 
 ### Audience
 
-People who already hold NVDA Stock Tokens or USDG on Robinhood Chain and already have a price in mind. They know what a limit order is. They don't want to learn strikes, expiries or assignment.
+People who already hold Stock Tokens or USDG on Robinhood Chain and already have a price in mind. They know what selling at a price means. They don't want to learn strikes, expiries or assignment.
 
 ### Promise
 
-One price you set, held every week until it fills or you cancel, with each week's premium paid to you for holding it.
+Pick the price you'd sell at. Get paid while you wait for it.
 
 ### Load-bearing idea
 
@@ -53,7 +53,7 @@ Calm, exact and plain-spoken. Level lines, prices on a fixed grid, numbers that 
 
 - Trading-floor imagery: candlesticks, charts going up, rockets, bulls and bears.
 - Options vocabulary in anything a holder reads. The product says price, week and fill.
-- Hype, and any wording that makes the premium sound guaranteed.
+- Hype, any wording that makes the weekly payment sound guaranteed, and any APY or annualized figure.
 - Blue on everything. Blue has two jobs, listed under Colour.
 - The chain's or the token issuer's logos, marks or brand colours used as Vayle decoration.
 - Glows, glass effects, neon on black, and purple-to-blue gradient washes.
@@ -210,7 +210,7 @@ UI icons are drawn on an 18-unit grid and sit in an 18 px box.
 
 ### Stroke and fill
 
-Icons are 1.5-unit strokes with round caps and joins and no fill, in the text colour of their label. The symbol is the only filled mark. Token logos are bitmaps.
+Icons are 1.5-unit strokes with round caps and joins and no fill, in the text colour of their label. The symbol is the only filled mark. Tokens are ticker badges, not artwork.
 
 ### Perspective
 
@@ -219,12 +219,13 @@ Flat and front-on. No isometric or 3D icons.
 ### Reuse rules
 
 - The symbol is never an icon, a bullet or a loading indicator, and no other icon draws a ladder.
-- Token logos are the real artwork, checksummed in [`assets/tokens/manifest.json`](assets/tokens/manifest.json) and never recoloured. Stock Tokens sit in a rounded square and payment tokens in a circle, each with a 1 px inset hairline, to the left of the text that names them.
+- Every token is a ticker badge, from [`css/ticker.css`](css/ticker.css): its ticker in Plus Jakarta Sans at weight 700 with 0.02 em tracking, set at 0.44 of the badge's height and never under 10 px. A Stock Token is an ink tile with inverse text and corners at 0.3 of the height. USDG is a pill on the sheet with ink text and a 1 px `--control` ring. A choice that isn't the current one, or a token that isn't listed, is the outlined tile. Heights run 16, 20, 24, 32, 40 and 56 px. The badge sits to the left of the text that names its token, and on a surface of fixed colour, like the dark band, it keeps its contrast by turning over.
+- Badges stay neutral: blue is for the holder's price, and no company's or issuer's artwork appears anywhere.
 - Robinhood Chain is named in words, next to a neutral glyph.
 
 ## Image and render system
 
-Vayle uses no photography, 3D renders or generated images. The imagery is the product itself: the ladder, order states and real token logos.
+Vayle uses no photography, 3D renders or generated images. The imagery is the product itself: the ladder, target states and ticker badges.
 
 ### Composition
 
@@ -268,11 +269,11 @@ None. The system uses no outside reference imagery.
 | App icon master                                                      | `source/vayle-app-icon.svg`                           |
 | Favicons and app icons                                               | `favicon/`, copied into `apps/web/public/`            |
 | Social card, 1200 by 630                                             | `social/cards.ts`, rendered per page by the web build |
-| Token logos with provenance                                          | `assets/tokens/`                                      |
+| Ticker badge                                                         | `css/ticker.css`                                      |
 | Machine-readable spec                                                | `brand.json`                                          |
 
 ## Validation
 
-- `pnpm --filter @vayle/brand test` checks that the token logos match their manifest, that every master and icon was generated from the current `src/mark.ts`, that no SVG carries text, scripts or outside references, and that the web app serves the same icons as this package.
+- `pnpm --filter @vayle/brand test` checks that every master and icon was generated from the current `src/mark.ts`, that no SVG carries text, scripts or outside references, and that the web app serves the same icons as this package.
 - After changing `src/mark.ts` or the wordmark settings, rerun `scripts/build_masters.py`, then `pnpm --filter @vayle/brand social`.
 - By eye before release: the favicon at 16 and 32 px on light and dark browser tabs, and both lockups in both themes.

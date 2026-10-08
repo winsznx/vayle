@@ -7,6 +7,7 @@ interface ImportMetaEnv {
   readonly VITE_PLACEMENT?: string;
   readonly VITE_MARKET_DEPLOY_BLOCK?: string;
   readonly VITE_WALLETCONNECT_PROJECT_ID?: string;
+  readonly VITE_MAKER_URL?: string;
 }
 
 interface ImportMeta {

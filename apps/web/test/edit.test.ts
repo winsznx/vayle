@@ -7,12 +7,13 @@ import { planEdit, type Holdings, type Limits } from "../src/app/edit.ts";
 import type { Epoch } from "../src/app/week.ts";
 
 const ONE = 10n ** 18n;
+// A made-up market: the planner works the same for every listed Stock Token.
 const addresses = {
   market: getAddress("0x00000000000000000000000000000000000000aa"),
-  asset: getAddress("0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC"),
+  asset: getAddress("0x00000000000000000000000000000000000000cc"),
   usdg: getAddress("0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168"),
 };
-const units = { usdg: 6, asset: 18, symbol: "NVDA" };
+const units = { usdg: 6, asset: { symbol: "ABC", decimals: 18, places: 2 } };
 const caps = {
   openSize: 100n * ONE,
   walletSize: 10n * ONE,
@@ -70,7 +71,7 @@ function functionNames(calls: readonly { readonly data: Hex }[]): string[] {
 }
 
 describe("planEdit", () => {
-  it("moves an idle sell order to a new price and size, asking approval for the extra NVDA", () => {
+  it("moves an idle sell target to a new price and size, asking approval for the extra tokens", () => {
     // #when
     const plan = planEdit(
       order(),
@@ -103,7 +104,7 @@ describe("planEdit", () => {
     assert.deepEqual(plan.kind === "ready" ? functionNames(plan.calls) : plan, ["amendOrder"]);
   });
 
-  it("frees USDG to withdraw when a buy order moves to a lower price", () => {
+  it("frees USDG to withdraw when a buy target moves to a lower price", () => {
     // #given
     const buy = order({ side: 1, target: 230_000_000n, size: ONE });
     // #when
@@ -123,8 +124,8 @@ describe("planEdit", () => {
     ]);
   });
 
-  it("counts what the order already locks toward a bigger order", () => {
-    // #given the wallet holds 1 NVDA and the order 0.5 more
+  it("counts what the target already locks toward a bigger target", () => {
+    // #given the wallet holds 1 token and the target 0.5 more
     const input = { target: 250_000_000n, amount: "1.50", minimum: "0.10" };
     // #when
     const plan = planEdit(order(), input, epoch, holdings, addresses, limits, units);
@@ -132,7 +133,7 @@ describe("planEdit", () => {
     assert.equal(plan.kind, "ready");
   });
 
-  it("refuses more NVDA than the wallet and the order hold together", () => {
+  it("refuses more tokens than the wallet and the target hold together", () => {
     // #when
     const plan = planEdit(
       order(),
@@ -146,7 +147,7 @@ describe("planEdit", () => {
     // #then
     assert.deepEqual(plan, {
       kind: "problem",
-      problem: "That's more NVDA than this wallet holds.",
+      problem: "That's more ABC than this wallet holds.",
     });
   });
 
@@ -165,7 +166,7 @@ describe("planEdit", () => {
     assert.deepEqual(plan, { kind: "unchanged" });
   });
 
-  it("changes only the least premium of an order in this week's trade", () => {
+  it("changes only the least payment of a target in this week's trade", () => {
     // #given
     const attached = order({ series: 42n, committed: ONE / 2n });
     // #when
@@ -185,8 +186,8 @@ describe("planEdit", () => {
     ]);
   });
 
-  it("counts the order's own size as released when it checks the wallet's cap", () => {
-    // #given a wallet cap of 1 NVDA, all of it this order's 0.5 and another order's 0.5
+  it("counts the target's own size as released when it checks the wallet's cap", () => {
+    // #given a wallet cap of 1 token, all of it this target's 0.5 and another target's 0.5
     const tight: Limits = {
       caps: { sell: { ...caps, walletSize: ONE }, buy: caps },
       open: { sell: ONE, buy: 0n },
@@ -206,7 +207,7 @@ describe("planEdit", () => {
     assert.equal(plan.kind, "ready");
   });
 
-  it("refuses to grow an order past the wallet's cap", () => {
+  it("refuses to grow a target past the wallet's cap", () => {
     // #given the same full cap
     const tight: Limits = {
       caps: { sell: { ...caps, walletSize: ONE }, buy: caps },
@@ -226,11 +227,11 @@ describe("planEdit", () => {
     // #then
     assert.deepEqual(plan, {
       kind: "problem",
-      problem: "That's over the market's limit for now. Up to 0.50 NVDA fits.",
+      problem: "That's over the market's limit for now. Up to 0.50 ABC fits.",
     });
   });
 
-  it("refuses a least premium off the market's price steps", () => {
+  it("refuses a least payment off the market's price steps, naming the step", () => {
     // #given
     const attached = order({ series: 42n });
     // #when
@@ -244,6 +245,9 @@ describe("planEdit", () => {
       units,
     );
     // #then
-    assert.equal(plan.kind, "problem");
+    assert.deepEqual(plan, {
+      kind: "problem",
+      problem: "The least payment goes in steps of $0.0001.",
+    });
   });
 });

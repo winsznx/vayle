@@ -79,6 +79,12 @@
   font-weight: 600;
 }
 
+/* The market the event is about, ahead of what happened. */
+.ac-title .ticker {
+  margin-right: 8px;
+  vertical-align: 1px;
+}
+
 .ac-amount {
   grid-area: amount;
   justify-self: end;

@@ -209,9 +209,12 @@ function text(args: Readonly<Record<string, unknown>>, name: string): string | n
   return typeof value === "string" ? value : null;
 }
 
-export function weeksOf(epochEvents: readonly MarketEvent[]): Week[] {
+// The weeks the market opened for one asset. Every market opens its own weeks, so a target's
+// history counts only its own market's.
+export function weeksOf(epochEvents: readonly MarketEvent[], asset: string): Week[] {
+  const wanted = asset.toLowerCase();
   return epochEvents
-    .filter((e) => e.name === "EpochCreated")
+    .filter((e) => e.name === "EpochCreated" && text(e.args, "asset")?.toLowerCase() === wanted)
     .map((e) => ({
       opening: Number(text(e.args, "opening") ?? Number.NaN),
       expiry: Number(text(e.args, "expiry") ?? Number.NaN),

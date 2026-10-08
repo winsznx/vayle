@@ -36,6 +36,27 @@ describe("loadConfig", () => {
     );
   });
 
+  it("reads the maker's bid sheet from a base URL, without its trailing slash", () => {
+    // #when
+    const result = loadConfig({ ...BASE, VITE_MAKER_URL: "https://maker.example/" });
+    // #then
+    assert.equal(result.ok ? result.config.makerUrl : null, "https://maker.example");
+  });
+
+  it("reads no bid sheet without a maker URL, and refuses one that isn't http or https", () => {
+    // #when
+    const results = [
+      loadConfig(BASE),
+      loadConfig({ ...BASE, VITE_MAKER_URL: "maker.example" }),
+      loadConfig({ ...BASE, VITE_MAKER_URL: "ftp://maker.example" }),
+    ];
+    // #then
+    assert.deepEqual(
+      results.map((r) => (r.ok ? r.config.makerUrl : r.missing)),
+      [null, ["VITE_MAKER_URL"], ["VITE_MAKER_URL"]],
+    );
+  });
+
   it("names every setting that's missing", () => {
     // #when
     const result = loadConfig({});

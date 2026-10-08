@@ -1,13 +1,16 @@
-import { TokenIcon } from "../../ui/TokenIcon.tsx";
+import { TickerBadge } from "../../ui/TickerBadge.tsx";
 import type { AppConfig } from "../config.ts";
 import { easternTime, feedDollars } from "../format.ts";
-import type { MarketView } from "../useMarket.ts";
+import type { AssetView } from "../useMarket.ts";
 import type { PriceHistory } from "../usePriceHistory.ts";
+import { hasBatch, referenceLabel } from "../week.ts";
+import { AssetSwitcher } from "./AssetSwitcher.tsx";
 import { PriceChart } from "./PriceChart.tsx";
 import "./dashboard.css";
 
-// NVDA as the market prices it: the feed's latest answer, how far it has moved since this week's
-// close set the strikes, and the last month of the feed's rounds.
+// One Stock Token as the market prices it: the feed's latest answer, how far it has moved since
+// this week's reference set the strikes, and the last month of the feed's rounds. With more than
+// one market listed, the switcher picks which.
 
 interface Change {
   readonly text: string;
@@ -31,34 +34,40 @@ function changeSince(
 
 interface Props {
   readonly config: AppConfig;
-  readonly view: MarketView;
+  readonly asset: AssetView;
+  // Chain time.
+  readonly now: number;
   readonly history: PriceHistory;
   // The prices the holder has active orders at, in USDG base units.
   readonly marks: readonly bigint[];
 }
 
-export function PriceCard({ config, view, history, marks }: Props) {
-  const close = view.epoch?.referencePrice ?? null;
+export function PriceCard({ config, asset, now, history, marks }: Props) {
+  const { market, epoch } = asset;
+  const close = epoch?.referencePrice ?? null;
   const change =
     close === null
       ? null
-      : changeSince(view.feedAnswer, view.feedDecimals, close, config.usdgDecimals);
+      : changeSince(asset.feedAnswer, asset.feedDecimals, close, config.usdgDecimals);
   const latest = history.status === "ready" ? history.points.at(-1) : undefined;
+  // A week without a batch takes its reference at its opening, not at a close.
+  const since = epoch !== null && !hasBatch(epoch) ? "this week's opening" : "this week's close";
   return (
-    <section className="card price-card" aria-label={`${config.assetSymbol} price`}>
+    <section className="card price-card" aria-label={`${market.symbol} price`}>
+      {config.markets.length > 1 && <AssetSwitcher />}
       <div className="price-head">
         <div className="price-asset">
-          <TokenIcon symbol="NVDA" size="lg" />
+          <TickerBadge symbol={market.symbol} size="lg" />
           <div>
-            <p className="price-symbol">{config.assetSymbol}</p>
+            <p className="price-symbol">{market.symbol}</p>
             <p className="price-name">Stock Token on Robinhood Chain</p>
           </div>
         </div>
         <div className="price-now">
-          <p className="price-figure num">{feedDollars(view.feedAnswer, view.feedDecimals)}</p>
+          <p className="price-figure num">{feedDollars(asset.feedAnswer, asset.feedDecimals)}</p>
           {change !== null && (
             <p className={change.up ? "price-change is-up" : "price-change is-down"}>
-              <span className="num">{change.text}</span> since this week&apos;s close
+              <span className="num">{change.text}</span> since {since}
             </p>
           )}
         </div>
@@ -67,8 +76,9 @@ export function PriceCard({ config, view, history, marks }: Props) {
         <PriceChart
           points={history.points}
           feedDecimals={history.decimals}
-          now={view.now}
+          now={now}
           close={close}
+          closeLabel={epoch === null ? "Close" : referenceLabel(epoch)}
           marks={marks}
           usdgDecimals={config.usdgDecimals}
         />
@@ -80,7 +90,7 @@ export function PriceCard({ config, view, history, marks }: Props) {
         </p>
       )}
       <p className="price-source">
-        Chainlink {config.assetSymbol}/USD feed
+        Chainlink {market.symbol}/USD feed
         {latest === undefined ? "" : `, last updated ${easternTime(latest.time)}`}
       </p>
     </section>

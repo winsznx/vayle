@@ -2,25 +2,28 @@ import type { MarketEvent, OrderState } from "@vayle/market";
 import { formatFixed } from "@vayle/units";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
-import { TokenIcon } from "../../ui/TokenIcon.tsx";
+import { TickerBadge } from "../../ui/TickerBadge.tsx";
 import { Holdings } from "../components/Holdings.tsx";
-import { actionFor, lineOf, type Action } from "../components/Orders.tsx";
+import { actionFor, lineOf, OrderBadge, type Action } from "../components/Orders.tsx";
 import { PriceCard } from "../components/PriceCard.tsx";
 import { WeekTrack } from "../components/WeekTrack.tsx";
 import type { AppConfig } from "../config.ts";
-import { describeEvent, sidesOf, txUrl, type EventLine } from "../events.ts";
+import { contextOf, describeEvent, txUrl, type EventLine } from "../events.ts";
 import { dollars, easternTime, premium } from "../format.ts";
-import type { OrderLine } from "../orders.ts";
+import { nameOf, type OrderLine } from "../orders.ts";
+import { sheetRows, type SheetRow } from "../rates.ts";
 import { useApp, type Run } from "../state.tsx";
-import type { AccountView, MarketView } from "../useMarket.ts";
+import { useAsset } from "../useAsset.ts";
+import { assetOf, type AccountView, type AssetView } from "../useMarket.ts";
 import type { MarketHistory } from "../useMarketHistory.ts";
 import { usePriceHistory } from "../usePriceHistory.ts";
-import { ladder, type Epoch, type Rung } from "../week.ts";
+import { ladder, referenceLabel, type Epoch, type Rung } from "../week.ts";
 import "./overview.css";
 
-// The holder's home: NVDA's price and what they hold, where this week stands, what needs them, their
-// orders and what happened to them, and this week's prices with the maker's bids. Everything shown
-// comes from the shared market read, the feed's rounds or the holder's history.
+// The holder's home: one market's price beside everything they hold, where that market's week
+// stands, what needs them, their targets on every market and what happened to them, and the week's
+// prices with the maker's bids. Everything shown comes from the shared market read, the feed's
+// rounds or the holder's history.
 
 const SHOWN_ORDERS = 4;
 const SHOWN_EVENTS = 5;
@@ -47,20 +50,27 @@ function newestFirst(a: Entry, b: Entry): number {
   return a.order.id < b.order.id ? 1 : -1;
 }
 
-function nameOf(line: OrderLine): string {
-  return line.title.replace(/ at$/, "");
-}
-
 function priceKey(side: Rung["side"], strike: bigint): string {
   return `${side}:${strike.toString()}`;
 }
 
-// The prices the holder's active orders stand at, so the week's prices can mark them as theirs.
-function heldPrices(account: AccountView): Set<string> {
+// The holder's active targets on one market.
+function activeOn(account: AccountView, asset: AssetView): OrderState[] {
+  return account.orders.filter((o) => o.status === "active" && o.asset === asset.market.token);
+}
+
+// The prices the holder's active targets on a market stand at, so the week's prices can mark them
+// as theirs.
+function heldPrices(account: AccountView, asset: AssetView): Set<string> {
   return new Set(
-    account.orders
-      .filter((o) => o.status === "active")
-      .map((o) => priceKey(o.side === 0 ? "sell" : "buy", o.target)),
+    activeOn(account, asset).map((o) => priceKey(o.side === 0 ? "sell" : "buy", o.target)),
+  );
+}
+
+// The same prices for the chart's marks, without repeats.
+function orderPrices(account: AccountView, asset: AssetView): bigint[] {
+  return [...new Set(activeOn(account, asset).map((o) => o.target))].sort((a, b) =>
+    a < b ? 1 : a > b ? -1 : 0,
   );
 }
 
@@ -85,43 +95,39 @@ function historyState(history: PendingHistory): string {
 }
 
 function recentOf(events: readonly MarketEvent[], config: AppConfig): Happened[] {
-  const sideOf = sidesOf(events);
+  const context = contextOf(events, config.markets);
   return [...events]
     .reverse()
     .flatMap((event) => {
-      const line = describeEvent(event, config, sideOf);
+      const line = describeEvent(event, config, context);
       return line === null ? [] : [{ event, line }];
     })
     .slice(0, SHOWN_EVENTS);
 }
 
-// The prices the holder has active orders at, for the chart's marks, without repeats.
-function orderPrices(account: AccountView): bigint[] {
-  return [
-    ...new Set(account.orders.filter((o) => o.status === "active").map((o) => o.target)),
-  ].sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
-}
-
 export function OverviewPage(): ReactNode {
   const { config, client, view, wallet, onChain, history, run, busy, readError } = useApp();
-  const prices = usePriceHistory(client, config.feed);
+  const { market, link } = useAsset();
+  const prices = usePriceHistory(client, market.feed);
   if (view === null) return null;
+  const asset = assetOf(view, market.token);
+  if (asset === undefined) return null;
   const account = wallet.address === null ? null : view.account;
 
   const hero = (
     <div className="ov-hero">
       <PriceCard
         config={config}
-        view={view}
+        asset={asset}
+        now={view.now}
         history={prices}
-        marks={account === null ? [] : orderPrices(account)}
+        marks={account === null ? [] : orderPrices(account, asset)}
       />
       {account !== null ? (
         <Holdings
           config={config}
           account={account}
-          feedAnswer={view.feedAnswer}
-          feedDecimals={view.feedDecimals}
+          assets={view.assets}
           history={history}
           canAct={onChain}
           run={run}
@@ -132,12 +138,12 @@ export function OverviewPage(): ReactNode {
           <p className="holdings-title">Your holdings</p>
           <p className="holdings-empty-line">
             {wallet.address === null
-              ? "Connect a wallet to see your NVDA and USDG, what's in your orders and what they've earned."
+              ? "Connect a wallet to see your Stock Tokens and USDG, what's in your targets and what they've earned."
               : readError === null
                 ? "Reading your holdings from the chain."
                 : `Can't read your holdings right now: ${firstLine(readError)}`}
           </p>
-          <Link className="ov-link" to="/trade">
+          <Link className="ov-link" to={link("/trade")}>
             See this week&apos;s prices
           </Link>
         </section>
@@ -149,8 +155,8 @@ export function OverviewPage(): ReactNode {
     return (
       <>
         {hero}
-        <WeekTrack epoch={view.epoch} now={view.now} />
-        <WeekPrices config={config} view={view} held={new Set()} />
+        <WeekTrack epoch={asset.epoch} now={view.now} />
+        <WeekPrices config={config} asset={asset} held={new Set()} link={link} />
       </>
     );
   }
@@ -168,13 +174,18 @@ export function OverviewPage(): ReactNode {
   return (
     <>
       {hero}
-      <NeedsYou items={needed} canAct={onChain} run={run} busy={busy} />
-      <WeekTrack epoch={view.epoch} now={view.now} />
+      <NeedsYou config={config} items={needed} canAct={onChain} run={run} busy={busy} />
+      <WeekTrack epoch={asset.epoch} now={view.now} />
       <div className="ov-columns">
-        <YourOrders entries={open.slice(0, SHOWN_ORDERS)} total={account.orders.length} />
-        <RecentActivity config={config} history={history} />
+        <YourOrders
+          config={config}
+          entries={open.slice(0, SHOWN_ORDERS)}
+          total={account.orders.length}
+          link={link}
+        />
+        <RecentActivity config={config} history={history} link={link} />
       </div>
-      <WeekPrices config={config} view={view} held={heldPrices(account)} />
+      <WeekPrices config={config} asset={asset} held={heldPrices(account, asset)} link={link} />
     </>
   );
 }
@@ -199,11 +210,13 @@ function CardHead({
 }
 
 function NeedsYou({
+  config,
   items,
   canAct,
   run,
   busy,
 }: {
+  readonly config: AppConfig;
   readonly items: readonly Needed[];
   readonly canAct: boolean;
   readonly run: Run;
@@ -230,7 +243,7 @@ function NeedsYou({
         {items.map(({ order, line, action }) => (
           <li key={order.id.toString()} className="ov-need">
             <Link className="ov-name" to={`/orders/${order.id.toString()}`}>
-              <TokenIcon symbol="NVDA" size="md" />
+              <OrderBadge config={config} order={order} size="md" />
               <span className="ov-name-text">{nameOf(line)}</span>
             </Link>
             <span className="ov-price num">{line.price}</span>
@@ -252,31 +265,39 @@ function NeedsYou({
 }
 
 function YourOrders({
+  config,
   entries,
   total,
+  link,
 }: {
+  readonly config: AppConfig;
   readonly entries: readonly Entry[];
   readonly total: number;
+  readonly link: (path: string) => string;
 }) {
   return (
     <section className="card ov-panel">
       <CardHead
-        title="Your orders"
+        title="Your targets"
         sub={null}
         aside={
-          <Link className="ov-link" to="/orders" aria-label={`All orders, ${total} in total`}>
-            All orders
+          <Link
+            className="ov-link"
+            to={link("/orders")}
+            aria-label={`All targets, ${total} in total`}
+          >
+            All targets
             <span className="ov-count num">{total}</span>
           </Link>
         }
       />
       {entries.length === 0 ? (
         <p className="empty-state">
-          No open orders.{" "}
-          <Link className="ov-link" to="/trade">
+          No open targets.{" "}
+          <Link className="ov-link" to={link("/trade")}>
             Choose a price
           </Link>{" "}
-          to place one.
+          to set one.
         </p>
       ) : (
         <ul className="ov-list ov-order-list">
@@ -284,7 +305,7 @@ function YourOrders({
             <li key={order.id.toString()}>
               <Link className="ov-order" to={`/orders/${order.id.toString()}`}>
                 <span className="ov-name">
-                  <TokenIcon symbol="NVDA" size="md" />
+                  <OrderBadge config={config} order={order} size="md" />
                   <span className="ov-name-text">{nameOf(line)}</span>
                 </span>
                 <span className="ov-price num">{line.price}</span>
@@ -311,19 +332,21 @@ function EventTime({ config, event }: { readonly config: AppConfig; readonly eve
 function RecentActivity({
   config,
   history,
+  link,
 }: {
   readonly config: AppConfig;
   readonly history: MarketHistory;
+  readonly link: (path: string) => string;
 }) {
   const recent = history.status === "ready" ? recentOf(history.events, config) : [];
-  const premiums = recent.some(({ line }) => line.kind === "earned");
+  const paid = recent.some(({ line }) => line.kind === "earned");
   return (
     <section className="card ov-panel">
       <CardHead
         title="Recent activity"
-        sub={premiums ? "Premiums come from the team-operated maker." : null}
+        sub={paid ? "Payments come from the maker Vayle operates." : null}
         aside={
-          <Link className="ov-link" to="/activity">
+          <Link className="ov-link" to={link("/activity")}>
             All activity
           </Link>
         }
@@ -331,12 +354,15 @@ function RecentActivity({
       {history.status !== "ready" ? (
         <p className="empty-state ov-state">{historyState(history)}</p>
       ) : recent.length === 0 ? (
-        <p className="empty-state">Nothing has happened on your orders yet.</p>
+        <p className="empty-state">Nothing has happened on your targets yet.</p>
       ) : (
         <ol className="ov-list ov-event-list">
           {recent.map(({ event, line }) => (
             <li key={`${event.block_number}:${event.log_index}`} className="ov-event">
-              <p className="ov-event-title">{line.title}</p>
+              <p className="ov-event-title">
+                {line.ticker !== null && <TickerBadge symbol={line.ticker} size="xs" named />}
+                {line.title}
+              </p>
               <EventTime config={config} event={event} />
               {line.amount !== null && (
                 <p
@@ -362,7 +388,7 @@ function RecentActivity({
   );
 }
 
-// A bid as a share of what one token's order locks, in basis points, cut down.
+// A bid as a share of what one token's target locks, in basis points, cut down.
 function shareOf(bid: bigint, locks: bigint): bigint {
   return locks === 0n ? 0n : (bid * 10_000n) / locks;
 }
@@ -378,21 +404,23 @@ function RungLink({
   share,
   widest,
   mine,
+  link,
 }: {
   readonly config: AppConfig;
   readonly rung: Rung;
   readonly bid: bigint | undefined;
-  // The bid as a share of what the order locks, and the largest share shown, in basis points.
+  // The bid as a share of what the target locks, and the largest share shown, in basis points.
   readonly share: bigint;
   readonly widest: bigint;
   readonly mine: boolean;
+  readonly link: (path: string) => string;
 }) {
   const selling = rung.side === "sell";
   return (
     <li>
       <Link
         className={mine ? "ov-rung ov-rung-mine" : "ov-rung"}
-        to={`/trade?price=${formatFixed(rung.strike, config.usdgDecimals)}`}
+        to={link(`/trade?price=${formatFixed(rung.strike, config.usdgDecimals)}`)}
       >
         <span className="ov-rung-tags">
           <span className={selling ? "row-side side-sell" : "row-side side-buy"}>
@@ -421,72 +449,81 @@ function RungLink({
   );
 }
 
-// What one token's order locks, priced in USDG: a sell locks the token, at this week's close, and
-// a buy locks its price.
+// What one token's target locks, priced in USDG: a sell target locks the token, at this week's
+// reference, and a buy target locks its price.
 function locksFor(rung: Rung, e: Epoch): bigint {
   return rung.side === "sell" ? e.referencePrice : rung.strike;
 }
 
-// The prices either side of the close, highest first as on the ladder, each a way into the ticket.
+// One market's prices either side of the reference, highest first as on the ladder, each a way
+// into the ticket. As on the rate sheet, a buy target shows only where there's a bid for it.
 function WeekPrices({
   config,
-  view,
+  asset,
   held,
+  link,
 }: {
   readonly config: AppConfig;
-  readonly view: MarketView;
+  readonly asset: AssetView;
   readonly held: ReadonlySet<string>;
+  readonly link: (path: string) => string;
 }) {
-  const e = view.epoch;
-  const rungs = e === null ? [] : ladder(e);
-  const sells = rungs.filter((r) => r.side === "sell").slice(-RUNGS_EACH_SIDE);
-  const buys = rungs.filter((r) => r.side === "buy").slice(0, RUNGS_EACH_SIDE);
+  const { rates } = useApp();
+  const e = asset.epoch;
+  const inputs = rates(asset);
+  const symbol = asset.market.symbol;
+  const rows = e === null || inputs === null ? [] : sheetRows(ladder(e), inputs);
+  const sells = rows.filter((r) => r.rung.side === "sell").slice(-RUNGS_EACH_SIDE);
+  const buys = rows.filter((r) => r.rung.side === "buy").slice(0, RUNGS_EACH_SIDE);
   const shares = new Map(
     e === null
       ? []
-      : [...sells, ...buys].map((r) => {
-          const bid = view.bids.get(r.strike);
-          return [r.strike, bid === undefined ? 0n : shareOf(bid, locksFor(r, e))] as const;
+      : [...sells, ...buys].map(({ rung, rate }) => {
+          const share = rate === null ? 0n : shareOf(rate.premium, locksFor(rung, e));
+          return [rung.strike, share] as const;
         }),
   );
   const widest = [...shares.values()].reduce((max, v) => (v > max ? v : max), 0n);
-  const link = (rung: Rung) => (
+  const rungLink = ({ rung, rate }: SheetRow) => (
     <RungLink
       key={rung.strike.toString()}
       config={config}
       rung={rung}
-      bid={view.bids.get(rung.strike)}
+      bid={rate?.premium}
       share={shares.get(rung.strike) ?? 0n}
       widest={widest}
       mine={held.has(priceKey(rung.side, rung.strike))}
+      link={link}
     />
   );
   return (
     <section className="card ov-prices">
       <CardHead
-        title="This week's prices"
-        sub={`Nearest the close, with the team-operated maker's bid per ${config.assetSymbol}.`}
+        title={`This week's ${symbol} prices`}
+        sub={`Nearest the ${e === null ? "close" : referenceLabel(e).toLowerCase()}, with each price's bid per ${symbol}.`}
         aside={
-          <Link className="ov-link" to="/trade">
+          <Link className="ov-link" to={link("/trade")}>
             Open the ladder
           </Link>
         }
       />
       {e === null ? (
-        <p className="empty-state">The ladder opens at the next weekly close.</p>
+        <p className="empty-state">{symbol}&apos;s ladder opens with its first week.</p>
       ) : (
         <>
           <ol className="ov-rungs">
-            {sells.map(link)}
+            {sells.map(rungLink)}
             <li className="ov-close">
-              <span className="close-pill num">Close {dollars(e.referencePrice)}</span>
+              <span className="close-pill num">
+                {referenceLabel(e)} {dollars(e.referencePrice)}
+              </span>
             </li>
-            {buys.map(link)}
+            {buys.map(rungLink)}
           </ol>
           {widest > 0n && (
             <p className="ov-foot">
-              Each share is the bid against what one order locks: one {config.assetSymbol} at the
-              close to sell, or the price in USDG to buy.
+              Each share is the bid against what one target locks: one {symbol} at the{" "}
+              {referenceLabel(e).toLowerCase()} to sell, or the price in USDG to buy.
             </p>
           )}
         </>

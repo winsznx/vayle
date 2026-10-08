@@ -9,19 +9,34 @@ import {
   type Address,
   type PublicClient,
 } from "viem";
-import { TokenIcon, type TokenSymbol } from "../../ui/TokenIcon.tsx";
+import type { Market } from "@vayle/markets";
+import { CASH_SYMBOL } from "../../tokens.ts";
+import { TickerBadge } from "../../ui/TickerBadge.tsx";
+import { AssetSwitcher } from "../components/AssetSwitcher.tsx";
 import { WeekCard } from "../components/StatCards.tsx";
 import type { AppConfig } from "../config.ts";
 import { addressUrl } from "../events.ts";
-import { dollars, easternClock, easternTime, feedDollars, tokens } from "../format.ts";
+import {
+  amountOf,
+  dollars,
+  easternClock,
+  easternDate,
+  easternMoment,
+  easternTime,
+  easternWeekday,
+  feedDollars,
+  unitOf,
+} from "../format.ts";
 import { EXTERNAL_ICON, NavIcon } from "../shell/nav.tsx";
 import { useApp } from "../state.tsx";
-import type { MarketView } from "../useMarket.ts";
-import { BID_WINDOW, bidOpensAt, ladder, type Epoch } from "../week.ts";
+import { useAsset } from "../useAsset.ts";
+import { assetOf, type AssetView, type MarketView } from "../useMarket.ts";
+import { BID_WINDOW, bidOpensAt, hasBatch, ladder, referenceLabel, type Epoch } from "../week.ts";
 import "./market.css";
 
-// The market as the contracts report it: the week, the feed, what can stop the market, its limits,
-// the calendar ahead and the addresses behind all of it. Every value is a chain read.
+// One market as the contracts report it: the week, the feed, what can stop it, its limits, the
+// calendar ahead and the addresses behind all of it. Every value is a chain read. The switcher at
+// the top picks the market.
 
 const REPO = "https://github.com/winsznx/vayle";
 const REFRESH_MS = 30_000;
@@ -32,7 +47,7 @@ const feedAbi = parseAbi([
   "function latestRoundData() view returns (uint80, int256, uint256, uint256, uint80)",
 ]);
 
-// One side's limits, in raw NVDA units.
+// One side's limits, in raw units of the market's token.
 interface Caps {
   readonly openSize: bigint;
   readonly walletSize: bigint;
@@ -95,6 +110,7 @@ function revertName(error: unknown): string | null {
 async function readBids(
   client: PublicClient,
   config: AppConfig,
+  market: Market,
   epoch: Epoch,
   blockNumber: bigint,
 ): Promise<WeekBids> {
@@ -104,12 +120,12 @@ async function readBids(
       const side = rung.side === "sell" ? CALL : PUT;
       const series = seriesId({
         chainId: BigInt(config.chainId),
-        asset: config.asset,
+        asset: market.token,
         side,
         strike: rung.strike,
         expiry: BigInt(epoch.expiry),
         windowLength: epoch.windowLength,
-        collateralToken: side === CALL ? config.asset : config.usdg,
+        collateralToken: side === CALL ? market.token : config.usdg,
       });
       return client.readContract({
         address: config.market,
@@ -171,6 +187,7 @@ async function readCloses(
 async function readStatus(
   client: PublicClient,
   config: AppConfig,
+  asset: Market,
   epoch: Epoch | null,
   now: number,
 ): Promise<MarketStatus> {
@@ -191,21 +208,21 @@ async function readStatus(
     bids,
   ] = await Promise.all([
     client.readContract({
-      address: config.feed,
+      address: asset.feed,
       abi: feedAbi,
       functionName: "latestRoundData",
       blockNumber,
     }),
     client.readContract({ ...market, functionName: "paused" }),
-    client.readContract({ ...market, functionName: "assetPaused", args: [config.asset] }),
+    client.readContract({ ...market, functionName: "assetPaused", args: [asset.token] }),
     client.readContract({ ...market, functionName: "haltedUntil" }),
     client.readContract({ ...market, functionName: "HALT_DURATION" }),
-    client.readContract({ ...market, functionName: "capsOf", args: [config.asset, CALL] }),
-    client.readContract({ ...market, functionName: "capsOf", args: [config.asset, PUT] }),
+    client.readContract({ ...market, functionName: "capsOf", args: [asset.token, CALL] }),
+    client.readContract({ ...market, functionName: "capsOf", args: [asset.token, PUT] }),
     client.readContract({ ...market, functionName: "feeBps" }),
     calendarRead,
     calendarRead.then((address) => readCloses(client, address, now, blockNumber)),
-    epoch === null ? Promise.resolve(null) : readBids(client, config, epoch, blockNumber),
+    epoch === null ? Promise.resolve(null) : readBids(client, config, asset, epoch, blockNumber),
   ]);
   return {
     block: blockNumber,
@@ -227,14 +244,20 @@ async function readStatus(
 }
 
 // The chain is the external system: read on mount and every 30 seconds, and straight away when a
-// new week opens. A failed read keeps the last result and says so.
-function useMarketStatus(client: PublicClient, config: AppConfig, view: MarketView): StatusState {
+// new week opens. A failed read keeps the last result and says so. The board is keyed by its
+// market, so another market's read never stands in for this one.
+function useMarketStatus(
+  client: PublicClient,
+  config: AppConfig,
+  asset: AssetView,
+  now: number,
+): StatusState {
   const [status, setStatus] = useState<StatusState>({ phase: "loading" });
-  const expiry = view.epoch?.expiry ?? null;
+  const expiry = asset.epoch?.expiry ?? null;
   // The shared view refreshes every 15 seconds. Reading its latest week and chain time here keeps
   // those refreshes from restarting this clock.
   const readLatest = useEffectEvent((client: PublicClient, config: AppConfig) =>
-    readStatus(client, config, view.epoch, view.now),
+    readStatus(client, config, asset.market, asset.epoch, now),
   );
   useEffect(() => {
     let cancelled = false;
@@ -308,33 +331,6 @@ function percent(bps: number): string {
 
 function shortAddress(address: string): string {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
-}
-
-const ET_PARTS = new Intl.DateTimeFormat("en-US", {
-  timeZone: "America/New_York",
-  weekday: "long",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-  hour: "2-digit",
-  hourCycle: "h23",
-});
-
-interface EasternDay {
-  readonly date: string;
-  readonly weekday: string;
-  readonly hour: number;
-}
-
-function easternDay(seconds: number): EasternDay {
-  const parts = ET_PARTS.formatToParts(new Date(seconds * 1000));
-  const part = (type: Intl.DateTimeFormatPartTypes): string =>
-    parts.find((p) => p.type === type)?.value ?? "";
-  return {
-    date: `${part("year")}-${part("month")}-${part("day")}`,
-    weekday: part("weekday"),
-    hour: Number(part("hour")),
-  };
 }
 
 // What a card says while it has nothing current to show: still reading, or the read failed.
@@ -436,14 +432,22 @@ function ReadNote({
 }
 
 // Said at the top when something has stopped, since it changes what anyone can do.
-function StopNotice({ read, now }: { readonly read: MarketStatus; readonly now: number }) {
+function StopNotice({
+  read,
+  now,
+  symbol,
+}: {
+  readonly read: MarketStatus;
+  readonly now: number;
+  readonly symbol: string;
+}) {
   let text: string | null = null;
   if (read.haltedUntil > now) {
-    text = `The market is halted until ${easternTime(read.haltedUntil)}. Nothing can be placed, stopped, settled or withdrawn until then.`;
+    text = `The market is halted until ${easternTime(read.haltedUntil)}. Nothing can be set, stopped, settled or withdrawn until then.`;
   } else if (read.paused) {
-    text = "New orders and fills are paused. Stopping, settling and withdrawing still work.";
+    text = "New targets and fills are paused. Stopping, settling and withdrawing still work.";
   } else if (read.assetPaused) {
-    text = "New NVDA orders and fills are paused. Stopping, settling and withdrawing still work.";
+    text = `New ${symbol} targets and fills are paused. Stopping, settling and withdrawing still work.`;
   }
   if (text === null) return null;
   return (
@@ -453,7 +457,15 @@ function StopNotice({ read, now }: { readonly read: MarketStatus; readonly now: 
   );
 }
 
-function FeedCard({ view, status }: { readonly view: MarketView; readonly status: StatusState }) {
+function FeedCard({
+  asset,
+  now,
+  status,
+}: {
+  readonly asset: AssetView;
+  readonly now: number;
+  readonly status: StatusState;
+}) {
   const read = readOf(status);
   return (
     <article className="card stat" aria-labelledby="mk-feed-title">
@@ -462,7 +474,7 @@ function FeedCard({ view, status }: { readonly view: MarketView; readonly status
           <h2 id="mk-feed-title" className="stat-title mk-stat-title">
             Price feed
           </h2>
-          <p className="stat-note">Chainlink NVDA/USD</p>
+          <p className="stat-note">Chainlink {asset.market.symbol}/USD</p>
         </div>
       </div>
       {read === null ? (
@@ -470,7 +482,7 @@ function FeedCard({ view, status }: { readonly view: MarketView; readonly status
       ) : (
         <>
           {read.feedAnswer > 0n ? (
-            <p className="figure num">{feedDollars(read.feedAnswer, view.feedDecimals)}</p>
+            <p className="figure num">{feedDollars(read.feedAnswer, asset.feedDecimals)}</p>
           ) : (
             <p className="stat-empty">The feed&apos;s latest answer isn&apos;t a usable price.</p>
           )}
@@ -483,12 +495,14 @@ function FeedCard({ view, status }: { readonly view: MarketView; readonly status
               <dt>Updated</dt>
               <dd>
                 {easternTime(read.feedUpdatedAt)}
-                <span className="mk-sub">{since(Math.max(0, view.now - read.feedUpdatedAt))}</span>
+                <span className="mk-sub">{since(Math.max(0, now - read.feedUpdatedAt))}</span>
               </dd>
             </div>
           </dl>
           <p className="stat-caption">
-            Each week starts from the last price the feed posted before the close.
+            {asset.epoch !== null && !hasBatch(asset.epoch)
+              ? "This week's prices start from the last price the feed posted before it opened."
+              : "Each week starts from the last price the feed posted before the close."}
           </p>
         </>
       )}
@@ -497,28 +511,47 @@ function FeedCard({ view, status }: { readonly view: MarketView; readonly status
 }
 
 function sameEasternDay(a: number, b: number): boolean {
-  return easternDay(a).date === easternDay(b).date;
+  return easternDate(a) === easternDate(b);
+}
+
+// When the stretch from `from` to `to` runs, with the second time cut to its clock on the same day.
+function span(from: number, to: number): string {
+  return `${easternTime(from)} to ${sameEasternDay(from, to) ? easternClock(to) : easternTime(to)}`;
 }
 
 function WeekRows({ epoch }: { readonly epoch: Epoch }) {
   const rungs = ladder(epoch);
   const sells = rungs.filter((r) => r.side === "sell").length;
   const bidOpen = bidOpensAt(epoch);
-  const bidClose = bidOpen + BID_WINDOW;
+  const windowEnds = epoch.expiry + epoch.windowLength;
   return (
     <dl className="mk-rows">
-      <Row label="Bid window">
-        {easternTime(bidOpen)} to{" "}
-        {sameEasternDay(bidOpen, bidClose) ? easternClock(bidClose) : easternTime(bidClose)}
-        <span className="mk-sub">The team-operated maker bids then, and the batch follows.</span>
-      </Row>
-      <Row label="Batch deadline">{easternTime(epoch.batchDeadline)}</Row>
-      <Row label="Week ends">{easternTime(epoch.expiry)}</Row>
+      {hasBatch(epoch) ? (
+        <>
+          <Row label="Bid window">
+            {span(bidOpen, bidOpen + BID_WINDOW)}
+            <span className="mk-sub">The maker bids then, and the batch follows.</span>
+          </Row>
+          <Row label="Batch deadline">{easternTime(epoch.batchDeadline)}</Row>
+          <Row label="Week ends">{easternTime(epoch.expiry)}</Row>
+        </>
+      ) : (
+        <>
+          <Row label="Fills by quote">
+            {span(epoch.opening, epoch.expiry)}
+            <span className="mk-sub">
+              This week has no batch. A target fills when the maker quotes it.
+            </span>
+          </Row>
+          <Row label="Week ends">{easternTime(epoch.expiry)}</Row>
+          <Row label="Exercise window">{span(epoch.expiry, windowEnds)}</Row>
+        </>
+      )}
       <Row label="Prices listed">
         {plural(rungs.length, "price")}, {dollars(epoch.strikeTick)} apart
         <span className="mk-sub">
           {sells} to sell and {rungs.length - sells} to buy, within {percent(epoch.strikeRangeBps)}{" "}
-          of the close
+          of the {referenceLabel(epoch).toLowerCase()}
         </span>
       </Row>
     </dl>
@@ -527,15 +560,18 @@ function WeekRows({ epoch }: { readonly epoch: Epoch }) {
 
 function Bidders({
   config,
-  view,
+  asset,
   status,
 }: {
   readonly config: AppConfig;
-  readonly view: MarketView;
+  readonly asset: AssetView;
   readonly status: StatusState;
 }) {
-  const e = view.epoch;
+  const e = asset.epoch;
   if (e === null) return <p className="mk-quiet">Bids start once the first week opens.</p>;
+  if (!hasBatch(e)) {
+    return <p className="mk-quiet">This week fills by quote, so it has no batch bids.</p>;
+  }
   const bids = readOf(status)?.bids ?? null;
   // Bids read for an earlier week never stand in for this one.
   if (bids?.expiry !== e.expiry) {
@@ -565,11 +601,11 @@ function Bidders({
 
 function WeekTimesCard({
   config,
-  view,
+  asset,
   status,
 }: {
   readonly config: AppConfig;
-  readonly view: MarketView;
+  readonly asset: AssetView;
   readonly status: StatusState;
 }) {
   return (
@@ -579,18 +615,16 @@ function WeekTimesCard({
           This week
         </h2>
       </div>
-      {view.epoch === null ? (
-        <p className="empty-state">
-          No week is open yet. The first one opens at the next weekly close.
-        </p>
+      {asset.epoch === null ? (
+        <p className="empty-state">No {asset.market.symbol} week is open yet.</p>
       ) : (
-        <WeekRows epoch={view.epoch} />
+        <WeekRows epoch={asset.epoch} />
       )}
       <section className="mk-section" aria-labelledby="mk-maker-title">
         <h3 id="mk-maker-title" className="mk-subhead">
           The maker
         </h3>
-        <Bidders config={config} view={view} status={status} />
+        <Bidders config={config} asset={asset} status={status} />
       </section>
     </article>
   );
@@ -598,15 +632,17 @@ function WeekTimesCard({
 
 function CloseList({
   read,
-  view,
+  asset,
+  now,
   status,
 }: {
   readonly read: MarketStatus;
-  readonly view: MarketView;
+  readonly asset: AssetView;
+  readonly now: number;
   readonly status: StatusState;
 }) {
   // Closes the chain has passed since the read drop out here, before the next read lands.
-  const upcoming = read.closes.filter((close) => close > view.now);
+  const upcoming = read.closes.filter((close) => close > now);
   if (upcoming.length === 0) {
     return (
       <p className="empty-state">
@@ -620,10 +656,10 @@ function CloseList({
     <>
       <ol className="mk-closes">
         {upcoming.map((close) => {
-          const day = easternDay(close);
+          const day = easternMoment(close);
           const tags: string[] = [];
-          if (close === view.epoch?.expiry) tags.push("This week ends");
-          if (day.weekday === "Thursday") tags.push("Thursday close");
+          if (close === asset.epoch?.expiry) tags.push("This week ends");
+          if (easternWeekday(close) === "Thursday") tags.push("Thursday close");
           if (day.hour === 13) tags.push("Early close");
           return (
             <li key={close} className="mk-close">
@@ -648,7 +684,15 @@ function CloseList({
   );
 }
 
-function ClosesCard({ view, status }: { readonly view: MarketView; readonly status: StatusState }) {
+function ClosesCard({
+  asset,
+  now,
+  status,
+}: {
+  readonly asset: AssetView;
+  readonly now: number;
+  readonly status: StatusState;
+}) {
   const read = readOf(status);
   return (
     <article className="card mk-card" aria-labelledby="mk-closes-title">
@@ -665,17 +709,19 @@ function ClosesCard({ view, status }: { readonly view: MarketView; readonly stat
       {read === null ? (
         <p className="empty-state">{waiting(status, "the calendar")}</p>
       ) : (
-        <CloseList read={read} view={view} status={status} />
+        <CloseList read={read} asset={asset} now={now} status={status} />
       )}
     </article>
   );
 }
 
 function ControlsCard({
-  view,
+  symbol,
+  now,
   status,
 }: {
-  readonly view: MarketView;
+  readonly symbol: string;
+  readonly now: number;
   readonly status: StatusState;
 }) {
   const read = readOf(status);
@@ -693,14 +739,14 @@ function ControlsCard({
         <p className="empty-state">{waiting(status, "the controls")}</p>
       ) : (
         <dl className="mk-rows">
-          <Row label="New orders">
+          <Row label="New targets">
             {read.paused ? (
               <span className="chip chip-problem">Paused</span>
             ) : (
               <span className="chip chip-plain">Open</span>
             )}
           </Row>
-          <Row label="NVDA orders">
+          <Row label={`${symbol} targets`}>
             {read.assetPaused ? (
               <span className="chip chip-problem">Paused</span>
             ) : (
@@ -708,7 +754,7 @@ function ControlsCard({
             )}
           </Row>
           <Row label="Emergency halt">
-            {read.haltedUntil > view.now ? (
+            {read.haltedUntil > now ? (
               <span className="mk-halt">
                 <span className="chip chip-problem">Halted</span> until{" "}
                 {easternTime(read.haltedUntil)}
@@ -720,31 +766,21 @@ function ControlsCard({
           <Row label="A halt lasts">Up to {lasting(read.haltDuration)}</Row>
         </dl>
       )}
-      <p className="mk-foot">
-        A pause stops new orders and fills, while stopping, settling and withdrawing still work. A
-        halt stops everything, withdrawals included, and only the timelocked owner can renew one.
-        The window after the close stretches by however long a halt lasted.
-      </p>
     </article>
   );
 }
 
 const LIMITS: readonly { readonly label: string; readonly key: keyof Caps }[] = [
-  { label: "All open orders", key: "openSize" },
+  { label: "All open targets", key: "openSize" },
   { label: "Per wallet", key: "walletSize" },
   { label: "Per week", key: "seriesOpenInterest" },
   { label: "Per fill", key: "fillSize" },
 ];
 
-function LimitsCard({
-  config,
-  status,
-}: {
-  readonly config: AppConfig;
-  readonly status: StatusState;
-}) {
+function LimitsCard({ market, status }: { readonly market: Market; readonly status: StatusState }) {
   const read = readOf(status);
-  const nvda = (raw: bigint): string => tokens(raw, config.assetSymbol, config.assetDecimals);
+  const unit = unitOf(market);
+  const amount = (raw: bigint): string => amountOf(raw, unit);
   const anyZero =
     read !== null &&
     LIMITS.some(({ key }) => read.sellCaps[key] === 0n || read.buyCaps[key] === 0n);
@@ -768,26 +804,27 @@ function LimitsCard({
                 <th scope="col">
                   <span className="visually-hidden">Limit</span>
                 </th>
-                <th scope="col">Sell orders</th>
-                <th scope="col">Buy orders</th>
+                <th scope="col">Sell targets</th>
+                <th scope="col">Buy targets</th>
               </tr>
             </thead>
             <tbody>
               {LIMITS.map(({ label, key }) => (
                 <tr key={key}>
                   <th scope="row">{label}</th>
-                  <td className="num" data-label="Sell orders">
-                    {nvda(read.sellCaps[key])}
+                  <td className="num" data-label="Sell targets">
+                    {amount(read.sellCaps[key])}
                   </td>
-                  <td className="num" data-label="Buy orders">
-                    {nvda(read.buyCaps[key])}
+                  <td className="num" data-label="Buy targets">
+                    {amount(read.buyCaps[key])}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
           <p className="mk-note">
-            Per week counts each price on its own, and buy orders count the NVDA they&apos;d buy.
+            Per week counts each price on its own, and buy targets count the {market.symbol}{" "}
+            they&apos;d buy.
             {anyZero && " A limit of zero closes that side."}
           </p>
           <section className="mk-section mk-fee" aria-labelledby="mk-fee-title">
@@ -795,11 +832,9 @@ function LimitsCard({
               <h3 id="mk-fee-title" className="mk-subhead">
                 Fee
               </h3>
-              <p className="mk-fee-value">{percent(read.feeBps)} of each premium</p>
+              <p className="mk-fee-value">{percent(read.feeBps)} of each payment</p>
             </div>
-            <p className="mk-sub">
-              The team-operated maker pays it on top, so you get the whole premium.
-            </p>
+            <p className="mk-sub">The maker pays it on top, so you get the whole payment.</p>
           </section>
         </>
       )}
@@ -813,13 +848,14 @@ function ContractRow({
   children,
 }: {
   readonly name: string;
-  readonly icon: TokenSymbol | null;
+  // The ticker of the token the contract is, when it is one.
+  readonly icon: string | null;
   readonly children: ReactNode;
 }) {
   return (
     <li className="mk-contract">
       <span className="mk-contract-icon">
-        {icon !== null && <TokenIcon symbol={icon} size="sm" />}
+        {icon !== null && <TickerBadge symbol={icon} size="sm" />}
       </span>
       <span className="mk-contract-name">{name}</span>
       {children}
@@ -829,9 +865,11 @@ function ContractRow({
 
 function ContractsCard({
   config,
+  market,
   status,
 }: {
   readonly config: AppConfig;
+  readonly market: Market;
   readonly status: StatusState;
 }) {
   const read = readOf(status);
@@ -854,14 +892,14 @@ function ContractsCard({
         <ContractRow name="Market" icon={null}>
           <AddressText config={config} address={config.market} short={false} />
         </ContractRow>
-        <ContractRow name="NVDA Stock Token" icon="NVDA">
-          <AddressText config={config} address={config.asset} short={false} />
+        <ContractRow name={`${market.symbol} Stock Token`} icon={market.symbol}>
+          <AddressText config={config} address={market.token} short={false} />
         </ContractRow>
-        <ContractRow name="USDG" icon="USDG">
+        <ContractRow name={CASH_SYMBOL} icon={CASH_SYMBOL}>
           <AddressText config={config} address={config.usdg} short={false} />
         </ContractRow>
-        <ContractRow name="Chainlink NVDA/USD feed" icon={null}>
-          <AddressText config={config} address={config.feed} short={false} />
+        <ContractRow name={`Chainlink ${market.symbol}/USD feed`} icon={null}>
+          <AddressText config={config} address={market.feed} short={false} />
         </ContractRow>
         <ContractRow name="Session calendar" icon={null}>
           {read === null ? (
@@ -889,34 +927,47 @@ function ContractsCard({
   );
 }
 
-function MarketBoard({ view }: { readonly view: MarketView }) {
+function MarketBoard({ view, asset }: { readonly view: MarketView; readonly asset: AssetView }) {
   const { config, client, readError } = useApp();
-  const status = useMarketStatus(client, config, view);
+  const status = useMarketStatus(client, config, asset, view.now);
   const read = readOf(status);
+  const { market } = asset;
   return (
     <>
       <ReadNote status={status} view={view} readError={readError} />
-      {read !== null && <StopNotice read={read} now={view.now} />}
+      {read !== null && <StopNotice read={read} now={view.now} symbol={market.symbol} />}
       <div className="mk-board">
         <section className="mk-lead" aria-labelledby="mk-lead-title">
           <h2 id="mk-lead-title" className="visually-hidden">
             Where this week stands
           </h2>
-          <WeekCard config={config} view={view} />
+          <WeekCard asset={asset} now={view.now} />
         </section>
-        <FeedCard view={view} status={status} />
-        <WeekTimesCard config={config} view={view} status={status} />
-        <LimitsCard config={config} status={status} />
-        <ControlsCard view={view} status={status} />
-        <ClosesCard view={view} status={status} />
-        <ContractsCard config={config} status={status} />
+        <FeedCard asset={asset} now={view.now} status={status} />
+        <WeekTimesCard config={config} asset={asset} status={status} />
+        <LimitsCard market={market} status={status} />
+        <ControlsCard symbol={market.symbol} now={view.now} status={status} />
+        <ClosesCard asset={asset} now={view.now} status={status} />
+        <ContractsCard config={config} market={market} status={status} />
       </div>
     </>
   );
 }
 
 export function MarketPage(): ReactNode {
-  const { view } = useApp();
+  const { config, view } = useApp();
+  const { market } = useAsset();
   if (view === null) return null;
-  return <MarketBoard view={view} />;
+  const asset = assetOf(view, market.token);
+  if (asset === undefined) return null;
+  return (
+    <>
+      {config.markets.length > 1 && (
+        <div className="page-head">
+          <AssetSwitcher />
+        </div>
+      )}
+      <MarketBoard key={market.token} view={view} asset={asset} />
+    </>
+  );
 }

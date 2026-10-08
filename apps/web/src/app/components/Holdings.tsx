@@ -1,45 +1,43 @@
 import { withdraw, type Call } from "@vayle/market";
+import type { Address } from "viem";
 import type { AppConfig } from "../config.ts";
-import { dollars, feedDollars, tokens, usdgAmount } from "../format.ts";
+import { amountOf, dollars, feedDollars, unitOf, usdgAmount } from "../format.ts";
 import type { Run } from "../state.tsx";
-import type { AccountView } from "../useMarket.ts";
+import type { AccountView, AssetView } from "../useMarket.ts";
 import type { MarketHistory } from "../useMarketHistory.ts";
 import "./dashboard.css";
 
-// The holder's NVDA and USDG on Robinhood Chain: in the wallet, locked in orders, and credited by
-// the market and ready to withdraw, valued at the feed's latest NVDA price. The feed and the
-// market's strikes both price one raw token, so the amounts value directly.
+// The holder's Stock Tokens and USDG on Robinhood Chain: in the wallet, locked in targets, and
+// credited by the market and ready to withdraw. Each token is valued at its own feed's latest
+// price, which prices one raw token, so raw amounts value directly.
 
-interface Pair {
-  readonly asset: bigint;
+// Amounts of each listed token, by its address, beside an amount of USDG.
+interface Bag {
+  readonly tokens: ReadonlyMap<Address, bigint>;
   readonly usdg: bigint;
 }
 
-// Every order's size is what it still has locked: a cancelled order keeps the part written into
-// this week until that series settles.
-function lockedIn(account: AccountView, rawUnit: bigint): Pair {
-  let asset = 0n;
+// Every target's size is what it still has locked: a cancelled target keeps the part written into
+// this week until that series settles. Targets on a market the build doesn't list aren't counted.
+function lockedIn(account: AccountView, assets: readonly AssetView[]): Bag {
+  const tokens = new Map<Address, bigint>();
   let usdg = 0n;
   for (const order of account.orders) {
-    if (order.side === 0) asset += order.size;
-    else usdg += (order.size * order.target) / rawUnit;
+    const asset = assets.find((a) => a.market.token === order.asset);
+    if (asset === undefined) continue;
+    if (order.side === 0) {
+      tokens.set(asset.market.token, (tokens.get(asset.market.token) ?? 0n) + order.size);
+    } else {
+      usdg += (order.size * order.target) / asset.market.rawUnit;
+    }
   }
-  return { asset, usdg };
-}
-
-function amountsOf(pair: Pair, config: AppConfig, none: string): string {
-  const parts = [
-    ...(pair.asset > 0n ? [tokens(pair.asset, config.assetSymbol, config.assetDecimals)] : []),
-    ...(pair.usdg > 0n ? [usdgAmount(pair.usdg, config.usdgDecimals)] : []),
-  ];
-  return parts.length === 0 ? none : parts.join(" and ");
+  return { tokens, usdg };
 }
 
 interface Props {
   readonly config: AppConfig;
   readonly account: AccountView;
-  readonly feedAnswer: bigint;
-  readonly feedDecimals: number;
+  readonly assets: readonly AssetView[];
   readonly history: MarketHistory;
   // False while the wallet is on another chain: the amounts still show, the button waits.
   readonly canAct: boolean;
@@ -48,41 +46,69 @@ interface Props {
 }
 
 export function Holdings(props: Props) {
-  const { config, account, feedAnswer, feedDecimals, history, canAct, run, busy } = props;
-  const rawUnit = 10n ** BigInt(config.assetDecimals);
-  const priceUsdg = (feedAnswer * 10n ** BigInt(config.usdgDecimals)) / 10n ** BigInt(feedDecimals);
-  const value = (pair: Pair): bigint => pair.usdg + (pair.asset * priceUsdg) / rawUnit;
+  const { config, account, assets, history, canAct, run, busy } = props;
+  const usdgScale = 10n ** BigInt(config.usdgDecimals);
+  // A token's raw amount in USDG base units at its feed's latest answer.
+  const valueOf = (asset: AssetView, raw: bigint): bigint =>
+    (raw * asset.feedAnswer * usdgScale) /
+    (10n ** BigInt(asset.feedDecimals) * asset.market.rawUnit);
+  const value = (bag: Bag): bigint =>
+    assets.reduce((sum, a) => sum + valueOf(a, bag.tokens.get(a.market.token) ?? 0n), bag.usdg);
+  const amountsOf = (bag: Bag, none: string): string => {
+    const parts = [
+      ...assets.flatMap((a) => {
+        const raw = bag.tokens.get(a.market.token) ?? 0n;
+        return raw > 0n ? [amountOf(raw, unitOf(a.market))] : [];
+      }),
+      ...(bag.usdg > 0n ? [usdgAmount(bag.usdg, config.usdgDecimals)] : []),
+    ];
+    return parts.length === 0 ? none : parts.join(", ");
+  };
+  const held = (pick: (t: { balance: bigint; claimable: bigint }) => bigint): Bag => ({
+    tokens: new Map(
+      assets.map((a) => {
+        const t = account.tokens.get(a.market.token);
+        return [a.market.token, t === undefined ? 0n : pick(t)] as const;
+      }),
+    ),
+    usdg: pick(account.usdg),
+  });
 
-  const wallet = { asset: account.balanceAsset, usdg: account.balanceUsdg };
-  const locked = lockedIn(account, rawUnit);
-  const claimable = { asset: account.claimableAsset, usdg: account.claimableUsdg };
+  const wallet = held((t) => t.balance);
+  const locked = lockedIn(account, assets);
+  const claimable = held((t) => t.claimable);
   const rows = [
-    { key: "wallet", label: "In your wallet", pair: wallet, none: "No NVDA or USDG" },
-    { key: "locked", label: "In your orders", pair: locked, none: "Nothing locked" },
-    { key: "claimable", label: "Ready to withdraw", pair: claimable, none: "Nothing yet" },
+    { key: "wallet", label: "In your wallet", bag: wallet, none: "No Stock Tokens or USDG" },
+    { key: "locked", label: "In your targets", bag: locked, none: "Nothing locked" },
+    { key: "claimable", label: "Ready to withdraw", bag: claimable, none: "Nothing yet" },
   ] as const;
-  const total = rows.reduce((sum, r) => sum + value(r.pair), 0n);
+  const total = rows.reduce((sum, r) => sum + value(r.bag), 0n);
 
   const calls: Call[] = [];
   if (claimable.usdg > 0n) calls.push(withdraw(config.market, config.usdg, claimable.usdg));
-  if (claimable.asset > 0n) calls.push(withdraw(config.market, config.asset, claimable.asset));
+  for (const [token, raw] of claimable.tokens) {
+    if (raw > 0n) calls.push(withdraw(config.market, token, raw));
+  }
 
   const summaries = history.status === "ready" ? [...history.summaries.values()] : [];
   const earned = summaries.reduce((sum, s) => sum + BigInt(s.premiumEarned), 0n);
-  // Orders that have earned, not weeks: two orders paid in one week are one week, two orders.
+  // Targets that have earned, not weeks: two targets paid in one week are one week, two targets.
   const earning = summaries.filter((s) => BigInt(s.premiumEarned) > 0n).length;
+  const only = assets.length === 1 ? assets[0] : undefined;
 
   return (
     <section className="card holdings" aria-label="Your holdings">
       <p className="holdings-title">Your holdings</p>
       <p className="holdings-total num">{dollars(total, config.usdgDecimals)}</p>
       <p className="holdings-basis">
-        NVDA valued at {feedDollars(feedAnswer, feedDecimals)}, the feed&apos;s latest price
+        {only === undefined
+          ? "Stock Tokens valued at each one's latest feed price"
+          : `${only.market.symbol} valued at ${feedDollars(only.feedAnswer, only.feedDecimals)}, the feed's latest price`}
       </p>
       <div className="holdings-bar" aria-hidden="true">
         {total > 0n &&
           rows.map((r) => {
-            const share = Number((value(r.pair) * 10_000n) / total) / 100;
+            const share = Number((value(r.bag) * 10_000n) / total) / 100;
             return share > 0 ? (
               <span
                 key={r.key}
@@ -97,10 +123,8 @@ export function Holdings(props: Props) {
           <li key={r.key} className="holdings-row">
             <span className={`holdings-swatch holdings-swatch-${r.key}`} aria-hidden="true" />
             <span className="holdings-label">{r.label}</span>
-            <span className="holdings-value num">
-              {dollars(value(r.pair), config.usdgDecimals)}
-            </span>
-            <span className="holdings-amounts">{amountsOf(r.pair, config, r.none)}</span>
+            <span className="holdings-value num">{dollars(value(r.bag), config.usdgDecimals)}</span>
+            <span className="holdings-amounts">{amountsOf(r.bag, r.none)}</span>
           </li>
         ))}
       </ul>
@@ -116,16 +140,16 @@ export function Holdings(props: Props) {
       )}
       <p className="holdings-earned">
         {history.status !== "ready" ? (
-          "What your orders earn adds up here."
+          "What your targets earn adds up here."
         ) : earned === 0n ? (
-          "Nothing earned yet. Premiums from the team-operated maker add up here."
+          "Nothing earned yet. Payments add up here."
         ) : (
           <>
             Earned{" "}
             <span className="holdings-earned-amount num">
               {usdgAmount(earned, config.usdgDecimals)}
             </span>{" "}
-            on {earning === 1 ? "1 order" : `${earning} orders`} so far
+            on {earning === 1 ? "1 target" : `${earning} targets`} so far
           </>
         )}
       </p>
