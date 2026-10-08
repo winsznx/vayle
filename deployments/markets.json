@@ -13,7 +13,10 @@
       "priceTick": "100",
       "strikeTick": "5000000",
       "strikeRangeBps": 1000,
-      "strikeStepBasis": { "priceUsdg": "237193720", "block": "82835060" },
+      "strikeStepBasis": {
+        "priceUsdg": "237193720",
+        "block": "82835060"
+      },
       "sell": {
         "enabled": true,
         "openSize": "10000000000000000000",
@@ -28,7 +31,86 @@
         "seriesOpenInterest": "4000000000000000000",
         "fillSize": "2000000000000000000"
       },
-      "maker": { "realizedVolBps": 2406, "volMarginBps": 1000, "volBps": 3406, "realizedVolBlock": "82835060" }
+      "maker": {
+        "realizedVolBps": 2406,
+        "volMarginBps": 1000,
+        "volBps": 3406,
+        "realizedVolBlock": "82835060"
+      }
+    },
+    {
+      "symbol": "SPY",
+      "token": "0x117cc2133c37B721F49dE2A7a74833232B3B4C0C",
+      "uid": "0x000000000000000000000000000000001c6f27a62789417d8ed359ed3c2d3da1",
+      "decimals": 18,
+      "feed": "0x319724394D3A0e3669269846abE664Cd621f9f6A",
+      "feedDecimals": 8,
+      "heartbeatSeconds": 86400,
+      "lot": "10000000000000000",
+      "priceTick": "100",
+      "strikeTick": "20000000",
+      "strikeRangeBps": 1000,
+      "strikeStepBasis": {
+        "priceUsdg": "775895695",
+        "block": "82871537"
+      },
+      "sell": {
+        "enabled": true,
+        "openSize": "3050000000000000000",
+        "walletSize": "1220000000000000000",
+        "seriesOpenInterest": "1830000000000000000",
+        "fillSize": "610000000000000000"
+      },
+      "buy": {
+        "enabled": true,
+        "openSize": "1220000000000000000",
+        "walletSize": "610000000000000000",
+        "seriesOpenInterest": "1220000000000000000",
+        "fillSize": "610000000000000000"
+      },
+      "maker": {
+        "realizedVolBps": 1155,
+        "volMarginBps": 1000,
+        "volBps": 2155,
+        "realizedVolBlock": "82871537"
+      }
+    },
+    {
+      "symbol": "META",
+      "token": "0xc0D6457C16Cc70d6790Dd43521C899C87ce02f35",
+      "uid": "0x00000000000000000000000000000000343e7beca03644bcba2e50b8236784f5",
+      "decimals": 18,
+      "feed": "0x7C38C00C30BEe9378381E7B6135d7283356D71b1",
+      "feedDecimals": 8,
+      "heartbeatSeconds": 86400,
+      "lot": "10000000000000000",
+      "priceTick": "100",
+      "strikeTick": "20000000",
+      "strikeRangeBps": 1000,
+      "strikeStepBasis": {
+        "priceUsdg": "720890121",
+        "block": "82871537"
+      },
+      "sell": {
+        "enabled": true,
+        "openSize": "3290000000000000000",
+        "walletSize": "1310000000000000000",
+        "seriesOpenInterest": "1970000000000000000",
+        "fillSize": "650000000000000000"
+      },
+      "buy": {
+        "enabled": true,
+        "openSize": "1310000000000000000",
+        "walletSize": "650000000000000000",
+        "seriesOpenInterest": "1310000000000000000",
+        "fillSize": "650000000000000000"
+      },
+      "maker": {
+        "realizedVolBps": 5372,
+        "volMarginBps": 1000,
+        "volBps": 6372,
+        "realizedVolBlock": "82871537"
+      }
     }
   ]
 }

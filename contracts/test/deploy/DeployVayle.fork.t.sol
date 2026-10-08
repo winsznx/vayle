@@ -126,7 +126,7 @@ contract DeployVayleForkTest is MarketFork {
         assertEq(d.market.capsOf(stock, OptionType.Call).fillSize, 2 * ONE);
         assertEq(d.market.capsOf(stock, OptionType.Put).openSize, 4 * ONE);
         assertEq(d.market.capsOf(stock, OptionType.Put).walletSize, 2 * ONE);
-        assertEq(d.registry.asset(stock).strikeTick, 5e6);
+        assertEq(d.registry.asset(stock).strikeTick, strikeTick);
         assertEq(d.calendar.boundaryCount(), 5);
         assertEq(d.calendar.boundaryAt(0).close, SEP_18);
     }
@@ -218,17 +218,32 @@ contract DeployVayleForkTest is MarketFork {
         // #when
         DeployVayle.Config memory config = runbook.readConfig();
         vm.removeFile(path);
-        // #then: the markets are the committed registry file's
+        // #then: the markets are the committed registry file's, this suite's market among them
         assertEq(config.boundaries.length, 2);
         assertEq(config.boundaries[1].close, OCT_16);
         assertEq(config.boundaries[1].creationDeadline, OCT_19_OPEN);
         assertEq(config.multisig, multisig);
-        assertEq(config.markets[0].token, stock);
-        assertEq(config.markets[0].uid, stockUid);
-        assertEq(config.markets[0].feed, stockFeed);
-        assertEq(config.markets[0].strikeTick, strikeTick);
-        assertEq(config.markets[0].sellCaps.openSize, 10 * ONE);
-        assertEq(config.markets[0].buyCaps.openSize, 4 * ONE);
+        DeployVayle.Market memory m = _marketFor(config, stock);
+        assertEq(m.uid, stockUid);
+        assertEq(m.feed, stockFeed);
+        assertEq(m.strikeTick, strikeTick);
+        assertEq(m.sellCaps.openSize, _fileUint(".sell.openSize"));
+        assertEq(m.buyCaps.fillSize, _fileUint(".buy.fillSize"));
+    }
+
+    function _marketFor(DeployVayle.Config memory config, address token)
+        internal
+        pure
+        returns (DeployVayle.Market memory)
+    {
+        for (uint256 i; i < config.markets.length; ++i) {
+            if (config.markets[i].token == token) return config.markets[i];
+        }
+        revert UnknownMarket("not in the config");
+    }
+
+    function _fileUint(string memory field) internal view returns (uint256) {
+        return vm.parseJsonUint(marketsJson, string.concat(stockEntry, field));
     }
 
     function test_theDeployedMarketOpensItsFirstWeekBeforeTheFirstClose() public {

@@ -16,7 +16,8 @@ library ChainActors {
     address internal constant ORACLE_PAUSER = 0x7369d100c00F28E45D779ac9d4b1c7afa61e4aBC;
 
     /// @dev Held about 24,527 raw NVDA and 52.2M USDG at block 81959622 (balanceOf reads,
-    /// 2026-10-06). Fork tests fund test wallets by impersonating its transfers.
+    /// 2026-10-06), and about 11,331 SPY and 5,258 META at block 82876462 (2026-10-07). Fork tests
+    /// fund test wallets by impersonating its transfers.
     /// https://robinhoodchain.blockscout.com/address/0x8366a39CC670B4001A1121B8F6A443A643e40951
     address internal constant FUNDING_SOURCE = 0x8366a39CC670B4001A1121B8F6A443A643e40951;
 
@@ -25,7 +26,9 @@ library ChainActors {
     /// @notice A real holder of the Stock Token with this symbol, for funding test wallets.
     function holderOf(string memory symbol) internal pure returns (address) {
         bytes32 key = keccak256(bytes(symbol));
-        if (key == keccak256("NVDA")) return FUNDING_SOURCE;
+        if (key == keccak256("NVDA") || key == keccak256("SPY") || key == keccak256("META")) {
+            return FUNDING_SOURCE;
+        }
         revert NoKnownHolder(symbol);
     }
 

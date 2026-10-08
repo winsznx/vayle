@@ -93,11 +93,20 @@ contract PriceAdapterForkTest is MarketFork {
     }
 
     function test_refusesAnEarlierRound() public {
-        // #given
+        // #given: on a feed that updates rarely, the round before the last can already be more
+        // than a day older than the close, and staleness is checked first
         uint80 earlier = lastRound - 1;
+        (,,, uint256 earlierUpdatedAt,) = IPriceFeed(stockFeed).getRoundData(earlier);
+        bool stale = OCT_02 - earlierUpdatedAt > adapter.MAX_AGE_AT_CLOSE();
         // #then
         vm.expectRevert(
-            abi.encodeWithSelector(PriceAdapter.NotLastRoundBeforeClose.selector, earlier, OCT_02)
+            stale
+                ? abi.encodeWithSelector(
+                    PriceAdapter.StaleAtClose.selector, earlier, earlierUpdatedAt, OCT_02
+                )
+                : abi.encodeWithSelector(
+                    PriceAdapter.NotLastRoundBeforeClose.selector, earlier, OCT_02
+                )
         );
         // #when
         adapter.referencePrice(stock, OCT_02, earlier, 0);

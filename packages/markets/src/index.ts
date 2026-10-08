@@ -200,21 +200,26 @@ function market(value: unknown, path: string): Market {
   };
 }
 
-export function parseMarkets(value: unknown): readonly Market[] {
+// At least one market, NVDA first.
+export type Markets = readonly [Market, ...Market[]];
+
+export function parseMarkets(value: unknown): Markets {
   const json = record(value, "markets file");
   if (json["schemaVersion"] !== 1) throw new BadMarkets("schemaVersion isn't 1");
   const entries = json["markets"];
-  if (!Array.isArray(entries) || entries.length === 0) throw new BadMarkets("no markets");
+  if (!Array.isArray(entries)) throw new BadMarkets("markets isn't a list");
   const parsed = entries.map((entry: unknown, i) => market(entry, `markets[${i}]`));
+  const [first, ...rest] = parsed;
+  if (first === undefined) throw new BadMarkets("no markets");
   const symbols = new Set(parsed.map((m) => m.symbol));
   const tokens = new Set(parsed.map((m) => m.token));
   if (symbols.size !== parsed.length || tokens.size !== parsed.length) {
     throw new BadMarkets("a symbol or token is listed twice");
   }
-  return parsed;
+  return [first, ...rest];
 }
 
-export const markets: readonly Market[] = parseMarkets(file);
+export const markets: Markets = parseMarkets(file);
 
 // A market's listing as the token registry's asset() returns it.
 export interface Listing {
