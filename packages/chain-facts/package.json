@@ -6,7 +6,8 @@
   "type": "module",
   "exports": {
     "./chain": "./src/chain.ts",
-    "./rpc-errors": "./src/rpc-errors.ts"
+    "./rpc-errors": "./src/rpc-errors.ts",
+    "./sources": "./src/sources.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",

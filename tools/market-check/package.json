@@ -1,0 +1,17 @@
+{
+  "name": "@vayle/market-check",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node --test \"test/*.test.ts\"",
+    "check": "node --env-file-if-exists=../../.env src/cli.ts"
+  },
+  "dependencies": {
+    "@vayle/calendar": "workspace:*",
+    "@vayle/chain-facts": "workspace:*",
+    "viem": "2.57.3"
+  }
+}
