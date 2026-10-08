@@ -184,7 +184,7 @@ function OtherToken({ token }: { readonly token: CheckedToken }) {
   return (
     <li className="mkts-other">
       <div className="mkts-other-head">
-        <TokenLogo symbol={token.symbol} size="md" quiet />
+        <TokenLogo symbol={token.symbol} size="md" />
         <div className="mkts-market-name">
           <p className="mkts-other-symbol">{token.symbol}</p>
           <p className="mkts-sub">{token.name}</p>
