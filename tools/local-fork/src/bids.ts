@@ -27,7 +27,7 @@ function memoryCache(): ResponseCache {
   };
 }
 
-async function toRequest(req: IncomingMessage): Promise<Request> {
+function toRequest(req: IncomingMessage): Request {
   const headers = new Headers();
   for (const [name, value] of Object.entries(req.headers)) {
     if (typeof value === "string") headers.set(name, value);
@@ -48,16 +48,13 @@ export function serveBids(deployment: Deployment, accounts: Accounts): Promise<n
   const { public: client, signer } = makerClients(config);
   const cache = memoryCache();
   const server = createServer((req, res) => {
-    void toRequest(req)
-      .then((request) =>
-        handleRequest(request, {
-          cache,
-          waitUntil: (promise) => {
-            void promise;
-          },
-          sheet: () => readBidSheet(config, client, signer.address),
-        }),
-      )
+    void handleRequest(toRequest(req), {
+      cache,
+      waitUntil: (promise) => {
+        void promise;
+      },
+      sheet: () => readBidSheet(config, client, signer.address),
+    })
       .then((response) => send(response, res))
       .catch((error: unknown) => {
         res.statusCode = 500;
