@@ -3,8 +3,8 @@ import { getAddress, isAddress, type Address } from "viem";
 import type { MakerBids } from "./rates.ts";
 import type { Epoch } from "./week.ts";
 
-// The maker's bid sheet, GET <maker>/v1/bids: what it would pay right now per target, per market,
-// for the week it priced. Integers past 2^53 come as decimal strings. It's read defensively: an
+// The maker's bid sheet, GET <maker>/v1/bids, in the shape services/maker/src/sheet.ts serves: what
+// it would pay right now per target, per market, for the week it priced. Integers past 2^53 come as decimal strings. It's read defensively: an
 // entry that doesn't parse is left out, and a sheet for another chain or market contract is
 // ignored whole.
 
@@ -102,13 +102,11 @@ function marketOf(value: unknown): SheetMarket | null {
   const token = address(json["token"]);
   const symbol = json["symbol"];
   const expiry = seconds(json["expiry"]);
-  const priceRound = integer(json["priceRound"]);
-  const priceUpdatedAt = seconds(json["priceUpdatedAt"]);
+  const round = record(json["round"]);
+  const priceRound = integer(round?.["id"]);
+  const priceUpdatedAt = seconds(round?.["updatedAt"]);
   const volBps = small(json["volBps"]);
-  const sides = record(json["sides"]);
-  if (token === null || typeof symbol !== "string" || expiry === null || sides === null) {
-    return null;
-  }
+  if (token === null || typeof symbol !== "string" || expiry === null) return null;
   if (priceRound === null || priceUpdatedAt === null || volBps === null) return null;
   return {
     token,
@@ -117,8 +115,8 @@ function marketOf(value: unknown): SheetMarket | null {
     priceRound,
     priceUpdatedAt,
     volBps,
-    sell: bidsOf(sides["sell"]),
-    buy: bidsOf(sides["buy"]),
+    sell: bidsOf(json["sell"]),
+    buy: bidsOf(json["buy"]),
   };
 }
 

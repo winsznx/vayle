@@ -53,12 +53,14 @@ Without a bid sheet, the batch's best bids are the rates all week. With one, bat
 The app reads `GET {VITE_MAKER_URL}/v1/bids` every 60 seconds while the page is in view. The maker has to allow the site's origin with CORS. The sheet's shape, with integers as decimal strings:
 
 ```text
-{ source: { chainId, market, block },
-  computedAt,                                   seconds, or an ISO 8601 string
-  markets: [ { token, symbol, expiry, priceRound, priceUpdatedAt, volBps,
-               sides: { sell: [ { target, premium, maxAmount } ],
-                        buy:  [ { target, premium, maxAmount } ] } } ] }
+{ computedAt,                                   seconds
+  source: { chainId, market, block },
+  markets: [ { symbol, token, expiry, round: { id, updatedAt }, volBps,
+               sell: [ { target, premium, maxAmount } ],
+               buy:  [ { target, premium, maxAmount } ] } ] }
 ```
+
+That's the shape the maker serves, as [`services/maker/README.md`](../../services/maker/README.md) describes it.
 
 It's read defensively ([`src/app/bidSheet.ts`](src/app/bidSheet.ts)): a sheet whose `chainId` or `market` isn't this build's is ignored whole, a market entry or a bid that doesn't parse is left out, a bid that pays nothing or covers nothing is dropped, and a market's bids count only for the week whose expiry they name. A failed request keeps the last sheet, whose computed time still shows.
 

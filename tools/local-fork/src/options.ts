@@ -6,7 +6,7 @@ export class UsageError extends Error {
 }
 
 export const USAGE =
-  "usage: pnpm fork up | pnpm fork advance [minutes] [--without-keeper] [--close-at <price>]";
+  "usage: pnpm fork up | pnpm fork advance [minutes] [--without-keeper] [--close-at <price>] | pnpm fork bids";
 
 const PRICE = /^\d+(\.\d+)?$/;
 

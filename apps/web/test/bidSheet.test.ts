@@ -31,23 +31,20 @@ const epoch: Epoch = {
 
 function sheet(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
-    source: { chainId: 4663, market: MARKET.toLowerCase(), block: "82835060" },
+    source: { chainId: 4663, market: MARKET.toLowerCase(), block: 82835060 },
     computedAt: 1_791_900_000,
     markets: [
       {
         token: second.token,
         symbol: "ABC",
         expiry: EXPIRY,
-        priceRound: "18446744073709552799",
-        priceUpdatedAt: "1791899900",
+        round: { id: "18446744073709552799", updatedAt: 1791899900 },
         volBps: 3406,
-        sides: {
-          sell: [
-            { target: "245000000", premium: "1250000", maxAmount: "2000000000000000000" },
-            { target: "250000000", premium: "700000", maxAmount: "2000000000000000000" },
-          ],
-          buy: [{ target: "230000000", premium: "910000", maxAmount: "1000000000000000000" }],
-        },
+        sell: [
+          { target: "245000000", premium: "1250000", maxAmount: "2000000000000000000" },
+          { target: "250000000", premium: "700000", maxAmount: "2000000000000000000" },
+        ],
+        buy: [{ target: "230000000", premium: "910000", maxAmount: "1000000000000000000" }],
       },
     ],
     ...overrides,
@@ -123,20 +120,17 @@ describe("parseBidSheet", () => {
           token: second.token,
           symbol: "ABC",
           expiry: EXPIRY,
-          priceRound: "1",
-          priceUpdatedAt: 1,
+          round: { id: "1", updatedAt: 1 },
           volBps: 1,
-          sides: {
-            sell: [
-              { target: "245000000", premium: "1250000", maxAmount: "1" },
-              { target: "245000000", premium: "9", maxAmount: "1" },
-              { target: "250000000", premium: "0", maxAmount: "1" },
-              { target: "255000000", premium: "1", maxAmount: "0" },
-              { target: 2.5, premium: "1", maxAmount: "1" },
-              "a bid",
-            ],
-            buy: "none",
-          },
+          sell: [
+            { target: "245000000", premium: "1250000", maxAmount: "1" },
+            { target: "245000000", premium: "9", maxAmount: "1" },
+            { target: "250000000", premium: "0", maxAmount: "1" },
+            { target: "255000000", premium: "1", maxAmount: "0" },
+            { target: 2.5, premium: "1", maxAmount: "1" },
+            "a bid",
+          ],
+          buy: "none",
         },
       ],
     });

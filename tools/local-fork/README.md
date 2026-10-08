@@ -11,6 +11,7 @@ pnpm fork advance                   # the next moment of the week
 pnpm fork advance 30                # or 30 minutes ahead
 pnpm fork advance --without-keeper  # as if the keeper had died, to try the fallback page
 pnpm fork advance --close-at 250.00 # the next close at $250, to rehearse an order that fills
+pnpm fork bids                      # the maker's bid sheet, for the rates the app shows
 ```
 
 `pnpm fork up` stays in the foreground, and Ctrl-C stops the fork. It needs `ROBINHOOD_RPC_URL` in `.env` and anvil and forge on the path.

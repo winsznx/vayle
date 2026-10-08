@@ -8,7 +8,7 @@ import {
   type KeeperConfig,
 } from "@vayle/keeper";
 import {
-  loadConfig as makerConfig,
+  loadConfig as loadMakerConfig,
   makerClients,
   runOnce as runMaker,
   type Clients as MakerClients,
@@ -64,6 +64,17 @@ interface Services {
   readonly maker: { readonly config: MakerConfig; readonly clients: MakerClients };
 }
 
+// The maker's config as its Worker would load it, pointed at the fork.
+export function makerConfig(deployment: Deployment, accounts: Accounts): MakerConfig {
+  return loadMakerConfig({
+    MAKER_KEY: accounts.keys.maker,
+    ROBINHOOD_RPC_URL: FORK_RPC,
+    VAYLE_MARKET: deployment.market,
+    VAYLE_REGISTRY: deployment.registry,
+    ...FORK_MAKER_PRICING,
+  });
+}
+
 // The production keeper and maker, configured the way their Workers are and with their Workers'
 // own clients, pointed at the fork.
 function services(deployment: Deployment, accounts: Accounts): Services {
@@ -80,13 +91,7 @@ function services(deployment: Deployment, accounts: Accounts): Services {
       clients: keeperClients({ rpcUrl: FORK_RPC, key: accounts.keys.keeper }),
     },
     maker: {
-      config: makerConfig({
-        MAKER_KEY: accounts.keys.maker,
-        ROBINHOOD_RPC_URL: FORK_RPC,
-        VAYLE_MARKET: deployment.market,
-        VAYLE_REGISTRY: deployment.registry,
-        ...FORK_MAKER_PRICING,
-      }),
+      config: makerConfig(deployment, accounts),
       clients: makerClients({ rpcUrl: FORK_RPC, key: accounts.keys.maker }),
     },
   };

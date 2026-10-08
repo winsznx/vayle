@@ -5,6 +5,7 @@
 //   pnpm fork advance <minutes>   or that many minutes ahead
 //   pnpm fork advance [minutes] --without-keeper   as if the keeper had died
 //   pnpm fork advance --close-at 250.00   the next close at that price, to rehearse a fill
+//   pnpm fork bids      serve the maker's bid sheet for the app's rates (stays running)
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { boundariesAfter, type Boundary } from "@vayle/calendar";
 import { markets } from "@vayle/markets";
@@ -12,6 +13,7 @@ import { formatUnits, getAddress, parseEther, parseUnits } from "viem";
 import facts from "../../../deployments/robinhood-mainnet.json" with { type: "json" };
 import { addressOf, newAccounts, readAccounts, ROLES, saveAccounts } from "./accounts.ts";
 import { FORK_RPC, forkClient, requireFork, startAnvil } from "./anvil.ts";
+import { BIDS_URL, serveBids } from "./bids.ts";
 import { deployToFork, readDeployment, type Deployment } from "./deploy.ts";
 import { DeployFailed, ForkNotRunning, MissingSetting } from "./errors.ts";
 import { fund } from "./fund.ts";
@@ -90,7 +92,7 @@ async function up(): Promise<void> {
     );
     writeFileSync(
       WEB_ENV_FILE,
-      `VITE_RPC_URL=${FORK_RPC}\nVITE_MARKET=${deployment.market}\nVITE_MARKET_DEPLOY_BLOCK=${deployment.block.toString()}\nVITE_PLACEMENT=open\n`,
+      `VITE_RPC_URL=${FORK_RPC}\nVITE_MARKET=${deployment.market}\nVITE_MARKET_DEPLOY_BLOCK=${deployment.block.toString()}\nVITE_MAKER_URL=${BIDS_URL}\nVITE_PLACEMENT=open\n`,
     );
 
     const week = await latestWeek(client, deployment.market);
@@ -146,8 +148,15 @@ async function advanceRunning(options: AdvanceOptions): Promise<void> {
   );
 }
 
+async function bids(): Promise<void> {
+  const client = forkClient();
+  await requireFork(client);
+  await serveBids(readDeployment(), readAccounts());
+}
+
 async function main(command: string | undefined, args: readonly string[]): Promise<void> {
   if (command === "up") return up();
+  if (command === "bids") return bids();
   if (command === "advance") {
     return advanceRunning(advanceOptions(args, markets[0].feedDecimals));
   }
