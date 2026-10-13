@@ -15,6 +15,11 @@ const SIGNED_OFF = [
   "The buyer is currently one market maker operated by Vayle.",
   "The contracts are unaudited.",
   "Stock Tokens aren't available everywhere, and Vayle blocks new targets where they're restricted.",
+  "The close that counts is the price feed's last price at or before 4:00 PM ET on Friday, or at the earlier close before a market holiday, and it can differ slightly from the exchange's official close.",
+  "Stock Tokens and USDG have issuers who can pause them. A pause can delay settlement.",
+  "In an emergency the market can be halted for up to 72 hours at a time, and settlement waits until it ends.",
+  "Only lock what you can leave locked for a week or more.",
+  "Not affiliated with the issuers of the assets shown.",
 ];
 
 describe("parseDisclosures", () => {
@@ -50,7 +55,7 @@ describe("parseDisclosures", () => {
 });
 
 describe("the signed-off disclosures file", () => {
-  it("holds exactly the nine signed-off lines, in order, as plain lines", () => {
+  it("holds exactly the fourteen signed-off lines, in order, as plain lines", () => {
     // #when
     const items = parseDisclosures(signedOff);
     // #then
