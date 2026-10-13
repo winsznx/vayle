@@ -107,7 +107,14 @@ The first line is the first close. Each market's first week opens shortly after 
 forge script contracts/script/DeployVayle.s.sol:DeployVayle --root contracts --rpc-url robinhood
 ```
 
-`robinhood` is the RPC alias in `contracts/foundry.toml`, and it reads `ROBINHOOD_RPC_URL`. The dry run runs the whole deploy against the chain's current state and sends nothing. It works before the deployer has any ETH, and it writes no address file. Only a broadcast writes `deployments/vayle-robinhood-mainnet.json`.
+`robinhood` is the RPC alias in `contracts/foundry.toml`, and it reads `ROBINHOOD_RPC_URL`. The chain's public RPC sits behind a Cloudflare front that challenges forge's HTTP client, most of all in bursts, while it lets curl through. If forge answers `HTTP error 403` with a page titled "Just a moment...", run the relay in another shell and point forge at it instead of `robinhood`:
+
+```sh
+node --env-file=.env tools/rpc-relay/src/relay.ts      # relays http://127.0.0.1:8547 to ROBINHOOD_RPC_URL
+forge script contracts/script/DeployVayle.s.sol:DeployVayle --root contracts --rpc-url http://127.0.0.1:8547
+```
+
+The dry run runs the whole deploy against the chain's current state and sends nothing. It works before the deployer has any ETH, and it writes no address file. Only a broadcast writes `deployments/vayle-robinhood-mainnet.json`.
 
 It should print `SIMULATION COMPLETE`. Before that, forge prints an `Error:` line saying `VayleMarket` is above the contract size limit. That one's expected. forge measures against Ethereum's 24,576 bytes, while this chain allows 98,304 (`chain.maxCodeSize` in the chain facts), and `contracts/test/Deployables.t.sol` checks every contract against the chain's limit. A real refusal names itself, like `MultisigHasNoCode`, `NoBoundaries`, `NoMarkets`, the calendar's `TooSoon`, or a registry error such as `UidMismatch` for a market whose entry is wrong.
 
@@ -165,14 +172,12 @@ The script writes the address file while it runs, before forge sends anything. S
 
 If the contracts deployed but verification didn't finish, forge ends with `Not all (n / 6) contracts were verified!` and exits non-zero. The deploy above that line still went through, so don't broadcast again. Verify in step 9.
 
-## 9. Verify the contracts on Blockscout
+## 9. Verify the contracts
 
-The chain's explorer is Blockscout at `https://robinhoodchain.blockscout.com`, `chain.explorerUrl` in the chain facts. The broadcast's `--verify` flags verify every contract it deployed. If that didn't finish, verify each contract on its own:
+Verify each contract on Sourcify, which supports this chain and which the explorer reads its verified sources from:
 
 ```sh
-forge verify-contract <address> <contract> --root contracts --rpc-url robinhood --chain 4663 \
-  --guess-constructor-args --watch \
-  --verifier blockscout --verifier-url https://robinhoodchain.blockscout.com/api/
+forge verify-contract <address> <contract> --root contracts --chain 4663 --verifier sourcify --watch
 ```
 
 | Address in the file | Contract                                                                                    |
@@ -184,9 +189,7 @@ forge verify-contract <address> <contract> --root contracts --rpc-url robinhood 
 | `priceAdapter`      | `src/assets/PriceAdapter.sol:PriceAdapter`                                                  |
 | `market`            | `src/VayleMarket.sol:VayleMarket`                                                           |
 
-forge takes the compiler settings from `contracts/foundry.toml`: solc 0.8.37, the IR pipeline, 200 optimizer runs and the cancun EVM. `--guess-constructor-args` finds each contract's constructor arguments in its creation transaction.
-
-Each contract's page, `https://robinhoodchain.blockscout.com/address/<address>`, should show its source as verified. The flags come from `forge verify-contract --help` in Foundry 1.7.1. forge sends its verification requests to the `--verifier-url`, here the explorer's `/api/` path, which is where Blockscout explorers serve their API. This explorer's API can answer command-line clients with a 403 challenge page instead of JSON. If that's what comes back, wait and run it again, or print the compiler input with `--show-standard-json-input` and submit it through the explorer's own verification page.
+Each should end `Contract successfully verified: Status: exact_match`. forge takes the compiler settings from `contracts/foundry.toml`: solc 0.8.37, the IR pipeline, 200 optimizer runs and the cancun EVM, and Sourcify reads the constructor arguments from the creation transaction. The explorer's own verification API, at `https://robinhoodchain.blockscout.com/api/`, challenges command-line clients and rate-limits verification, so it isn't the way to go.
 
 ## 10. Create the database tables
 
@@ -236,7 +239,7 @@ Without the vars it watches each market's token and feed and USDG only, so it ca
 
 ### Keeper
 
-Secrets: `ROBINHOOD_RPC_URL` and `KEEPER_KEY`. Vars: `VAYLE_MARKET`, `VAYLE_LIVENESS`, `VAYLE_CALENDAR` and `VAYLE_REGISTRY`, from the address file. Send the keeper's address ETH for gas, which is all it holds.
+Secrets: `ROBINHOOD_RPC_URL` and `KEEPER_KEY`. Vars: `VAYLE_MARKET`, `VAYLE_LIVENESS`, `VAYLE_CALENDAR` and `VAYLE_REGISTRY`, from the address file, in `services/keeper/wrangler.toml`. The keeper's `ROBINHOOD_RPC_URL` has to be a metered RPC: from Cloudflare's shared addresses the chain's public RPC answers most requests 429 Too Many Requests, and a keeper that can't read misses its checkpoints. Send the keeper's address ETH for gas, which is all it holds.
 
 Deploy it with its secrets and gas within 5 minutes of the broadcast. Each market's first week opens once the liveness record has no gap over 5 minutes through the 30 minutes before the opening, and only from 30 minutes after the market's deploy (`GAP_THRESHOLD` in `contracts/src/liveness/LivenessCheckpoint.sol`, `LIVENESS_LOOKBACK` and `createFirstEpoch` in `contracts/src/core/EpochBook.sol`). The liveness contract counts the time since its own deploy as quiet, so a keeper that starts later records one gap at its first checkpoint, and the first weeks wait 30 minutes past it. Until every market has its first week, the keeper checkpoints every minute and then sends `createFirstEpoch` for each one, with the feed's latest round as the hint.
 
@@ -251,7 +254,7 @@ cast call <market> "latestExpiry(address)(uint64)" <each token> --rpc-url "$ROBI
 
 ### Maker
 
-Secrets: `ROBINHOOD_RPC_URL` and `MAKER_KEY`, the key whose address is `TEAM_MAKER`. Vars: `VAYLE_MARKET`, `VAYLE_REGISTRY`, and the pricing inputs `MAKER_EDGE_BPS`, `MAKER_DIVIDEND_YIELD_BPS`, `MAKER_RATE_BPS` and `MAKER_RFQ`, which [services/maker/README.md](services/maker/README.md) describes. Each market's volatility and caps come from `deployments/markets.json`. Set `MAKER_RFQ` to `on`: a first week has no batch, so quotes are the only way its targets get paid.
+Secrets: `ROBINHOOD_RPC_URL`, a metered RPC for the same reason as the keeper's, and `MAKER_KEY`, the key whose address is `TEAM_MAKER`. Vars: `VAYLE_MARKET`, `VAYLE_REGISTRY`, and the pricing inputs `MAKER_EDGE_BPS`, `MAKER_DIVIDEND_YIELD_BPS`, `MAKER_RATE_BPS` and `MAKER_RFQ`, which [services/maker/README.md](services/maker/README.md) describes. Each market's volatility and caps come from `deployments/markets.json`. Set `MAKER_RFQ` to `on`: a first week has no batch, so quotes are the only way its targets get paid.
 
 Fund it before the first weeks open. The maker's account needs:
 
@@ -279,35 +282,26 @@ Run one or the other. `curl <indexer URL>/v1/run` should return JSON whose `sour
 
 ## 12. Open the site
 
-The site at vayle.xyz is the Worker in `apps/web`, serving the Vite build as static assets. Until a build names a market, `/app/` says Vayle isn't open yet.
+The site at vayle.xyz is the Worker in `apps/web`, serving the Vite build as static assets.
 
-1. In `apps/web/wrangler.jsonc`, set `RPC_LOG_ADDRESSES` to the market's address. The site's `/rpc` answers `eth_getLogs` only for addresses on that list, and the app's history reads the market's logs. Check `RESTRICTED_COUNTRIES` and `RESTRICTED_REGIONS` while you're there. They're the places the app doesn't offer new orders.
-2. Build with the market:
+1. In `apps/web/wrangler.jsonc`, set `RPC_LOG_ADDRESSES` to the market's address. The site's `/rpc` answers `eth_getLogs` only for addresses on that list, and the app's history reads the market's logs. Check `RESTRICTED_COUNTRIES` and `RESTRICTED_REGIONS` while you're there. They're the places the app doesn't offer new targets.
+2. Set `MAKER_URL` in `apps/web/vite.config.ts` to the maker Worker's URL, and build:
 
    ```sh
-   VITE_RPC_URL=/rpc \
-   VITE_MARKET=<market address> \
-   VITE_MARKET_DEPLOY_BLOCK=<block from the address file> \
-   VITE_INDEXER_URL=<indexer URL> \
-   pnpm --filter @vayle/web build
+   pnpm --filter @vayle/web build:mainnet
    ```
 
-   - `VITE_RPC_URL=/rpc` makes the page read the chain through the Worker's `/rpc`, which forwards to the `RPC_URL` secret, so the RPC's key never ships in the page.
-   - `VITE_MARKET` turns the app on.
-   - `VITE_MARKET_DEPLOY_BLOCK` is where the app starts reading the market's events from the chain when there's no indexer. It reads at most 500,000 blocks that way (`MAX_CHAIN_HISTORY_BLOCKS` in `apps/web/src/app/useMarketHistory.ts`), which is less than a day of this chain's blocks, so history needs the indexer soon after launch.
-   - `VITE_INDEXER_URL` is the indexer's base URL.
-   - `VITE_MAKER_URL` is the maker Worker's base URL, for the rates it would pay now.
-   - `VITE_PLACEMENT` stays unset for now. New orders need a build with `VITE_PLACEMENT=open` and the disclosures published at `/disclosures.json`, as [apps/web/README.md](apps/web/README.md) describes. Settling, stopping an order and withdrawing never depend on it.
-   - `VITE_WALLETCONNECT_PROJECT_ID` is optional. It turns on WalletConnect for phone wallets.
+   That's `vite build --mode mainnet`: the market and its deploy block from the address file, `/rpc` for reads, the maker's bid sheet for rates, and placement open. Placement also needs the disclosures at `apps/web/public/disclosures.json`, the signed-off risk lines. Any of the settings in the environment wins, and `VITE_INDEXER_URL` and `VITE_WALLETCONNECT_PROJECT_ID` come from there.
 
-3. Deploy, and put the RPC secret if it isn't set yet:
+3. Deploy, and put the RPC secrets if they aren't set yet:
 
    ```sh
    pnpm --filter @vayle/web exec wrangler deploy
    pnpm --filter @vayle/web exec wrangler secret put RPC_URL
+   pnpm --filter @vayle/web exec wrangler secret put RPC_FALLBACK_URL
    ```
 
-   `RPC_URL` is the private RPC `/rpc` forwards to. It can be the same as `ROBINHOOD_RPC_URL`, and it needs the same 10,000-block log reads, because the app asks for history in ranges that size. The Worker takes `vayle.xyz` as its custom domain from `routes` in `wrangler.jsonc`, which needs the domain as a zone in the same Cloudflare account.
+   `RPC_URL` is the RPC `/rpc` forwards to, the chain's public one. `RPC_FALLBACK_URL` is a metered RPC that answers only the requests the public one refuses as too many. Both need 10,000-block log reads, because the app asks for history in ranges that size. The Worker takes `vayle.xyz` as its custom domain from `routes` in `wrangler.jsonc`, which needs the domain as a zone in the same Cloudflare account.
 
 `https://vayle.xyz/app/market` should then list the same contract addresses as the address file.
 
@@ -317,7 +311,13 @@ The site at vayle.xyz is the Worker in `apps/web`, serving the Vite build as sta
 pnpm --filter @vayle/fallback build
 ```
 
-The build takes the market's address from `deployments/vayle-robinhood-mainnet.json` and writes one file, `apps/fallback/dist/index.html`. Put it somewhere that doesn't depend on the site, so holders can reach the market through their own wallets when the site is down. Opened from disk with a wallet on Robinhood Chain, it should show the market's address and read the wallet's orders without an error. [apps/fallback/README.md](apps/fallback/README.md) has the rest.
+The build takes the market's address from `deployments/vayle-robinhood-mainnet.json` and writes one file, `apps/fallback/dist/index.html`. Serve it apart from the site, so holders can reach the market through their own wallets when the site is down:
+
+```sh
+pnpm --filter @vayle/web exec wrangler deploy --cwd "$PWD/apps/fallback"
+```
+
+That's the `vayle-fallback` Worker on workers.dev, from `apps/fallback/wrangler.jsonc`. Set its URL as `FALLBACK_URL` in `apps/web/src/links.ts`. Opened from disk with a wallet on Robinhood Chain, it should show the market's address and read the wallet's orders without an error. [apps/fallback/README.md](apps/fallback/README.md) has the rest.
 
 ## 14. Sweep the deployer key
 
