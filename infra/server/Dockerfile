@@ -17,7 +17,8 @@ COPY services/indexer ./services/indexer
 COPY services/watcher ./services/watcher
 COPY tools/rpc-relay ./tools/rpc-relay
 
-RUN pnpm install --frozen-lockfile --prod=false \
+# No install scripts: the root's sets git hooks, and these services need none.
+RUN pnpm install --frozen-lockfile --ignore-scripts \
     --filter "@vayle/indexer..." --filter "@vayle/watcher..." --filter "@vayle/rpc-relay..."
 
 USER node

@@ -1,8 +1,14 @@
-# Deployed by the owner's Cloudflare account. Secrets: ROBINHOOD_RPC_URL, SUPABASE_URL and
-# SUPABASE_SERVICE_ROLE_KEY. Vars, once the contracts are deployed: VAYLE_MARKET and VAYLE_START_BLOCK.
+# The indexer's public API, read from Supabase. The indexing passes run on the server
+# (infra/server), where the chain's public RPC answers, so this Worker has no cron.
+# Secrets: ROBINHOOD_RPC_URL (unused here, but the config requires it), SUPABASE_URL and
+# SUPABASE_SERVICE_ROLE_KEY. Vars: the mainnet market and its deploy block.
 name = "vayle-indexer"
 main = "src/index.ts"
 compatibility_date = "2026-10-01"
 
 [triggers]
-crons = ["* * * * *"]
+crons = []
+
+[vars]
+VAYLE_MARKET = "0x8d8f1E52848F9C2B04f091878D23DFed672bC78E"
+VAYLE_START_BLOCK = "87106459"
