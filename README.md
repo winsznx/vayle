@@ -66,45 +66,9 @@ Each of these is enforced by the contracts themselves.
 
 ## The pieces
 
-```mermaid
-flowchart LR
-  holder([Holder's wallet])
-  subgraph site[vayle.xyz on Cloudflare Workers]
-    app[Web app]
-    proxy[RPC proxy]
-  end
-  fallback[Fallback page]
-  subgraph chain[Robinhood Chain]
-    market[VayleMarket]
-    calendar[Session calendar]
-    liveness[Liveness checkpoints]
-    adapter[Price adapter]
-    tokens[Stock Tokens]
-    usdg[USDG]
-    feed[Chainlink price feeds]
-  end
-  keeper[Keeper]
-  maker[Team-operated maker]
-  watcher[Watcher]
-  indexer[Indexer]
-  db[(Supabase)]
+![Vayle architecture](docs/architecture.svg)
 
-  holder --> app
-  holder --> fallback
-  app --> proxy --> market
-  app --> indexer
-  fallback --> market
-  keeper --> market
-  maker --> market
-  watcher --> market
-  indexer --> market
-  indexer --> db
-  market --- calendar
-  market --- liveness
-  market --- adapter --- feed
-  market --- tokens
-  market --- usdg
-```
+[Mermaid source](docs/architecture.mmd)
 
 | Folder                                     | What's there                                                                                               |
 | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
