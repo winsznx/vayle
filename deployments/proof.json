@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-13T01:51:23.021Z",
+  "generatedAt": "2026-10-13T01:58:07.108Z",
   "chainId": 4663,
-  "toBlock": 87142212,
-  "toBlockTime": 1791856279,
+  "toBlock": 87146139,
+  "toBlockTime": 1791856684,
   "deployment": {
     "block": 87106459,
     "calendar": "0x6A6F108fE00e59c7C58c3Bac0b6cBF20f87014a6",
@@ -210,43 +210,43 @@
     ]
   },
   "ci": {
-    "id": 38332222676,
-    "url": "https://github.com/winsznx/vayle/actions/runs/38332222676",
-    "commit": "b2eb8d768e04fdc0e15fc03b95d2ae4f207cb52f",
-    "finishedAt": "2026-10-13T01:30:35Z",
-    "conclusion": "failure",
+    "id": 38334355088,
+    "url": "https://github.com/winsznx/vayle/actions/runs/38334355088",
+    "commit": "6fb5c371303ca5caa8e459ba1ce43106731286da",
+    "finishedAt": "2026-10-13T01:57:39Z",
+    "conclusion": "success",
     "jobs": [
-      {
-        "name": "Lifecycle and invariants for every other listed market",
-        "conclusion": "failure"
-      },
-      {
-        "name": "Lint, typecheck, build, test",
-        "conclusion": "success"
-      },
       {
         "name": "Names and private paths",
         "conclusion": "success"
       },
       {
         "name": "Contracts",
-        "conclusion": "failure"
+        "conclusion": "success"
       },
       {
-        "name": "Holder flow through the shared call builders",
+        "name": "Lifecycle and invariants for every other listed market",
         "conclusion": "success"
       },
       {
         "name": "Static analysis",
         "conclusion": "success"
+      },
+      {
+        "name": "Lint, typecheck, build, test",
+        "conclusion": "success"
+      },
+      {
+        "name": "Holder flow through the shared call builders",
+        "conclusion": "success"
       }
     ],
     "contractTests": {
-      "passed": 173,
-      "failed": 21
+      "passed": 443,
+      "failed": 0
     },
     "typescriptTests": {
-      "passed": 664,
+      "passed": 670,
       "failed": 0
     }
   }
