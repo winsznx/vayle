@@ -6,7 +6,23 @@ Vayle is weekly pay for Stock Token holders on Robinhood Chain. Pick the price y
 
 NVDA is the first market. More Stock Tokens list as they pass the market check in [`tools/market-check`](tools/market-check).
 
-The site is [vayle.xyz](https://vayle.xyz). The contracts aren't deployed to mainnet yet, so the app there says it isn't open. Everything in this repository runs end to end on a local fork of Robinhood Chain mainnet, and [Run it locally](#run-it-locally) starts one.
+The site is [vayle.xyz](https://vayle.xyz), and the app at [vayle.xyz/app](https://vayle.xyz/app/) runs on Robinhood Chain mainnet. Everything in this repository also runs end to end on a local fork of mainnet, and [Run it locally](#run-it-locally) starts one.
+
+## On mainnet
+
+Deployed at block 87,106,459, with NVDA, SPY and META listed. Every contract's source is verified on Sourcify, which the explorer reads.
+
+| Contract                           | Address                                                                                                                                  |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| VayleMarket                        | [`0x8d8f1E52848F9C2B04f091878D23DFed672bC78E`](https://robinhoodchain.blockscout.com/address/0x8d8f1E52848F9C2B04f091878D23DFed672bC78E) |
+| StockTokenRegistry                 | [`0x3190A78bf4AB329eCBFdbc592c53d7A2E2ed69d8`](https://robinhoodchain.blockscout.com/address/0x3190A78bf4AB329eCBFdbc592c53d7A2E2ed69d8) |
+| SessionCalendar                    | [`0x6A6F108fE00e59c7C58c3Bac0b6cBF20f87014a6`](https://robinhoodchain.blockscout.com/address/0x6A6F108fE00e59c7C58c3Bac0b6cBF20f87014a6) |
+| PriceAdapter                       | [`0xdD45a6B8f8f0B71B50BEb56e0ad372bF7fA51671`](https://robinhoodchain.blockscout.com/address/0xdD45a6B8f8f0B71B50BEb56e0ad372bF7fA51671) |
+| LivenessCheckpoint                 | [`0x0F78aE8654C797D8a2a81F78f055041711eac91a`](https://robinhoodchain.blockscout.com/address/0x0F78aE8654C797D8a2a81F78f055041711eac91a) |
+| TimelockController, 8 days 6 hours | [`0xB717B143a5B28D4B7f897AA34f533D46f485B1C1`](https://robinhoodchain.blockscout.com/address/0xB717B143a5B28D4B7f897AA34f533D46f485B1C1) |
+| Owner: a 2-of-3 Safe               | [`0x1D7bee7FDb39d5a3a319AA9975B590Dfa6a589E4`](https://robinhoodchain.blockscout.com/address/0x1D7bee7FDb39d5a3a319AA9975B590Dfa6a589E4) |
+
+[`deployments/vayle-robinhood-mainnet.json`](deployments/vayle-robinhood-mainnet.json) is the record every service and the app build from. The [fallback page](https://vayle-fallback.timjosh507.workers.dev) reaches the market through your own wallet, without the site.
 
 ## What a holder does
 

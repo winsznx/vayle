@@ -21,7 +21,7 @@ Underneath, every target is a fully collateralized, physically settled weekly op
 | `/app/activity`   | Everything that happened to your targets and your wallet in the market, each with its market's ticker                                                                                                                                             |
 | `/app/market`     | Status: one market as the contracts report it, its week, feed, limits, what can stop it, the calendar and every contract address                                                                                                                  |
 
-A build that names no market contract, as the site does before the contracts are deployed, shows a page at `/app/` that says Vayle isn't open yet.
+A build that names no market contract shows a page at `/app/` that says Vayle isn't open yet. `pnpm --filter @vayle/web build:mainnet` builds the site as vayle.xyz serves it: the market from `deployments/vayle-robinhood-mainnet.json`, `/rpc`, the maker's bid sheet and placement open.
 
 Both pages take their colours, type, symbol and icons from [`packages/brand`](../../packages/brand). Every asset shows its real logo from the brand package's pinned files, served at `/logos/`: a Stock Token the mark of the company or fund it tracks, USDG its own. They follow the system's light or dark setting, and the theme toggle overrides it for that browser.
 
@@ -68,7 +68,7 @@ It's read defensively ([`src/app/bidSheet.ts`](src/app/bidSheet.ts)): a sheet wh
 
 The app reads every market every 15 seconds while the page is in view, and again after each transaction. Every read in a poll is pinned to the block the poll starts from, so a page never mixes two blocks' state, and reads that don't wait on each other leave as one Multicall3 call. Every market's reads start in the same groups, so a poll is one block read and three Multicall3 calls whether the build lists one market or three, plus one more call for the series of a wallet's targets, and a simulated finalize for a series whose window the chain says has run. The price chart reads the shown market's last month of feed rounds in one call every five minutes.
 
-In production the page reads through `/rpc` on its own origin. The Worker ([`worker/rpc.ts`](worker/rpc.ts)) forwards each request to the private RPC held as its `RPC_URL` secret, so the key never ships in the page's JavaScript. It takes read methods only, from the site's own pages only, log queries only for the addresses in `RPC_LOG_ADDRESSES` and over at most 10,000 blocks, and batches of at most 10. Each visitor's requests go through a rate limiter, so one page can't use up the plan.
+In production the page reads through `/rpc` on its own origin. The Worker ([`worker/rpc.ts`](worker/rpc.ts)) forwards each request to the RPC held as its `RPC_URL` secret, the chain's public RPC in production, so no key ships in the page's JavaScript. The public RPC refuses some requests from Cloudflare's shared addresses as too many, and those go to `RPC_FALLBACK_URL`, a metered RPC, instead. It takes read methods only, from the site's own pages only, log queries only for the addresses in `RPC_LOG_ADDRESSES` and over at most 10,000 blocks, and batches of at most 10. Each visitor's requests go through a rate limiter, so one page can't use up the plan.
 
 History, meaning earnings, skipped weeks and activity, comes from the [indexer](../../services/indexer) when the build names one. Without it, the app reads the market's events from its deploy block, which suits a short history like the local fork's, and counts each target's skipped weeks on its own market's weeks. The browser won't read more than 500,000 blocks of history itself and says the indexer is needed instead.
 
@@ -115,7 +115,8 @@ The markets come from `deployments/markets.json` and the market check from `depl
 
 On the Worker:
 
-- `RPC_URL`, a secret set with `wrangler secret put RPC_URL`: the private RPC `/rpc` forwards to.
+- `RPC_URL`, a secret set with `wrangler secret put RPC_URL`: the RPC `/rpc` forwards to.
+- `RPC_FALLBACK_URL`, an optional secret: the RPC `/rpc` asks when `RPC_URL` refuses a request as too many.
 - `RPC_LOG_ADDRESSES`: the addresses `/rpc` answers log queries for, comma-separated.
 - `RESTRICTED_COUNTRIES` and `RESTRICTED_REGIONS`: where new targets aren't offered.
 - `RPC_LIMITER`: the rate limit binding, set in `wrangler.jsonc`.
@@ -132,7 +133,7 @@ pnpm --filter @vayle/web exec wrangler dev   # the build under the Worker, with 
 ## Deploying
 
 ```sh
-VITE_RPC_URL=/rpc VITE_MARKET=<market address> pnpm --filter @vayle/web build
+pnpm --filter @vayle/web build:mainnet
 pnpm --filter @vayle/web exec wrangler deploy
 pnpm --filter @vayle/web exec wrangler secret put RPC_URL
 ```
