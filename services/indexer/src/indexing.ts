@@ -24,7 +24,9 @@ export function chainClient(
 ): PublicClient {
   return createPublicClient({
     chain: robinhoodChain,
-    transport: http(rpcUrl, { retryCount: 3, fetchFn: rpcFetch }),
+    // The chain's public RPC refuses some requests from Cloudflare's shared addresses as too many,
+    // so a pass rides out about a minute of refusals, waiting 0.3 s and then twice as long each time.
+    transport: http(rpcUrl, { retryCount: 8, retryDelay: 300, fetchFn: rpcFetch }),
   });
 }
 

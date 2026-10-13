@@ -1,12 +1,23 @@
 # Deployed by the owner's Cloudflare account. Secrets are set with wrangler secret put:
 # ROBINHOOD_RPC_URL and MAKER_KEY (the team maker's account). Vars: VAYLE_MARKET, VAYLE_REGISTRY,
 # and the pricing inputs MAKER_EDGE_BPS, MAKER_DIVIDEND_YIELD_BPS, MAKER_RATE_BPS and MAKER_RFQ,
-# which the owner sets. Each market's volatility and per-series limit come from
-# deployments/markets.json. The bid sheet at /v1/bids needs a custom domain, where Cloudflare
-# caches it.
+# set below. Each market's volatility and per-series limit come from deployments/markets.json.
+# The bid sheet is served at /v1/bids.
 name = "vayle-maker"
 main = "src/worker.ts"
 compatibility_date = "2026-10-01"
 
 [triggers]
 crons = ["* * * * *"]
+
+[vars]
+VAYLE_MARKET = "0x8d8f1E52848F9C2B04f091878D23DFed672bC78E"
+VAYLE_REGISTRY = "0x3190A78bf4AB329eCBFdbc592c53d7A2E2ed69d8"
+# Bids 10% under the model's fair value.
+MAKER_EDGE_BPS = "1000"
+# No dividend assumed, which prices calls a little higher. The edge covers the difference.
+MAKER_DIVIDEND_YIELD_BPS = "0"
+# The annual USDG rate the model discounts at.
+MAKER_RATE_BPS = "400"
+# A first week has no batch, so quotes are how its targets get paid.
+MAKER_RFQ = "on"

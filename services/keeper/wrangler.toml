@@ -1,10 +1,16 @@
 # Deployed by the owner's Cloudflare account. Secrets are set with wrangler secret put:
 # ROBINHOOD_RPC_URL and KEEPER_KEY (a key that holds gas only).
-# VAYLE_MARKET, VAYLE_LIVENESS, VAYLE_CALENDAR and VAYLE_REGISTRY go in [vars] once the contracts
-# are deployed.
+# VAYLE_MARKET, VAYLE_LIVENESS, VAYLE_CALENDAR and VAYLE_REGISTRY are the mainnet deployment's, from
+# deployments/vayle-robinhood-mainnet.json.
 name = "vayle-keeper"
 main = "src/worker.ts"
 compatibility_date = "2026-10-01"
 
 [triggers]
 crons = ["* * * * *"]
+
+[vars]
+VAYLE_MARKET = "0x8d8f1E52848F9C2B04f091878D23DFed672bC78E"
+VAYLE_LIVENESS = "0x0F78aE8654C797D8a2a81F78f055041711eac91a"
+VAYLE_CALENDAR = "0x6A6F108fE00e59c7C58c3Bac0b6cBF20f87014a6"
+VAYLE_REGISTRY = "0x3190A78bf4AB329eCBFdbc592c53d7A2E2ed69d8"

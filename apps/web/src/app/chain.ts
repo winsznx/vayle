@@ -14,7 +14,9 @@ const RECEIPT_POLL_MS = 1_000;
 export function publicClientOf(config: AppConfig): PublicClient {
   return createPublicClient({
     chain: robinhoodChain,
-    transport: http(config.rpcUrl),
+    // The RPC behind /rpc refuses some requests as too many, so each is tried again up to five
+    // times, waiting 0.3 s and then twice as long each time.
+    transport: http(config.rpcUrl, { retryCount: 5, retryDelay: 300 }),
     batch: { multicall: { batchSize: MULTICALL_BYTES } },
     pollingInterval: RECEIPT_POLL_MS,
   });

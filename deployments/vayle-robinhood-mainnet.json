@@ -1,0 +1,10 @@
+{
+  "block": 87106459,
+  "calendar": "0x6A6F108fE00e59c7C58c3Bac0b6cBF20f87014a6",
+  "chainId": 4663,
+  "liveness": "0x0F78aE8654C797D8a2a81F78f055041711eac91a",
+  "market": "0x8d8f1E52848F9C2B04f091878D23DFed672bC78E",
+  "priceAdapter": "0xdD45a6B8f8f0B71B50BEb56e0ad372bF7fA51671",
+  "registry": "0x3190A78bf4AB329eCBFdbc592c53d7A2E2ed69d8",
+  "timelock": "0xB717B143a5B28D4B7f897AA34f533D46f485B1C1"
+}
