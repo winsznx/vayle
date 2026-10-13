@@ -94,6 +94,33 @@ jobs:
         # One recent block for every fork test, so forge's RPC cache serves repeated reads.
         run: FORK_BLOCK="$(cast block-number --rpc-url "$ROBINHOOD_RPC_URL")" forge test -vvv
 
+  markets:
+    name: Lifecycle and invariants for every other listed market
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1.9.1
+        with:
+          version: v1.7.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+      - name: Test each market in deployments/markets.json beyond the first
+        working-directory: contracts
+        env:
+          ROBINHOOD_RPC_URL: ${{ secrets.ROBINHOOD_RPC_URL }}
+        # The contracts job covers the first market. Each other one runs the lifecycle campaigns
+        # and invariant suites on its own token, at one recent block.
+        run: |
+          export FORK_BLOCK="$(cast block-number --rpc-url "$ROBINHOOD_RPC_URL")"
+          for symbol in $(node -p 'require("../deployments/markets.json").markets.slice(1).map((m) => m.symbol).join(" ")'); do
+            echo "::group::$symbol"
+            FORK_MARKET="$symbol" forge test --match-path "test/campaigns/*" -vvv
+            echo "::endgroup::"
+          done
+
   interface:
     name: Holder flow through the shared call builders
     runs-on: ubuntu-latest
