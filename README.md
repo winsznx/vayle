@@ -8,6 +8,8 @@ NVDA is the first market. More Stock Tokens list as they pass the market check i
 
 The site is [vayle.xyz](https://vayle.xyz), and the app at [vayle.xyz/app](https://vayle.xyz/app/) runs on Robinhood Chain mainnet. Everything in this repository also runs end to end on a local fork of mainnet, and [Run it locally](#run-it-locally) starts one.
 
+The [pitch deck](docs/deck/vayle-pitch-deck.pdf) covers the problem, the product, what's live and the plan. Its source is [`docs/deck/vayle-pitch-deck.html`](docs/deck/vayle-pitch-deck.html).
+
 ## On mainnet
 
 Deployed at block 87,106,459, with NVDA, SPY and META listed. Every contract's source is verified on Sourcify, which the explorer reads.
@@ -22,7 +24,7 @@ Deployed at block 87,106,459, with NVDA, SPY and META listed. Every contract's s
 | TimelockController, 8 days 6 hours | [`0xB717B143a5B28D4B7f897AA34f533D46f485B1C1`](https://robinhoodchain.blockscout.com/address/0xB717B143a5B28D4B7f897AA34f533D46f485B1C1) |
 | Owner: a 2-of-3 Safe               | [`0x1D7bee7FDb39d5a3a319AA9975B590Dfa6a589E4`](https://robinhoodchain.blockscout.com/address/0x1D7bee7FDb39d5a3a319AA9975B590Dfa6a589E4) |
 
-[`deployments/vayle-robinhood-mainnet.json`](deployments/vayle-robinhood-mainnet.json) is the record every service and the app build from. The [fallback page](https://vayle-fallback.timjosh507.workers.dev) reaches the market through your own wallet, without the site.
+[`deployments/vayle-robinhood-mainnet.json`](deployments/vayle-robinhood-mainnet.json) is the record every service and the app build from. The [fallback page](https://vayle-fallback.timjosh507.workers.dev) reaches the market through your own wallet, without the site. [vayle.xyz/proof](https://vayle.xyz/proof) lists every mainnet transaction, read from the market's own events.
 
 ## What a holder does
 

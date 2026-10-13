@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vayle | Pitch deck</title>
+    <style>
+      @page {
+        size: 13.333in 7.5in;
+        margin: 0;
+      }
+      :root {
+        --ink: #080b18;
+        --blue: #253cef;
+        --muted: #5b6072;
+        --line: #dfe3ed;
+        --pale: #f5f7fc;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        background: #e8eaf0;
+        color: var(--ink);
+        font-family: Arial, Helvetica, sans-serif;
+      }
+      .slide {
+        width: 1280px;
+        height: 720px;
+        margin: 24px auto;
+        padding: 58px 76px 54px;
+        background: #fff;
+        position: relative;
+        overflow: hidden;
+        page-break-after: always;
+        break-after: page;
+      }
+      .slide:last-child {
+        page-break-after: auto;
+        break-after: auto;
+      }
+      .top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 35px;
+      }
+      .logo {
+        width: 132px;
+        height: auto;
+        display: block;
+      }
+      .kicker {
+        color: var(--blue);
+        font-size: 16px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      .num {
+        position: absolute;
+        right: 76px;
+        bottom: 40px;
+        color: #9299aa;
+        font-size: 16px;
+      }
+      .foot {
+        position: absolute;
+        left: 76px;
+        bottom: 38px;
+        color: #7b8291;
+        font-size: 15px;
+      }
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+      h1 {
+        font-size: 82px;
+        line-height: 1.03;
+        letter-spacing: -0.055em;
+        max-width: 1020px;
+      }
+      h2 {
+        font-size: 58px;
+        line-height: 1.07;
+        letter-spacing: -0.045em;
+        max-width: 1040px;
+      }
+      .lead {
+        color: var(--muted);
+        font-size: 27px;
+        line-height: 1.34;
+        max-width: 850px;
+      }
+      .body {
+        font-size: 26px;
+        line-height: 1.38;
+        max-width: 950px;
+      }
+      .small {
+        font-size: 19px;
+        line-height: 1.38;
+        color: var(--muted);
+      }
+      .blue {
+        color: var(--blue);
+      }
+      .hero {
+        padding-top: 111px;
+      }
+      .hero h1 {
+        margin-top: 27px;
+      }
+      .hero .lead {
+        margin-top: 28px;
+      }
+      .hero .url {
+        position: absolute;
+        left: 76px;
+        bottom: 79px;
+        color: var(--blue);
+        font-size: 23px;
+        font-weight: 700;
+      }
+      .hero::after {
+        content: "";
+        width: 250px;
+        height: 250px;
+        border: 65px solid var(--blue);
+        border-radius: 50%;
+        position: absolute;
+        right: -80px;
+        bottom: -105px;
+        opacity: 0.95;
+      }
+      .section {
+        margin-top: 63px;
+      }
+      .section h2 {
+        margin-bottom: 29px;
+      }
+      .two {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 65px;
+      }
+      .rule {
+        border-top: 1px solid var(--line);
+      }
+      .big-number {
+        font-size: 210px;
+        line-height: 1;
+        letter-spacing: -0.08em;
+        color: var(--blue);
+        font-weight: 800;
+      }
+      .problem .big-number {
+        position: absolute;
+        right: 90px;
+        bottom: 124px;
+      }
+      .problem .body {
+        max-width: 590px;
+        margin-top: 54px;
+      }
+      .problem .small {
+        position: absolute;
+        right: 103px;
+        bottom: 102px;
+      }
+      .statement {
+        font-size: 45px;
+        line-height: 1.22;
+        letter-spacing: -0.035em;
+        max-width: 970px;
+      }
+      .quote {
+        margin-top: 65px;
+        padding-left: 35px;
+        border-left: 8px solid var(--blue);
+      }
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 42px;
+        margin-top: 65px;
+      }
+      .step {
+        border-top: 3px solid var(--blue);
+        padding-top: 22px;
+      }
+      .step .index {
+        color: var(--blue);
+        font-size: 22px;
+        font-weight: 800;
+      }
+      .step h3 {
+        margin: 24px 0 12px;
+        font-size: 35px;
+        letter-spacing: -0.035em;
+      }
+      .step p {
+        color: var(--muted);
+        font-size: 22px;
+        line-height: 1.37;
+      }
+      .outcomes {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 34px;
+        margin-top: 67px;
+      }
+      .outcome {
+        border-top: 1px solid var(--line);
+        padding-top: 22px;
+      }
+      .outcome strong {
+        font-size: 41px;
+        letter-spacing: -0.035em;
+      }
+      .outcome p {
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: 21px;
+        line-height: 1.35;
+      }
+      .note {
+        position: absolute;
+        left: 76px;
+        bottom: 76px;
+        font-size: 18px;
+        color: var(--muted);
+        max-width: 1000px;
+      }
+      .who {
+        margin-top: 64px;
+        align-items: start;
+      }
+      .who .label {
+        color: var(--blue);
+        font-size: 19px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 19px;
+      }
+      .who .statement {
+        font-size: 37px;
+      }
+      .who .small {
+        margin-top: 24px;
+        max-width: 485px;
+      }
+      .screenshot {
+        position: absolute;
+        left: 76px;
+        top: 218px;
+        width: 1128px;
+        height: 384px;
+        border: 1px solid #d9deea;
+        object-fit: cover;
+        object-position: top center;
+        box-shadow: 0 14px 40px rgba(19, 33, 79, 0.11);
+      }
+      .screen-label {
+        position: absolute;
+        left: 76px;
+        bottom: 67px;
+        color: var(--muted);
+        font-size: 18px;
+      }
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 28px;
+        margin-top: 76px;
+      }
+      .metric {
+        border-top: 3px solid var(--blue);
+        padding-top: 22px;
+      }
+      .metric strong {
+        display: block;
+        color: var(--blue);
+        font-size: 53px;
+        line-height: 1.03;
+        letter-spacing: -0.05em;
+      }
+      .metric:nth-child(3) strong {
+        font-size: 43px;
+      }
+      .metric span {
+        display: block;
+        margin-top: 15px;
+        color: var(--muted);
+        font-size: 20px;
+        line-height: 1.3;
+      }
+      .proof-note {
+        margin-top: 57px;
+        font-size: 22px;
+        line-height: 1.38;
+        max-width: 1000px;
+      }
+      .rows {
+        margin-top: 51px;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 255px 1fr;
+        gap: 30px;
+        border-top: 1px solid var(--line);
+        padding: 24px 0;
+      }
+      .row strong {
+        font-size: 27px;
+      }
+      .row span {
+        font-size: 23px;
+        line-height: 1.34;
+        color: var(--muted);
+      }
+      .plan {
+        margin-top: 55px;
+      }
+      .plan .step {
+        border-top: 1px solid var(--line);
+        padding-top: 18px;
+      }
+      .plan .step h3 {
+        font-size: 30px;
+        margin-top: 15px;
+      }
+      .plan .step p {
+        font-size: 21px;
+      }
+      .economics {
+        margin-top: 53px;
+        padding-top: 29px;
+        border-top: 3px solid var(--blue);
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 65px;
+      }
+      .economics strong {
+        display: block;
+        font-size: 32px;
+        margin-bottom: 12px;
+      }
+      .economics p {
+        font-size: 22px;
+        line-height: 1.35;
+        color: var(--muted);
+      }
+      .close {
+        padding-top: 95px;
+      }
+      .close h2 {
+        font-size: 75px;
+      }
+      .close .lead {
+        margin-top: 29px;
+      }
+      .links {
+        position: absolute;
+        left: 76px;
+        bottom: 111px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        color: var(--blue);
+        font-size: 24px;
+        font-weight: 700;
+      }
+      .sources {
+        font-size: 17px;
+        line-height: 1.44;
+        margin-top: 44px;
+        color: var(--muted);
+      }
+      .sources p {
+        margin-bottom: 10px;
+      }
+      @media print {
+        html,
+        body {
+          background: white;
+        }
+        .slide {
+          margin: 0;
+          box-shadow: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <section class="slide hero">
+      <img class="logo" src="assets/vayle-lockup-horizontal.svg" alt="Vayle" />
+      <h1>Your sell price should do more than wait.</h1>
+      <p class="lead">
+        Vayle turns a price target for a Stock Token into a chance to earn a weekly payment.
+      </p>
+      <div class="url">vayle.xyz</div>
+      <div class="num">01</div>
+    </section>
+
+    <section class="slide problem">
+      <div class="top">
+        <img class="logo" src="assets/vayle-lockup-horizontal.svg" alt="Vayle" /><span
+          class="kicker"
+          >The problem</span
+        >
+      </div>
+      <div class="section">
+        <h2>Waiting for your price pays nothing.</h2>
+        <p class="body">
+          You own a token tied to a stock. You know the price where you would sell. A normal limit
+          order waits for that price, but gives you nothing while it waits.
+        </p>
+      </div>
+      <div class="big-number">$0</div>
+      <div class="small">Earned by a waiting limit order</div>
+      <div class="num">02</div>
+    </section>
+
+    <section class="slide">
+      <div class="top">
+        <img class="logo" src="assets/vayle-lockup-horizontal.svg" alt="Vayle" /><span
+          class="kicker"
+          >The idea</span
+        >
+      </div>
+      <div class="section">
+        <h2>Put your price to work.</h2>
+        <div class="quote">
+          <p class="statement">
+            Set the price where you would sell. A buyer can pay you for the right to buy at that
+            price this week.
+          </p>
+        </div>
+      </div>
+      <p class="note">You keep the token unless the buyer uses that right after the week closes.</p>
+      <div class="num">03</div>
+    </section>
+
+    <section class="slide">
+      <div class="top">
+        <img class="logo" src="assets/vayle-lockup-horizontal.svg" alt="Vayle" /><span
+          class="kicker"
+          >How it works</span
+        >
+      </div>
+      <div class="section">
+        <h2>Three steps. One week.</h2>
+        <div class="steps">
+          <div class="step">
+            <div class="index">01</div>
+            <h3>Pick a price</h3>
+            <p>Choose the token, amount, and price where you would sell.</p>
+          </div>
+          <div class="step">
+            <div class="index">02</div>
+            <h3>Get an offer</h3>
+            <p>If a buyer takes your target, you receive a payment up front.</p>
+          </div>
+          <div class="step">
+            <div class="index">03</div>
+            <h3>Settle at close</h3>
+            <p>After the week ends, the buyer may buy your tokens at your price.</p>
+          </div>
+        </div>
+      </div>
+      <p class="note">
+        No offer means no payment. Vayle also supports targets for buying with USDG.
+      </p>
+      <div class="num">04</div>
+    </section>
+
+    <section class="slide">
+      <div class="top">
+        <img class="logo" src="assets/vayle-lockup-horizontal.svg" alt="Vayle" /><span
+          class="kicker"
+          >What you see</span
+        >
+      </div>
+      <div class="section">
+        <h2>Every target has a clear result.</h2>
+        <div class="outcomes">
+          <div class="outcome">
+            <strong>Paid</strong>
+            <p>A buyer takes the target. You receive the weekly payment.</p>
+          </div>
+          <div class="outcome">
+            <strong>Skipped</strong>
+            <p>No buyer takes it. No payment, and your target carries over to next week.</p>
+          </div>
+          <div class="outcome">
+            <strong>Filled</strong>
+            <p>The buyer acts after the close. Your tokens sell at your chosen price.</p>
+          </div>
+        </div>
+      </div>
+      <p class="note">The payment is for giving the buyer a choice. It is not a promised yield.</p>
+      <div class="num">05</div>
+    </section>
+
+    <section class="slide">
+      <div class="top">
+        <img class="logo" src="assets/vayle-lockup-horizontal.svg" alt="Vayle" /><span
+          class="kicker"
+          >Who it is for</span
+        >
+      </div>
+      <div class="section">
+        <h2>Built for people who already have a price in mind.</h2>
+        <div class="two who">
+          <div>
+            <div class="label">First user</div>
+            <p class="statement">A Stock Token holder who would sell at a chosen price.</p>
+            <p class="small">
+              They want a simple way to set that price and see if a buyer will pay for the week.
+            </p>
+          </div>
+          <div>
+            <div class="label">Also supported</div>
+            <p class="statement">A USDG holder who wants to buy at a chosen price.</p>
+            <p class="small">
+              They can set a buy target and wait for a buyer to take the other side.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="num">06</div>
+    </section>
+
+    <section class="slide">
+      <div class="top">
+        <img class="logo" src="assets/vayle-lockup-horizontal.svg" alt="Vayle" /><span
+          class="kicker"
+          >The product</span
+        >
+      </div>
+      <div class="section"><h2>Choose a market. Set your target.</h2></div>
+      <img
+        class="screenshot"
+        src="assets/trade-nvda.png"
+        alt="Vayle live trading screen for NVDA"
+      />
+      <div class="screen-label">Live app capture · vayle.xyz/app · October 2026</div>
+      <div class="num">07</div>
+    </section>
+
+    <section class="slide">
+      <div class="top">
+        <img class="logo" src="assets/vayle-lockup-horizontal.svg" alt="Vayle" /><span
+          class="kicker"
+          >Proof at launch</span
+        >
+      </div>
+      <div class="section">
+        <h2>Live on chain. Small by design.</h2>
+        <div class="metrics">
+          <div class="metric"><strong>3</strong><span>Markets listed: NVDA, SPY, META</span></div>
+          <div class="metric"><strong>1</strong><span>Team test target</span></div>
+          <div class="metric">
+            <strong>0.024372</strong><span>USDG paid to the team test target</span>
+          </div>
+          <div class="metric"><strong>0</strong><span>Outside holders so far</span></div>
+        </div>
+        <p class="proof-note">
+          The first target used the team's own wallet. No token delivery had happened when these
+          launch figures were recorded.
+        </p>
+      </div>
+      <p class="note">Source: vayle.xyz/proof and the public project repo, October 12, 2026.</p>
+      <div class="num">08</div>
+    </section>
+
+    <section class="slide">
+      <div class="top">
+        <img class="logo" src="assets/vayle-lockup-horizontal.svg" alt="Vayle" /><span
+          class="kicker"
+          >Technical strength</span
+        >
+      </div>
+      <div class="section">
+        <h2>Real assets back each target.</h2>
+        <div class="rows">
+          <div class="row">
+            <strong>Assets are held</strong
+            ><span
+              >The seller's tokens, or the buyer's USDG, are locked before a target can go
+              live.</span
+            >
+          </div>
+          <div class="row">
+            <strong>Tokens move</strong
+            ><span>If the buyer acts, Vayle settles with the actual Stock Token and USDG.</span>
+          </div>
+          <div class="row">
+            <strong>There is a backup</strong
+            ><span
+              >Anyone can use the public fallback path if the normal app or team service
+              fails.</span
+            >
+          </div>
+        </div>
+      </div>
+      <p class="note">The contracts have automated tests; they have not had an outside audit.</p>
+      <div class="num">09</div>
+    </section>
+
+    <section class="slide">
+      <div class="top">
+        <img class="logo" src="assets/vayle-lockup-horizontal.svg" alt="Vayle" /><span
+          class="kicker"
+          >Go to market</span
+        >
+      </div>
+      <div class="section">
+        <h2>Earn trust one market at a time.</h2>
+        <div class="steps plan">
+          <div class="step">
+            <div class="index">NOW</div>
+            <h3>Prove the flow</h3>
+            <p>Show real targets, payments, and outcomes in public.</p>
+          </div>
+          <div class="step">
+            <div class="index">NEXT</div>
+            <h3>Find first users</h3>
+            <p>Reach Stock Token holders in Robinhood Chain communities.</p>
+          </div>
+          <div class="step">
+            <div class="index">THEN</div>
+            <h3>Grow with care</h3>
+            <p>Fund more offers, get an outside review, then add markets.</p>
+          </div>
+        </div>
+      </div>
+      <p class="note">These are plans, not reported user growth.</p>
+      <div class="num">10</div>
+    </section>
+
+    <section class="slide">
+      <div class="top">
+        <img class="logo" src="assets/vayle-lockup-horizontal.svg" alt="Vayle" /><span
+          class="kicker"
+          >Business model</span
+        >
+      </div>
+      <div class="section">
+        <h2>Make money when a target gets paid.</h2>
+        <div class="economics">
+          <div>
+            <strong>Today: no platform fee</strong>
+            <p>We keep the fee at zero while we test demand and the user experience.</p>
+          </div>
+          <div>
+            <strong>Later: a small maker fee</strong>
+            <p>
+              The buyer who pays for a target could pay a fee of up to 5% of that payment. Raising
+              it requires a time delay.
+            </p>
+          </div>
+        </div>
+        <p class="body" style="margin-top: 55px; max-width: 950px">
+          The team currently supplies the buying side. We need more capital and more buyers before
+          this can serve many users.
+        </p>
+      </div>
+      <div class="num">11</div>
+    </section>
+
+    <section class="slide close">
+      <div class="top">
+        <img class="logo" src="assets/vayle-lockup-horizontal.svg" alt="Vayle" /><span
+          class="kicker"
+          >What comes next</span
+        >
+      </div>
+      <div class="section">
+        <h2>A working pilot.<br /><span class="blue">Now earn trust.</span></h2>
+        <p class="lead">
+          Our next proof is simple: an outside holder uses Vayle, understands the trade, and can
+          verify the result.
+        </p>
+      </div>
+      <div class="links">
+        <span>Try it: vayle.xyz/app</span><span>Verify it: vayle.xyz/proof</span
+        ><span>Read the code: github.com/winsznx/vayle</span>
+      </div>
+      <div class="num">12</div>
+    </section>
+  </body>
+</html>
