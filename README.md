@@ -111,7 +111,7 @@ Fork tests run against real mainnet state and need `ROBINHOOD_RPC_URL`. CI runs 
 
 ## Deploying
 
-[DEPLOY.md](DEPLOY.md) is the runbook: the chain facts check, the contracts, the Workers, the database and the site.
+[DEPLOY.md](DEPLOY.md) is the runbook: the chain facts check, the contracts, the Workers, the server, the database and the site.
 
 ## Security
 

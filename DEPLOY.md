@@ -206,7 +206,7 @@ The project should then have three tables, each with row level security on and n
 
 ## 11. Deploy the Workers
 
-The keeper, the maker, the watcher and the indexer are Cloudflare Workers, each run by a cron every minute (`crons = ["* * * * *"]` in its `wrangler.toml`). They need Cloudflare's Workers paid plan, because a run makes more subrequests and uses more CPU time than the free plan allows, as [Cloudflare's limits page](https://developers.cloudflare.com/workers/platform/limits/) sets them out. [services/README.md](services/README.md) says what each one does.
+The keeper and the maker are Cloudflare Workers, each run by a cron every minute (`crons = ["* * * * *"]` in its `wrangler.toml`). The watcher and the indexer can run the same way, or on a server, as [the server](#the-server) below sets out. Mainnet runs them on a server, because from Cloudflare's shared addresses the chain's public RPC refuses most requests, and the indexer's API stays a Worker. The Workers need Cloudflare's Workers paid plan, because a run makes more subrequests and uses more CPU time than the free plan allows, as [Cloudflare's limits page](https://developers.cloudflare.com/workers/platform/limits/) sets them out. [services/README.md](services/README.md) says what each one does.
 
 The wrangler commands use the version the repo pins in `apps/web`, run from the repo root and pointed at a service with `--cwd`:
 
@@ -224,7 +224,7 @@ Deploy a Worker first, then put its secrets. Until they're in, each run stops at
 
 ### Watcher
 
-Secrets: `ROBINHOOD_RPC_URL`, `WATCHER_WEBHOOK_URL` for where alerts are posted, `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. Vars, all five or none, or the run stops at `MarketConfigIncomplete`:
+Secrets: `ROBINHOOD_RPC_URL`, where alerts go, which is `WATCHER_TELEGRAM_BOT_TOKEN` and `WATCHER_TELEGRAM_CHAT_ID` for a Telegram chat or else `WATCHER_WEBHOOK_URL`, and `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. Vars, all five or none, or the run stops at `MarketConfigIncomplete`:
 
 ```toml
 [vars]
@@ -235,7 +235,7 @@ VAYLE_REGISTRY = "<registry from the address file>"
 VAYLE_START_BLOCK = "<block from the address file>"
 ```
 
-Without the vars it watches each market's token and feed and USDG only, so it can go up before step 8, and the vars can follow the deploy. Once it runs, `watcher_state` has one row whose `cursor_block` moves forward every minute. `WATCHER_WEBHOOK_URL` can be a Discord webhook, which gets Discord's own payload.
+Without the vars it watches each market's token and feed and USDG only, so it can go up before step 8, and the vars can follow the deploy. Once it runs, `watcher_state` has one row whose `cursor_block` moves forward every minute. `WATCHER_WEBHOOK_URL` can be a Discord webhook, which gets Discord's own payload. For Telegram, make a bot with @BotFather, send it a message from the chat that should get the alerts, and read the chat's id from `https://api.telegram.org/bot<token>/getUpdates`. Setting only one of the two Telegram values stops the run with `MissingSetting`.
 
 ### Keeper
 
@@ -278,7 +278,32 @@ It can run on a server as a Node process instead, with the same settings in that
 node --env-file=.env services/indexer/src/node.ts
 ```
 
-Run one or the other. `curl <indexer URL>/v1/run` should return JSON whose `source.toBlock` grows from one minute to the next.
+Only one of them should index. On mainnet the server indexes and the Worker only serves the API: `services/indexer/wrangler.toml` sets `crons = []`, and the Worker reads what the server wrote to Supabase. `curl <indexer URL>/v1/run` should return JSON whose `source.toBlock` grows from one minute to the next.
+
+### The server
+
+[infra/server](infra/server) runs the watcher, the indexer and an RPC relay as three containers from one image, with Docker Compose. The relay sends each request on to the chain's public RPC with curl, which its Cloudflare front lets through, a few at a time, retrying refusals, and the other two read through it. On a machine with Docker and the repo checked out, put the settings in `infra/server/.env`, which git ignores:
+
+```sh
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+WATCHER_TELEGRAM_BOT_TOKEN=
+WATCHER_TELEGRAM_CHAT_ID=
+VAYLE_MARKET=
+VAYLE_LIVENESS=
+VAYLE_CALENDAR=
+VAYLE_REGISTRY=
+VAYLE_START_BLOCK=
+```
+
+The `VAYLE_*` values come from the address file, and `compose.yaml` points both services' `ROBINHOOD_RPC_URL` at the relay. Then build and start them, and follow their logs:
+
+```sh
+docker compose -f infra/server/compose.yaml up -d --build
+docker compose -f infra/server/compose.yaml logs -f indexer watcher
+```
+
+The indexer logs `indexed through block <n>` after each pass, and the watcher logs `watched through block <n>, <k> alerts` every minute. To start some of them, name them after `up -d`, such as `relay indexer` while the watcher waits for its chat id. Both retry a failed pass on the next minute, and Compose restarts a container that exits.
 
 ## 12. Open the site
 
@@ -366,7 +391,7 @@ What the owner provides:
 - [ ] The keeper key and the maker key, `KEEPER_KEY` and `MAKER_KEY`, with the maker's address as `TEAM_MAKER`.
 - [ ] The maker's USDG and each market's token, and its pricing inputs.
 - [ ] A Supabase project: its Postgres connection string, `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
-- [ ] A webhook for the watcher's alerts, `WATCHER_WEBHOOK_URL`.
+- [ ] Where the watcher's alerts go: a Telegram bot and chat, `WATCHER_TELEGRAM_BOT_TOKEN` and `WATCHER_TELEGRAM_CHAT_ID`, or a webhook, `WATCHER_WEBHOOK_URL`.
 - [ ] A Cloudflare account on the Workers paid plan, with vayle.xyz as a zone in it.
-- [ ] A server for the indexer, if it doesn't run as a Worker, and a WalletConnect project ID, if phone wallets should connect.
+- [ ] A server with Docker for the watcher, the indexer and the RPC relay, unless they run as Workers, and a WalletConnect project ID, if phone wallets should connect.
 - [ ] Before new orders open: the disclosures at `/disclosures.json`, and the restricted countries and regions.

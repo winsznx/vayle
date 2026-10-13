@@ -1,6 +1,6 @@
 # Watcher
 
-A Cloudflare Worker that checks the chain every minute and posts an alert when something needs a person: an issuer pauses a market's token, its access registry or USDG, a token's oracle pauses, a corporate action is pending, a feed goes quiet in the trading week, the keeper goes silent near a close, a week's epoch hasn't opened, a market's listing or caps aren't the markets file's, the session calendar is running out, or the owner or the guardian acts on the market, its calendar or its listing. It never sends transactions and holds no key.
+Checks the chain every minute and posts an alert when something needs a person: an issuer pauses a market's token, its access registry or USDG, a token's oracle pauses, a corporate action is pending, a feed goes quiet in the trading week, the keeper goes silent near a close, a week's epoch hasn't opened, a market's listing or caps aren't the markets file's, the session calendar is running out, or the owner or the guardian acts on the market, its calendar or its listing. It never sends transactions and holds no key. It runs as a Cloudflare Worker, or as a Node process on a server with `node --env-file=.env src/node.ts`, which [infra/server](../../infra/server) runs in a container.
 
 It watches every market in `deployments/markets.json`, and its rules run for each one.
 
@@ -41,10 +41,11 @@ A condition alerts once when it starts, again if it escalates from warn to page,
 
 ## Where alerts go
 
-Every run's alerts go to `WATCHER_WEBHOOK_URL` in one POST, pages first, one line each.
+Every run's alerts go out together, pages first, one line each, to a Telegram chat or to a webhook.
 
-- A Discord webhook, a URL on `discord.com` or `discordapp.com` whose path starts with `/api/webhooks/`, gets Discord's shape: `{ "content": "<the lines>" }`. Discord takes at most 2,000 characters, so the lines are kept whole while they fit and the rest are counted in a last line, `…and N more` (`DISCORD_LIMIT` in `src/sink.ts`).
-- Any other URL gets `{ "text": "<the lines>", "alerts": [...] }`, where `alerts` lists each alert's key, severity and text.
+- With `WATCHER_TELEGRAM_BOT_TOKEN` and `WATCHER_TELEGRAM_CHAT_ID` both set, a bot sends the lines to that chat as plain text through Telegram's `sendMessage`. Telegram takes at most 4,096 characters, so the lines are kept whole while they fit and the rest are counted in a last line (`TELEGRAM_LIMIT` in `src/sink.ts`). One without the other stops the run with `MissingSetting` rather than falling back to the webhook.
+- Otherwise they go to `WATCHER_WEBHOOK_URL` in one POST. A Discord webhook, a URL on `discord.com` or `discordapp.com` whose path starts with `/api/webhooks/`, gets Discord's shape: `{ "content": "<the lines>" }`. Discord takes at most 2,000 characters, so the lines are kept whole while they fit and the rest are counted in a last line, `…and N more` (`DISCORD_LIMIT` in `src/sink.ts`).
+  Any other URL gets `{ "text": "<the lines>", "alerts": [...] }`, where `alerts` lists each alert's key, severity and text.
 
 ## How it reads
 
@@ -54,13 +55,14 @@ A read a market's own token, feed or access registry refuses is pinned on that m
 
 ## Configuration
 
-Secrets, set with `wrangler secret put`:
+Secrets, set with `wrangler secret put` for the Worker or in `.env` on a server:
 
-- `ROBINHOOD_RPC_URL`: the private Robinhood Chain RPC the other services use.
-- `WATCHER_WEBHOOK_URL`: where alerts are posted, a Discord webhook or any URL that takes the JSON above.
+- `ROBINHOOD_RPC_URL`: a Robinhood Chain RPC. On the server it's the relay container, which sends requests on to the chain's public RPC.
+- `WATCHER_TELEGRAM_BOT_TOKEN` and `WATCHER_TELEGRAM_CHAT_ID`: the bot that posts the alerts and the chat it posts them to. A chat's id shows up in the bot's `getUpdates` once someone sends the bot a message there.
+- `WATCHER_WEBHOOK_URL`: where alerts are posted when the Telegram settings are absent, a Discord webhook or any URL that takes the JSON above.
 - `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`: the project holding the `watcher_state` table from `supabase/migrations`, one row with the log cursor, the conditions alerting and the count of failed runs.
 
-Vars, set once the contracts are deployed, all together or not at all: `VAYLE_MARKET`, `VAYLE_LIVENESS`, `VAYLE_CALENDAR`, `VAYLE_REGISTRY` and `VAYLE_START_BLOCK`. Some but not all stops the run with `MarketConfigIncomplete`. Without them the watcher covers each market's token, access registry and feed, and USDG, only. The markets come from `deployments/markets.json`, and USDG and the explorer from `deployments/robinhood-mainnet.json`, both built into the Worker.
+Vars, set once the contracts are deployed, all together or not at all: `VAYLE_MARKET`, `VAYLE_LIVENESS`, `VAYLE_CALENDAR`, `VAYLE_REGISTRY` and `VAYLE_START_BLOCK`. Some but not all stops the run with `MarketConfigIncomplete`. Without them the watcher covers each market's token, access registry and feed, and USDG, only. The markets come from `deployments/markets.json`, and USDG and the explorer from `deployments/robinhood-mainnet.json`, both read from the repo.
 
 ## Development
 

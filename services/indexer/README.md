@@ -2,6 +2,8 @@
 
 A Cloudflare Worker that copies every event the market emits into Supabase and serves them back as a read-only API. The app reads balances, orders and claims straight from the chain, so nothing a holder does depends on this service. It adds history: what an order has earned, how many weeks it filled, and how many weeks in a row it hasn't.
 
+On mainnet the indexing passes run on a server, from [infra/server](../../infra/server), where the chain's public RPC answers, and the Worker has no cron and only serves the API.
+
 ## API
 
 All responses are JSON, with a `source` block naming the chain, the market and the last block indexed.
