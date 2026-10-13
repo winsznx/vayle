@@ -3,7 +3,8 @@
 // The relay sends each request with curl, at most a few at a time, and tries a challenge or a rate
 // refusal again, so a fork test or a deploy script can read through it:
 //   node tools/rpc-relay/src/relay.ts          then point forge at http://127.0.0.1:8547
-// The upstream is ROBINHOOD_RPC_URL. RELAY_PORT changes the port.
+// The upstream is RELAY_UPSTREAM, or else ROBINHOOD_RPC_URL. RELAY_PORT and RELAY_HOST change where it
+// listens.
 import { execFile } from "node:child_process";
 import { createServer } from "node:http";
 
@@ -11,11 +12,15 @@ class MissingUpstream extends Error {
   override readonly name = "MissingUpstream";
 }
 
-const upstream = process.env["ROBINHOOD_RPC_URL"];
+// In a container the relay's own ROBINHOOD_RPC_URL is the upstream, while the services beside it
+// point theirs at the relay, so RELAY_UPSTREAM wins when it's set.
+const upstream = process.env["RELAY_UPSTREAM"] ?? process.env["ROBINHOOD_RPC_URL"];
 if (upstream === undefined || upstream === "" || upstream.startsWith("http://127.0.0.1")) {
   throw new MissingUpstream("set ROBINHOOD_RPC_URL to the RPC to relay to");
 }
 const port = Number(process.env["RELAY_PORT"] ?? "8547");
+// 127.0.0.1 on a laptop or CI runner, 0.0.0.0 inside a container so the services next to it reach it.
+const host = process.env["RELAY_HOST"] ?? "127.0.0.1";
 const IN_FLIGHT = 4;
 const ATTEMPTS = 8;
 
@@ -107,6 +112,6 @@ createServer((request, response) => {
       }
     })();
   });
-}).listen(port, "127.0.0.1", () => {
-  console.log(`relaying http://127.0.0.1:${String(port)} to the RPC in ROBINHOOD_RPC_URL`);
+}).listen(port, host, () => {
+  console.log(`relaying ${host}:${String(port)} to the upstream RPC`);
 });

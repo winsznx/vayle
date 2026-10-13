@@ -1,0 +1,38 @@
+# Runs on the server from a checkout of the repo: docker compose -f infra/server/compose.yaml up -d
+# Settings and secrets come from infra/server/.env, which git ignores (DEPLOY.md lists them).
+name: vayle
+
+x-service: &service
+  build:
+    context: ../..
+    dockerfile: infra/server/Dockerfile
+  image: vayle-server
+  restart: unless-stopped
+  env_file: .env
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
+
+services:
+  # Sends the others' RPC requests to the chain's public RPC with curl, which its Cloudflare front
+  # lets through, a few at a time, retrying refusals.
+  relay:
+    <<: *service
+    command: ["node", "tools/rpc-relay/src/relay.ts"]
+    environment:
+      RELAY_HOST: 0.0.0.0
+      RELAY_UPSTREAM: https://rpc.mainnet.chain.robinhood.com
+
+  indexer:
+    <<: *service
+    command: ["node", "services/indexer/src/node.ts"]
+    environment:
+      ROBINHOOD_RPC_URL: http://relay:8547
+    depends_on: [relay]
+
+  watcher:
+    <<: *service
+    command: ["node", "services/watcher/src/node.ts"]
+    environment:
+      ROBINHOOD_RPC_URL: http://relay:8547
+    depends_on: [relay]
