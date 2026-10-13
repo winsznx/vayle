@@ -7,6 +7,8 @@ import {
   discordContent,
   isDiscordWebhook,
   postAlerts,
+  TELEGRAM_LIMIT,
+  telegramBody,
   webhookBody,
 } from "../src/sink.ts";
 
@@ -125,12 +127,50 @@ describe("postAlerts", () => {
       return Promise.resolve(new Response(null, { status: 204 }));
     };
     // #when
-    await postAlerts(DISCORD, many(30), fetchFn);
+    await postAlerts({ kind: "webhook", url: DISCORD }, many(30), fetchFn);
     // #then
     const [body] = bodies as [{ content: string }];
     assert.deepEqual(
       [Object.keys(body), body.content.length <= DISCORD_LIMIT],
       [["content"], true],
     );
+  });
+});
+
+describe("Telegram alerts", () => {
+  it("sends the alert lines, pages first, as plain text to the chat", () => {
+    // #when
+    const body = telegramBody("-100123", ALERTS);
+    // #then
+    assert.deepEqual(body, {
+      chat_id: "-100123",
+      text: "[PAGE] halted\n[WARN] runway\n[info] listed",
+      disable_web_page_preview: true,
+    });
+  });
+
+  it("keeps a long batch under Telegram's limit", () => {
+    // #when
+    const body = telegramBody("1", many(80));
+    // #then
+    assert.ok(body.text.length <= TELEGRAM_LIMIT);
+  });
+
+  it("posts to the bot's sendMessage and names Telegram, not the URL, when refused", async () => {
+    // #given
+    const urls: string[] = [];
+    const fetchFn = (url: string): Promise<Response> => {
+      urls.push(url);
+      return Promise.resolve(new Response(null, { status: 401 }));
+    };
+    // #when
+    const attempt = postAlerts(
+      { kind: "telegram", botToken: "123:abc", chatId: "1" },
+      ALERTS,
+      fetchFn,
+    );
+    // #then
+    await assert.rejects(attempt, (error: Error) => error.message === "Telegram answered HTTP 401");
+    assert.deepEqual(urls, ["https://api.telegram.org/bot123:abc/sendMessage"]);
   });
 });

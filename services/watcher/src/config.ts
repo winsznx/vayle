@@ -20,9 +20,14 @@ export interface StoreConfig {
   readonly serviceKey: string;
 }
 
+// Where alerts go: a Telegram chat through a bot, or a webhook, which can be a Discord one.
+export type AlertDestination =
+  | { readonly kind: "telegram"; readonly botToken: string; readonly chatId: string }
+  | { readonly kind: "webhook"; readonly url: string };
+
 export interface WatcherConfig {
   readonly rpcUrl: string;
-  readonly webhookUrl: string;
+  readonly alerts: AlertDestination;
   readonly store: StoreConfig;
   // USDG, from the chain facts. Each token names its own access registry.
   readonly usdg: Address;
@@ -67,10 +72,25 @@ function marketAddresses(env: Env): MarketAddresses | null {
   };
 }
 
+// A Telegram bot token and chat together, or else a webhook. Half a Telegram setting is a mistake,
+// not a reason to fall back to the webhook.
+function alertDestination(env: Env): AlertDestination {
+  const botToken = env["WATCHER_TELEGRAM_BOT_TOKEN"] ?? "";
+  const chatId = env["WATCHER_TELEGRAM_CHAT_ID"] ?? "";
+  if (botToken !== "" || chatId !== "") {
+    return {
+      kind: "telegram",
+      botToken: required(env, "WATCHER_TELEGRAM_BOT_TOKEN"),
+      chatId: required(env, "WATCHER_TELEGRAM_CHAT_ID"),
+    };
+  }
+  return { kind: "webhook", url: required(env, "WATCHER_WEBHOOK_URL") };
+}
+
 export function loadConfig(env: Env, markets: readonly Market[] = listed): WatcherConfig {
   return {
     rpcUrl: required(env, "ROBINHOOD_RPC_URL"),
-    webhookUrl: required(env, "WATCHER_WEBHOOK_URL"),
+    alerts: alertDestination(env),
     store: {
       url: required(env, "SUPABASE_URL"),
       serviceKey: required(env, "SUPABASE_SERVICE_ROLE_KEY"),

@@ -27,6 +27,25 @@ describe("loadConfig", () => {
     assert.throws(load, MissingSetting);
   });
 
+  it("sends alerts to Telegram when a bot token and chat are set", () => {
+    // #when
+    const config = loadConfig({
+      ...base,
+      WATCHER_WEBHOOK_URL: "",
+      WATCHER_TELEGRAM_BOT_TOKEN: "123:abc",
+      WATCHER_TELEGRAM_CHAT_ID: "-100123",
+    });
+    // #then
+    assert.deepEqual(config.alerts, { kind: "telegram", botToken: "123:abc", chatId: "-100123" });
+  });
+
+  it("refuses a Telegram bot token without a chat", () => {
+    // #when
+    const load = (): unknown => loadConfig({ ...base, WATCHER_TELEGRAM_BOT_TOKEN: "123:abc" });
+    // #then
+    assert.throws(load, MissingSetting);
+  });
+
   it("refuses a partial market configuration", () => {
     // #when
     const load = (): unknown =>

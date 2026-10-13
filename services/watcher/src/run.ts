@@ -55,7 +55,7 @@ async function watch(
   }
   const changes = transitions(state.active, conditions(snapshot), snapshot.now);
   const alerts: Alert[] = [...eventAlerts(events, EXPLORER), ...changes.alerts];
-  if (alerts.length > 0) await postAlerts(config.webhookUrl, alerts, deps.fetch);
+  if (alerts.length > 0) await postAlerts(config.alerts, alerts, deps.fetch);
   await saveState(config.store, { cursor, active: changes.active, failures: 0 }, deps.fetch);
   return { cursor, alerts: alerts.length };
 }
@@ -74,7 +74,7 @@ async function recordFailure(
     if (failures === FAILURES_BEFORE_PAGE) {
       const reason = errorText(error);
       await postAlerts(
-        config.webhookUrl,
+        config.alerts,
         [
           {
             key: "watcher-failing",
