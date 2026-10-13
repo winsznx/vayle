@@ -33,12 +33,12 @@ import { useAsset } from "../useAsset.ts";
 import { assetOf, type AssetView, type MarketView } from "../useMarket.ts";
 import { BID_WINDOW, bidOpensAt, hasBatch, ladder, referenceLabel, type Epoch } from "../week.ts";
 import "./market.css";
+import { FALLBACK_URL, REPO_URL } from "../../links.ts";
 
 // One market as the contracts report it: the week, the feed, what can stop it, its limits, the
 // calendar ahead and the addresses behind all of it. Every value is a chain read. The switcher at
 // the top picks the market.
 
-const REPO = "https://github.com/winsznx/vayle";
 const REFRESH_MS = 30_000;
 const CLOSES_SHOWN = 4;
 // Feed round IDs carry the aggregator phase in their top bits; the round itself is the low 64.
@@ -910,11 +910,11 @@ function ContractsCard({
         </ContractRow>
       </ul>
       <div className="mk-links">
-        <a className="btn btn-outline btn-sm" href={REPO}>
+        <a className="btn btn-outline btn-sm" href={REPO_URL}>
           <NavIcon d={EXTERNAL_ICON} />
           Source code
         </a>
-        <a className="btn btn-outline btn-sm" href={`${REPO}/tree/main/apps/fallback`}>
+        <a className="btn btn-outline btn-sm" href={FALLBACK_URL}>
           <NavIcon d={EXTERNAL_ICON} />
           Fallback page
         </a>

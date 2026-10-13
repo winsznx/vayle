@@ -2,8 +2,7 @@ import { NavLink } from "react-router";
 import { BrandMark } from "../../ui/BrandMark.tsx";
 import { EXTERNAL_ICON, NavIcon, SECTIONS } from "../shell/nav.tsx";
 import { useAsset } from "../useAsset.ts";
-
-const REPO = "https://github.com/winsznx/vayle";
+import { FALLBACK_URL } from "../../links.ts";
 
 export function Sidebar() {
   const { link } = useAsset();
@@ -24,7 +23,7 @@ export function Sidebar() {
             {s.label}
           </NavLink>
         ))}
-        <a className="sidebar-link" href={`${REPO}/tree/main/apps/fallback`}>
+        <a className="sidebar-link" href={FALLBACK_URL}>
           <NavIcon d={EXTERNAL_ICON} />
           Fallback page
         </a>

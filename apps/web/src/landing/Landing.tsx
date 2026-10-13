@@ -3,8 +3,7 @@ import { BrandMark } from "../ui/BrandMark.tsx";
 import { ThemeToggle } from "../ui/ThemeToggle.tsx";
 import { Hero } from "./Hero.tsx";
 import { Closing, Compare, HowItWorks, Risks, Safety, Statement, TheWeek } from "./Sections.tsx";
-
-const REPO = "https://github.com/winsznx/vayle";
+import { FALLBACK_URL, REPO_URL } from "../links.ts";
 
 // The bar turns solid once the page has scrolled, so it never sits on top of the hero's art.
 function useScrolled(): boolean {
@@ -66,12 +65,12 @@ function Footer() {
           <p className="footer-title">Safety</p>
           <a href="#safety">What holds it together</a>
           <a href="#risks">Risks</a>
-          <a href={`${REPO}/blob/main/SECURITY.md`}>Security</a>
+          <a href={`${REPO_URL}/blob/main/SECURITY.md`}>Security</a>
         </div>
         <div>
           <p className="footer-title">Build</p>
-          <a href={REPO}>Source code</a>
-          <a href={`${REPO}/tree/main/apps/fallback`}>Fallback page</a>
+          <a href={REPO_URL}>Source code</a>
+          <a href={FALLBACK_URL}>Fallback page</a>
         </div>
       </nav>
       <p className="footer-base muted">

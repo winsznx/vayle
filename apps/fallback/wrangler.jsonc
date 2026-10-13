@@ -1,0 +1,9 @@
+// The fallback page, served as a static file from a Worker of its own on workers.dev, apart from
+// the site, so holders can still reach the market through their own wallets when vayle.xyz is down.
+{
+  "name": "vayle-fallback",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "./dist" },
+  "workers_dev": true,
+  "preview_urls": false,
+}
