@@ -1,15 +1,20 @@
 // The site's own RPC endpoint. The browser reads the chain through /rpc, and the Worker forwards
-// each request to the private RPC whose URL, key included, is a Worker secret, so the key never
-// ships in the site's JavaScript. Only the read methods the app uses pass, only from the site's
-// own pages, and log queries only for the market and the feed.
+// each request to the RPC whose URL is a Worker secret, so no key ships in the site's JavaScript.
+// Only the read methods the app uses pass, only from the site's own pages, and log queries only for
+// the market and the feed.
 
 export interface RpcEnv {
-  // The private RPC's URL, set with `wrangler secret put RPC_URL`.
+  // The RPC's URL, set with `wrangler secret put RPC_URL`.
   readonly RPC_URL?: string;
+  // An RPC to try when the first refuses a request as too many, set with
+  // `wrangler secret put RPC_FALLBACK_URL`. The chain's public RPC refuses some requests from
+  // Cloudflare's shared addresses, so a metered RPC behind it answers only those. Optional.
+  readonly RPC_FALLBACK_URL?: string;
   // Addresses eth_getLogs may ask about, comma-separated.
   readonly RPC_LOG_ADDRESSES?: string;
-  // Counts each visitor's requests. Configured in wrangler.jsonc.
-  readonly RPC_LIMITER: RateLimit;
+  // Counts each visitor's requests. Configured in wrangler.jsonc. The part of Cloudflare's rate
+  // limit binding this uses, so the Worker's tests can stand one in.
+  readonly RPC_LIMITER: { limit(options: { key: string }): Promise<{ success: boolean }> };
 }
 
 const READ_METHODS = new Set([
@@ -138,11 +143,16 @@ export async function proxyRpc(request: Request, env: RpcEnv): Promise<Response>
       return json(batch ? [rpcError(r.id, -32601, reason)] : rpcError(r.id, -32601, reason), 400);
   }
 
-  const upstream = await fetch(env.RPC_URL, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: text,
-  });
+  const send = (url: string): Promise<Response> =>
+    fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: text });
+  let upstream = await send(env.RPC_URL);
+  if (
+    upstream.status === 429 &&
+    env.RPC_FALLBACK_URL !== undefined &&
+    env.RPC_FALLBACK_URL !== ""
+  ) {
+    upstream = await send(env.RPC_FALLBACK_URL);
+  }
   return new Response(upstream.body, {
     status: upstream.status,
     headers: { "content-type": "application/json", "cache-control": "no-store" },

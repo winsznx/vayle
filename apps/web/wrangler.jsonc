@@ -16,9 +16,9 @@
     "not_found_handling": "404-page",
   },
   "vars": {
-    // The only addresses /rpc answers eth_getLogs for: the market, set here after the deploy. The
-    // app reads no other contract's logs.
-    "RPC_LOG_ADDRESSES": "",
+    // The only addresses /rpc answers eth_getLogs for: the mainnet market, from
+    // deployments/vayle-robinhood-mainnet.json. The app reads no other contract's logs.
+    "RPC_LOG_ADDRESSES": "0x8d8f1E52848F9C2B04f091878D23DFed672bC78E",
     // Where the app doesn't offer new orders. Settling, stopping and withdrawing stay open
     // everywhere, and so does the fallback page. These are the places Stock Tokens themselves are
     // restricted, as the issuer's terms read on 2026-10-07: the United States and its territories,

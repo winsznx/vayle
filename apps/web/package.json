@@ -8,6 +8,7 @@
     "dev": "vite",
     "dev:fork": "vite --mode fork",
     "build": "vite build",
+    "build:mainnet": "vite build --mode mainnet",
     "typecheck": "tsc -p tsconfig.json && tsc -p worker/tsconfig.json",
     "test": "node --test \"test/*.test.ts\""
   },

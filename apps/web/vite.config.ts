@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv, type Plugin } from "vite";
@@ -52,10 +53,33 @@ function appRoutes(): Plugin {
 
 const page = (path: string): string => fileURLToPath(new URL(path, import.meta.url));
 
+// `vite build --mode mainnet`: the site as vayle.xyz serves it, pointed at the deployment in
+// deployments/vayle-robinhood-mainnet.json, reading the chain through the Worker's /rpc, rates from
+// the maker's bid sheet, and taking new targets. A setting already in the environment wins.
+const MAKER_URL = "https://vayle-maker.timjosh507.workers.dev";
+
+function mainnetSettings(): void {
+  const deployment = JSON.parse(
+    readFileSync(
+      new URL("../../deployments/vayle-robinhood-mainnet.json", import.meta.url),
+      "utf8",
+    ),
+  ) as { market: string; block: number };
+  const settings: Record<string, string> = {
+    VITE_RPC_URL: "/rpc",
+    VITE_MARKET: deployment.market,
+    VITE_MARKET_DEPLOY_BLOCK: String(deployment.block),
+    VITE_MAKER_URL: MAKER_URL,
+    VITE_PLACEMENT: "open",
+  };
+  for (const [name, value] of Object.entries(settings)) process.env[name] ??= value;
+}
+
 // Two pages: the landing at / and the holder app at /app/. Only the app loads viem and the wallet
 // libraries. In dev, /rpc forwards to the private RPC in the repo's .env, as the Worker does in
 // production, so its key never reaches the page.
 export default defineConfig(({ mode }) => {
+  if (mode === "mainnet") mainnetSettings();
   const repoEnv = loadEnv(mode, fileURLToPath(new URL("../..", import.meta.url)), "");
   return {
     plugins: [
