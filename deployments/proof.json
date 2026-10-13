@@ -1,0 +1,253 @@
+{
+  "generatedAt": "2026-10-13T01:51:23.021Z",
+  "chainId": 4663,
+  "toBlock": 87142212,
+  "toBlockTime": 1791856279,
+  "deployment": {
+    "block": 87106459,
+    "calendar": "0x6A6F108fE00e59c7C58c3Bac0b6cBF20f87014a6",
+    "chainId": 4663,
+    "liveness": "0x0F78aE8654C797D8a2a81F78f055041711eac91a",
+    "market": "0x8d8f1E52848F9C2B04f091878D23DFed672bC78E",
+    "priceAdapter": "0xdD45a6B8f8f0B71B50BEb56e0ad372bF7fA51671",
+    "registry": "0x3190A78bf4AB329eCBFdbc592c53d7A2E2ed69d8",
+    "timelock": "0xB717B143a5B28D4B7f897AA34f533D46f485B1C1"
+  },
+  "team": [
+    {
+      "address": "0x1D7bee7FDb39d5a3a319AA9975B590Dfa6a589E4",
+      "label": "Owner multisig (2-of-3 Safe)"
+    },
+    {
+      "address": "0x573a151fF8B65B454D1EfAd705f4F644838250Ab",
+      "label": "Multisig signer"
+    },
+    {
+      "address": "0x07179b91d47F8bfe65a05D38c015913341e5b74A",
+      "label": "Multisig signer"
+    },
+    {
+      "address": "0xa791626894f0c55Bdb6B7259b8edC6EcA9d0b629",
+      "label": "Multisig signer"
+    },
+    {
+      "address": "0x399e9FaD7975B13d67959e0E358d6ccd8Bf16642",
+      "label": "Guardian"
+    },
+    {
+      "address": "0x91fb3bde92B569102c044acc76A918bf477dbFe3",
+      "label": "Deployer"
+    },
+    {
+      "address": "0xa697B35Ab748341Fb70BD684956CFa3594692CF0",
+      "label": "Keeper"
+    },
+    {
+      "address": "0x5CF1B3A1041aD0cd66315a8915EB4BE03E7FaE10",
+      "label": "Team-operated maker"
+    },
+    {
+      "address": "0xC45716eD08999073fd60a00373fe63485555F1a8",
+      "label": "Team test wallet"
+    }
+  ],
+  "counts": {
+    "OwnershipTransferred": 1,
+    "GuardianSet": 1,
+    "FeeSet": 1,
+    "CapsSet": 6,
+    "TeamOperatedSet": 1,
+    "BatchBidderSet": 1,
+    "EpochCreated": 3,
+    "OrderPlaced": 1,
+    "SeriesRegistered": 1,
+    "OrderCommitted": 1,
+    "QuoteFilled": 1,
+    "Credited": 1,
+    "TransferSingle": 1
+  },
+  "wallets": {
+    "total": 1,
+    "team": 1,
+    "outside": 0,
+    "outsideAddresses": []
+  },
+  "transactions": [
+    {
+      "hash": "0x46be06bafe516f97933360dbd5ccee03268834ed24a65e3dbaaaf115c4448b6b",
+      "block": 87134017,
+      "time": "2026-10-13T01:37:12.000Z",
+      "events": [
+        "OrderCommitted",
+        "QuoteFilled",
+        "Credited",
+        "TransferSingle"
+      ],
+      "account": "0x5cf1b3a1041ad0cd66315a8915eb4be03e7fae10",
+      "team": "Team-operated maker"
+    },
+    {
+      "hash": "0x5db4f1135a013de76528cd413d8bbb4b729b319dc45cb28221fd868dbae52a81",
+      "block": 87133438,
+      "time": "2026-10-13T01:36:12.000Z",
+      "events": [
+        "SeriesRegistered"
+      ],
+      "account": null,
+      "team": null
+    },
+    {
+      "hash": "0xd2c9a88eaf12a25a52182dbd2788cf5b6c30d81fd201cd5ecb7c851533321714",
+      "block": 87133101,
+      "time": "2026-10-13T01:35:37.000Z",
+      "events": [
+        "OrderPlaced"
+      ],
+      "account": "0xc45716ed08999073fd60a00373fe63485555f1a8",
+      "team": "Team test wallet"
+    },
+    {
+      "hash": "0x96736c50f00cd906aad959d12948bde37937b698534201b77ec5a2ce39313b42",
+      "block": 87132866,
+      "time": "2026-10-13T01:35:13.000Z",
+      "events": [
+        "EpochCreated"
+      ],
+      "account": null,
+      "team": null
+    },
+    {
+      "hash": "0xceb40aa994735ef15b0992676e23bf5fe9352a638e34ed7ff646298f311514bc",
+      "block": 87132863,
+      "time": "2026-10-13T01:35:13.000Z",
+      "events": [
+        "EpochCreated"
+      ],
+      "account": null,
+      "team": null
+    },
+    {
+      "hash": "0xe4f1219b2d688829d09d234d5e6bb1ba9afbd421c3b9b8656f950a63c80a8e93",
+      "block": 87132859,
+      "time": "2026-10-13T01:35:12.000Z",
+      "events": [
+        "EpochCreated"
+      ],
+      "account": null,
+      "team": null
+    },
+    {
+      "hash": "0xe63339fb93297739e8c23905ea9802a7a904daa9f285425d23cd0fabaab3652e",
+      "block": 87107081,
+      "time": "2026-10-13T00:50:42.000Z",
+      "events": [
+        "CapsSet",
+        "CapsSet",
+        "CapsSet",
+        "CapsSet",
+        "CapsSet",
+        "CapsSet",
+        "TeamOperatedSet",
+        "BatchBidderSet"
+      ],
+      "account": null,
+      "team": "Owner, through the timelock"
+    },
+    {
+      "hash": "0x58fbf095a89ebd1065593bf694c75d9b6a3035eb57efcb91ee2e86e466ff70f1",
+      "block": 87107026,
+      "time": "2026-10-13T00:50:36.000Z",
+      "events": [
+        "OwnershipTransferred",
+        "GuardianSet",
+        "FeeSet"
+      ],
+      "account": null,
+      "team": "Owner, through the timelock"
+    }
+  ],
+  "markets": [
+    {
+      "symbol": "NVDA",
+      "token": "0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC"
+    },
+    {
+      "symbol": "SPY",
+      "token": "0x117cc2133c37B721F49dE2A7a74833232B3B4C0C"
+    },
+    {
+      "symbol": "META",
+      "token": "0xc0D6457C16Cc70d6790Dd43521C899C87ce02f35"
+    }
+  ],
+  "marketCheck": {
+    "block": "82871537",
+    "timestamp": 1791416912,
+    "total": 194,
+    "passed": [
+      "AAPL",
+      "AMD",
+      "AMZN",
+      "BABA",
+      "COIN",
+      "CRCL",
+      "GME",
+      "GOOGL",
+      "INTC",
+      "META",
+      "MSFT",
+      "MSTR",
+      "MU",
+      "NVDA",
+      "PLTR",
+      "QQQ",
+      "SLV",
+      "SPCX",
+      "SPY",
+      "TSLA",
+      "TSM",
+      "USO"
+    ]
+  },
+  "ci": {
+    "id": 38332222676,
+    "url": "https://github.com/winsznx/vayle/actions/runs/38332222676",
+    "commit": "b2eb8d768e04fdc0e15fc03b95d2ae4f207cb52f",
+    "finishedAt": "2026-10-13T01:30:35Z",
+    "conclusion": "failure",
+    "jobs": [
+      {
+        "name": "Lifecycle and invariants for every other listed market",
+        "conclusion": "failure"
+      },
+      {
+        "name": "Lint, typecheck, build, test",
+        "conclusion": "success"
+      },
+      {
+        "name": "Names and private paths",
+        "conclusion": "success"
+      },
+      {
+        "name": "Contracts",
+        "conclusion": "failure"
+      },
+      {
+        "name": "Holder flow through the shared call builders",
+        "conclusion": "success"
+      },
+      {
+        "name": "Static analysis",
+        "conclusion": "success"
+      }
+    ],
+    "contractTests": {
+      "passed": 173,
+      "failed": 21
+    },
+    "typescriptTests": {
+      "passed": 664,
+      "failed": 0
+    }
+  }
+}

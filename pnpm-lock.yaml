@@ -295,6 +295,20 @@ importers:
         specifier: 2.57.3
         version: 2.57.3(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.6.5)
 
+  tools/proof:
+    dependencies:
+      '@vayle/chain-facts':
+        specifier: workspace:*
+        version: link:../../packages/chain-facts
+      '@vayle/market':
+        specifier: workspace:*
+        version: link:../../packages/market
+      viem:
+        specifier: 2.57.3
+        version: 2.57.3(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.6.5)
+
+  tools/rpc-relay: {}
+
 packages:
 
   '@adraffy/ens-normalize@1.11.1':

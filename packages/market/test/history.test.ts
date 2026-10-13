@@ -113,6 +113,15 @@ describe("blockTimesInLogs", () => {
     assert.deepEqual([[...times], missing], [[[82_000_000n, 1_790_971_200]], []]);
   });
 
+  it("leaves a block to look up when its logs carry a zero timestamp, as the public RPC sends", () => {
+    // #given
+    const logs = [{ ...orderPlaced(), blockTimestamp: 0n }];
+    // #when
+    const { times, missing } = blockTimesInLogs(logs);
+    // #then
+    assert.deepEqual([times.size, missing], [0, [82_000_000n]]);
+  });
+
   it("leaves a block to look up once when its logs arrive without a timestamp", () => {
     // #when
     const { times, missing } = blockTimesInLogs([orderPlaced(), batchFilled()]);

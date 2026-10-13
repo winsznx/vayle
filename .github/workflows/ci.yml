@@ -84,13 +84,21 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
+      # The public RPC's Cloudflare front challenges forge's HTTP client, so forge reads through a
+      # local relay that sends each request with curl and retries refusals.
+      - name: Start the RPC relay
+        env:
+          ROBINHOOD_RPC_URL: ${{ secrets.ROBINHOOD_RPC_URL }}
+        run: |
+          node tools/rpc-relay/src/relay.ts > "$RUNNER_TEMP/relay.log" 2>&1 &
+          for i in $(seq 1 30); do curl -s -o /dev/null http://127.0.0.1:8547 -X POST -d '{}' && break; sleep 1; done
       - name: Generated ABIs match the contracts
         run: node packages/abi/src/generate.ts --check
       - name: Test
         working-directory: contracts
         env:
           FOUNDRY_PROFILE: ci
-          ROBINHOOD_RPC_URL: ${{ secrets.ROBINHOOD_RPC_URL }}
+          ROBINHOOD_RPC_URL: http://127.0.0.1:8547
         # One recent block for every fork test, so forge's RPC cache serves repeated reads.
         run: FORK_BLOCK="$(cast block-number --rpc-url "$ROBINHOOD_RPC_URL")" forge test -vvv
 
@@ -107,10 +115,18 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
+      # The public RPC's Cloudflare front challenges forge's HTTP client, so forge reads through a
+      # local relay that sends each request with curl and retries refusals.
+      - name: Start the RPC relay
+        env:
+          ROBINHOOD_RPC_URL: ${{ secrets.ROBINHOOD_RPC_URL }}
+        run: |
+          node tools/rpc-relay/src/relay.ts > "$RUNNER_TEMP/relay.log" 2>&1 &
+          for i in $(seq 1 30); do curl -s -o /dev/null http://127.0.0.1:8547 -X POST -d '{}' && break; sleep 1; done
       - name: Test each market in deployments/markets.json beyond the first
         working-directory: contracts
         env:
-          ROBINHOOD_RPC_URL: ${{ secrets.ROBINHOOD_RPC_URL }}
+          ROBINHOOD_RPC_URL: http://127.0.0.1:8547
         # The contracts job covers the first market. Each other one runs the lifecycle campaigns
         # and invariant suites on its own token, at one recent block.
         run: |
@@ -137,11 +153,19 @@ jobs:
       - uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1.9.1
         with:
           version: v1.7.1
+      # The public RPC's Cloudflare front challenges forge's HTTP client, so forge reads through a
+      # local relay that sends each request with curl and retries refusals.
+      - name: Start the RPC relay
+        env:
+          ROBINHOOD_RPC_URL: ${{ secrets.ROBINHOOD_RPC_URL }}
+        run: |
+          node tools/rpc-relay/src/relay.ts > "$RUNNER_TEMP/relay.log" 2>&1 &
+          for i in $(seq 1 30); do curl -s -o /dev/null http://127.0.0.1:8547 -X POST -d '{}' && break; sleep 1; done
       - name: Test
         working-directory: contracts
         env:
           FOUNDRY_PROFILE: interface
-          ROBINHOOD_RPC_URL: ${{ secrets.ROBINHOOD_RPC_URL }}
+          ROBINHOOD_RPC_URL: http://127.0.0.1:8547
         run: FORK_BLOCK="$(cast block-number --rpc-url "$ROBINHOOD_RPC_URL")" forge test --match-path "test/interface/*" -vvv
 
   slither:

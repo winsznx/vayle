@@ -15,6 +15,13 @@ export const LANDING: PageMeta = {
   card: "landing",
 };
 
+export const PROOF: PageMeta = {
+  title: "Vayle on mainnet",
+  description:
+    "Every Vayle transaction on Robinhood Chain mainnet, the deployed contracts, the market check, the tests, and how many wallets outside the team have set targets.",
+  card: "landing",
+};
+
 // Keyed by the path under /app.
 export const APP_PAGES: Readonly<Record<string, PageMeta>> = {
   "/": {

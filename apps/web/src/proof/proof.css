@@ -1,0 +1,228 @@
+/* vayle.xyz/proof: one sheet of records, scanned more than read. */
+
+.proof {
+  min-height: 100vh;
+  background: var(--page);
+  padding: 16px;
+}
+
+.proof-bar,
+.proof-main {
+  max-width: 1080px;
+  margin: 0 auto;
+  background: var(--sheet);
+}
+
+.proof-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px clamp(18px, 4vw, 40px);
+  border-radius: var(--radius-xl, 28px) var(--radius-xl, 28px) 0 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.proof-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.proof-main {
+  display: grid;
+  gap: 40px;
+  padding: clamp(24px, 4vw, 48px) clamp(18px, 4vw, 40px) 48px;
+  border-radius: 0 0 var(--radius-xl, 28px) var(--radius-xl, 28px);
+}
+
+.proof-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.proof-lede {
+  margin: -24px 0 0;
+  max-width: 62ch;
+  color: var(--body);
+}
+
+.proof-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.proof-stat {
+  padding: 16px 18px;
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  background: var(--raised);
+}
+
+.proof-stat-value {
+  margin: 0;
+  color: var(--ink);
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.proof-stat-label {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.proof-section {
+  display: grid;
+  gap: 12px;
+}
+
+.proof-section h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.375rem;
+  font-weight: 600;
+}
+
+.proof-section > p {
+  margin: 0;
+  max-width: 68ch;
+}
+
+.proof-rows {
+  margin: 0;
+  display: grid;
+  border-top: 1px solid var(--hairline);
+}
+
+.proof-row {
+  display: grid;
+  grid-template-columns: minmax(0, 14rem) minmax(0, 1fr);
+  gap: 4px 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.proof-row dt {
+  color: var(--body);
+}
+
+.proof-row dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.proof-txs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--hairline);
+}
+
+.proof-tx {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 4px 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.proof-tx p {
+  margin: 0;
+  min-width: 0;
+}
+
+.proof-tx-what {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.proof-team {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--sunken);
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.proof-markets {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+}
+
+.proof-markets li {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.proof-jobs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.proof-ok {
+  color: var(--earned);
+  font-weight: 600;
+}
+
+.proof-bad {
+  color: var(--problem);
+  font-weight: 600;
+}
+
+.proof-empty {
+  margin: 0;
+  color: var(--muted);
+}
+
+.proof-foot {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.mono {
+  font-family: var(--font-mono, ui-monospace, "SF Mono", Menlo, monospace);
+  font-size: 0.875em;
+}
+
+@media (max-width: 720px) {
+  .proof {
+    padding: 0;
+  }
+
+  .proof-bar,
+  .proof-main {
+    border-radius: 0;
+  }
+
+  .proof-row {
+    grid-template-columns: 1fr;
+  }
+
+  .proof-tx {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .proof-tx-who,
+  .proof-tx-when {
+    grid-column: 1;
+  }
+}

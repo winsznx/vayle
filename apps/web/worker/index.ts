@@ -1,4 +1,4 @@
-import { appPage, LANDING, tabTitle, type PageMeta } from "../src/meta.ts";
+import { appPage, LANDING, PROOF, tabTitle, type PageMeta } from "../src/meta.ts";
 import { restrictedHere, type RegionEnv } from "./region.ts";
 import { proxyRpc, type RpcEnv } from "./rpc.ts";
 
@@ -92,6 +92,9 @@ export default {
     if (request.method !== "GET" && request.method !== "HEAD") return env.ASSETS.fetch(request);
     if (path === "/" || path === "/index.html") {
       return page(request, env, "/", LANDING, LANDING.title, 200);
+    }
+    if (path === "/proof" || path === "/proof/") {
+      return page(request, env, "/proof/", PROOF, PROOF.title, 200);
     }
     if (path === "/app") return Response.redirect(`${url.origin}/app/${url.search}`, 308);
     if (path.startsWith("/app/")) {

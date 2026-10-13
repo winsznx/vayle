@@ -32,6 +32,7 @@ function appRoutes(): Plugin {
     if (url === undefined) return url;
     const path = url.split("?")[0] ?? url;
     const isAppRoute = path === "/app" || (path.startsWith("/app/") && !/\.[a-z0-9]+$/i.test(path));
+    if (path === "/proof" || path === "/proof/") return "/proof/index.html";
     return isAppRoute ? "/app/index.html" : url;
   };
   return {
@@ -100,7 +101,13 @@ export default defineConfig(({ mode }) => {
       // react-dom, viem, wagmi and the wallet modal are most of the app's first load. This warns if
       // the app's main chunk grows past what they take today.
       chunkSizeWarningLimit: 900,
-      rolldownOptions: { input: { landing: page("index.html"), app: page("app/index.html") } },
+      rolldownOptions: {
+        input: {
+          landing: page("index.html"),
+          app: page("app/index.html"),
+          proof: page("proof/index.html"),
+        },
+      },
     },
   };
 });

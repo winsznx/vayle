@@ -1,0 +1,14 @@
+{
+  "about": "Every address the Vayle team controls on Robinhood Chain. The proof page labels these as team and counts every other wallet that set a target as outside.",
+  "wallets": [
+    { "address": "0x1D7bee7FDb39d5a3a319AA9975B590Dfa6a589E4", "label": "Owner multisig (2-of-3 Safe)" },
+    { "address": "0x573a151fF8B65B454D1EfAd705f4F644838250Ab", "label": "Multisig signer" },
+    { "address": "0x07179b91d47F8bfe65a05D38c015913341e5b74A", "label": "Multisig signer" },
+    { "address": "0xa791626894f0c55Bdb6B7259b8edC6EcA9d0b629", "label": "Multisig signer" },
+    { "address": "0x399e9FaD7975B13d67959e0E358d6ccd8Bf16642", "label": "Guardian" },
+    { "address": "0x91fb3bde92B569102c044acc76A918bf477dbFe3", "label": "Deployer" },
+    { "address": "0xa697B35Ab748341Fb70BD684956CFa3594692CF0", "label": "Keeper" },
+    { "address": "0x5CF1B3A1041aD0cd66315a8915EB4BE03E7FaE10", "label": "Team-operated maker" },
+    { "address": "0xC45716eD08999073fd60a00373fe63485555F1a8", "label": "Team test wallet" }
+  ]
+}

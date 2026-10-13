@@ -110,15 +110,16 @@ export function toMarketEvents(
 export const LOG_RANGE = 10_000n;
 const RANGES_AT_ONCE = 4;
 
-// The block times a page of logs carries. This chain's nodes put each block's timestamp on its
-// logs, so only blocks whose logs arrive without one are left to look up.
+// The block times a page of logs carries. Some of this chain's RPCs put each block's timestamp on
+// its logs, and the public one sends zero there, so only real times count and every other block is
+// left to look up.
 export function blockTimesInLogs(logs: readonly Log<bigint, number, false>[]): {
   readonly times: Map<bigint, number>;
   readonly missing: readonly bigint[];
 } {
   const times = new Map<bigint, number>();
   for (const log of logs) {
-    if (log.blockTimestamp !== undefined) {
+    if (log.blockTimestamp !== undefined && log.blockTimestamp > 0n) {
       times.set(log.blockNumber, Number(log.blockTimestamp));
     }
   }

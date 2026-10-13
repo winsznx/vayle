@@ -1,0 +1,17 @@
+{
+  "name": "@vayle/proof",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node --test \"test/*.test.ts\"",
+    "proof": "node --env-file-if-exists=../../.env src/cli.ts"
+  },
+  "dependencies": {
+    "@vayle/chain-facts": "workspace:*",
+    "@vayle/market": "workspace:*",
+    "viem": "2.57.3"
+  }
+}
